@@ -11,6 +11,7 @@ use artifactsmmo_openapi::{
 };
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct ResourcesApi {
     configuration: Arc<Configuration>,
 }

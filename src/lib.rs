@@ -1,27 +1,31 @@
-use account::Account;
-use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{FightSchema, RewardsSchema, SkillDataSchema, SkillInfoSchema};
-use events::Events;
 use fs_extra::file::{read_to_string, write_all};
-use items::Items;
 use log::error;
-use maps::Maps;
-use monsters::Monsters;
-use resources::Resources;
 use serde::{Deserialize, Serialize};
-use std::{
-    path::Path,
-    sync::{Arc, LazyLock, OnceLock},
-};
-use tasks_rewards::TasksRewards;
+use std::path::Path;
 
 pub use artifactsmmo_openapi::models;
-pub use simulator::Simulator;
 
-pub mod client;
+pub use account::Account;
+pub use bank::Bank;
+pub use char::Character;
+pub use client::Client;
+pub use simulator::Simulator;
+//pub use consts::{};
+pub use events::Events;
+pub use gear::Gear;
+pub use items::Items;
+pub use maps::Maps;
+pub use monsters::Monsters;
+pub use resources::Resources;
+pub use server::Server;
+pub use tasks::Tasks;
+pub use tasks_rewards::TasksRewards;
+
 pub mod account;
-pub mod base_bank;
+pub mod bank;
 pub mod char;
+pub mod client;
 pub mod consts;
 pub mod events;
 pub mod gear;
@@ -34,41 +38,6 @@ pub mod server;
 pub mod simulator;
 pub mod tasks;
 pub mod tasks_rewards;
-
-static BASE_URL: OnceLock<String> = OnceLock::new();
-static TOKEN: OnceLock<String> = OnceLock::new();
-static ACCOUNT_NAME: OnceLock<String> = OnceLock::new();
-
-pub(crate) static API: LazyLock<Arc<ArtifactApi>> = LazyLock::new(|| {
-    let base_url = BASE_URL.get_or_init(|| "https://api.artifactsmmo.com".to_owned());
-    let token = TOKEN.get_or_init(|| "".to_owned());
-    Arc::new(ArtifactApi::new(base_url.to_owned(), token.to_owned()))
-});
-
-pub static EVENTS: LazyLock<Arc<Events>> = LazyLock::new(|| Arc::new(Events::new(API.clone())));
-pub static RESOURCES: LazyLock<Arc<Resources>> =
-    LazyLock::new(|| Arc::new(Resources::new(API.clone(), EVENTS.clone())));
-pub static MONSTERS: LazyLock<Arc<Monsters>> =
-    LazyLock::new(|| Arc::new(Monsters::new(API.clone(), EVENTS.clone())));
-pub static TASKS_REWARDS: LazyLock<Arc<TasksRewards>> =
-    LazyLock::new(|| Arc::new(TasksRewards::new(API.clone())));
-pub static ITEMS: LazyLock<Items> = LazyLock::new(|| {
-    Items::new(
-        API.clone(),
-        RESOURCES.clone(),
-        MONSTERS.clone(),
-        TASKS_REWARDS.clone(),
-    )
-});
-pub static MAPS: LazyLock<Maps> = LazyLock::new(|| Maps::new(&API, EVENTS.clone()));
-pub static BASE_ACCOUNT: LazyLock<Account> =
-    LazyLock::new(|| Account::new(&API, ACCOUNT_NAME.get().unwrap()));
-
-pub fn init(base_url: String, token: String, account_name: String) {
-    BASE_URL.get_or_init(|| base_url);
-    TOKEN.get_or_init(|| token);
-    ACCOUNT_NAME.get_or_init(|| account_name);
-}
 
 pub trait PersistedData<D: for<'a> Deserialize<'a> + Serialize> {
     const PATH: &'static str;

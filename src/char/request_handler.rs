@@ -1,13 +1,13 @@
 use super::CharacterData;
 use crate::{
-    base_bank::BASE_BANK,
+    bank::Bank,
     char::{action::Action, HasCharacterData},
     consts::BANK_EXTENSION_SIZE,
     gear::Slot,
     maps::MapSchemaExt,
-    server::SERVER,
-    API,
+    server::Server,
 };
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::{
     apis::Error,
     models::{
@@ -39,12 +39,25 @@ use thiserror::Error;
 /// by updating character and bank data, and retrying requests in case of errors.
 #[derive(Default)]
 pub struct CharacterRequestHandler {
+    api: Arc<ArtifactApi>,
     data: CharacterData,
+    bank: Arc<Bank>,
+    server: Arc<Server>,
 }
 
 impl CharacterRequestHandler {
-    pub fn new(data: CharacterData) -> Self {
-        Self { data }
+    pub fn new(
+        api: Arc<ArtifactApi>,
+        data: CharacterData,
+        bank: Arc<Bank>,
+        server: Arc<Server>,
+    ) -> Self {
+        Self {
+            api,
+            data,
+            bank,
+            server,
+        }
     }
 
     fn request_action(&self, action: Action) -> Result<Box<dyn ResponseSchema>, RequestError> {
@@ -54,7 +67,7 @@ impl CharacterRequestHandler {
         self.wait_for_cooldown();
         if action.is_deposit() || action.is_withdraw() {
             bank_content = Some(
-                BASE_BANK
+                self.bank
                     .content
                     .write()
                     .expect("bank_content to be writable"),
@@ -62,13 +75,13 @@ impl CharacterRequestHandler {
         }
         if action.is_deposit_gold() || action.is_withdraw_gold() || action.is_expand_bank() {
             bank_details = Some(
-                BASE_BANK
+                self.bank
                     .details
                     .write()
                     .expect("bank_details to be writable"),
             );
         }
-        match action.request(&self.name(), &API) {
+        match action.request(&self.name(), &self.api) {
             Ok(res) => {
                 info!("{}", res.to_string());
                 self.update_data(res.character().clone());
@@ -318,7 +331,7 @@ impl CharacterRequestHandler {
                         "{}: code 499 received, resyncronizing server time",
                         self.name()
                     );
-                    SERVER.update_offset();
+                    self.server.update_offset();
                     return self.request_action(action);
                 }
                 if res.error.code == 500 || res.error.code == 520 {
@@ -362,7 +375,7 @@ impl CharacterRequestHandler {
     /// Returns the remaining cooldown duration of the `Character`.
     fn remaining_cooldown(&self) -> Duration {
         if let Some(exp) = self.cooldown_expiration() {
-            let synced = Utc::now() - *SERVER.server_offset.read().unwrap();
+            let synced = Utc::now() - *self.server.server_offset.read().unwrap();
             if synced.cmp(&exp.to_utc()) == Ordering::Less {
                 return (exp.to_utc() - synced).to_std().unwrap();
             }
@@ -372,7 +385,7 @@ impl CharacterRequestHandler {
 
     /// Refresh the `Character` schema from API.
     pub fn refresh_data(&self) {
-        let Ok(resp) = API.character.get(&self.name()) else {
+        let Ok(resp) = self.api.character.get(&self.name()) else {
             return;
         };
         self.update_data(*resp.data)

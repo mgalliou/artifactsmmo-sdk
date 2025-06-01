@@ -1,4 +1,4 @@
-use crate::{PersistedData, API};
+use crate::PersistedData;
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
@@ -6,6 +6,7 @@ use itertools::Itertools;
 use log::debug;
 use std::sync::{Arc, RwLock};
 
+#[derive(Default)]
 pub struct Events {
     data: RwLock<Vec<Arc<EventSchema>>>,
     api: Arc<ArtifactApi>,
@@ -60,7 +61,7 @@ impl Events {
         // NOTE: keep `events` locked before updating last refresh
         let mut events = self.active.write().unwrap();
         self.update_last_refresh(now);
-        if let Ok(new) = API.events.active() {
+        if let Ok(new) = self.api.events.active() {
             *events = new.into_iter().map(Arc::new).collect_vec();
             debug!("events refreshed.");
         }

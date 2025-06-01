@@ -1,14 +1,13 @@
-use crate::{char::Skill, events::Events, EVENTS, MAPS, MONSTERS, RESOURCES};
+use crate::{char::Skill, events::Events};
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{
-    MapContentSchema, MapContentType, MapSchema, MonsterSchema, ResourceSchema, TaskType,
-};
+use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema};
 use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
 
+#[derive(Default)]
 pub struct Maps {
     data: HashMap<(i32, i32), RwLock<Arc<MapSchema>>>,
     events: Arc<Events>,
@@ -43,8 +42,8 @@ impl Maps {
                 }
             }
         });
-        EVENTS.refresh_active();
-        EVENTS.active().iter().for_each(|e| {
+        self.events.refresh_active();
+        self.events.active().iter().for_each(|e| {
             if DateTime::parse_from_rfc3339(&e.expiration).unwrap() > Utc::now() {
                 if let Some(map) = self.data.get(&(e.map.x, e.map.y)) {
                     let mut new_map = (*map.read().unwrap().clone()).clone();
@@ -115,13 +114,13 @@ pub trait MapSchemaExt {
     fn content_code_is(&self, code: &str) -> bool;
     fn content_type_is(&self, r#type: MapContentType) -> bool;
     fn pretty(&self) -> String;
-    fn monster(&self) -> Option<Arc<MonsterSchema>>;
-    fn resource(&self) -> Option<Arc<ResourceSchema>>;
+    fn monster(&self) -> Option<String>;
+    fn resource(&self) -> Option<String>;
     fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>>;
-    fn closest_with_content_code(&self, code: &str) -> Option<Arc<MapSchema>>;
-    fn closest_with_content_schema(&self, schema: &MapContentSchema) -> Option<Arc<MapSchema>>;
-    fn closest_of_type(&self, r#type: MapContentType) -> Option<Arc<MapSchema>>;
-    fn closest_tasksmaster(&self, r#type: Option<TaskType>) -> Option<Arc<MapSchema>>;
+    // fn closest_with_content_code(&self, code: &str) -> Option<Arc<MapSchema>>;
+    // fn closest_with_content_schema(&self, schema: &MapContentSchema) -> Option<Arc<MapSchema>>;
+    // fn closest_of_type(&self, r#type: MapContentType) -> Option<Arc<MapSchema>>;
+    // fn closest_tasksmaster(&self, r#type: Option<TaskType>) -> Option<Arc<MapSchema>>;
 }
 
 impl MapSchemaExt for MapSchema {
@@ -145,54 +144,54 @@ impl MapSchemaExt for MapSchema {
         }
     }
 
-    fn monster(&self) -> Option<Arc<MonsterSchema>> {
-        MONSTERS.get(&self.content()?.code)
+    fn monster(&self) -> Option<String> {
+        Some(self.content()?.code.clone())
     }
 
-    fn resource(&self) -> Option<Arc<ResourceSchema>> {
-        RESOURCES.get(&self.content()?.code)
+    fn resource(&self) -> Option<String> {
+        Some(self.content()?.code.clone())
     }
 
     fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>> {
         Maps::closest_from_amoung(self.x, self.y, others)
     }
 
-    fn closest_with_content_code(&self, code: &str) -> Option<Arc<MapSchema>> {
-        let maps = MAPS.with_content_code(code);
-        if maps.is_empty() {
-            return None;
-        }
-        self.closest_among(maps)
-    }
+    // fn closest_with_content_code(&self, code: &str) -> Option<Arc<MapSchema>> {
+    //     let maps = MAPS.with_content_code(code);
+    //     if maps.is_empty() {
+    //         return None;
+    //     }
+    //     self.closest_among(maps)
+    // }
 
-    fn closest_with_content_schema(&self, schema: &MapContentSchema) -> Option<Arc<MapSchema>> {
-        let maps = MAPS.with_content_schema(schema);
-        if maps.is_empty() {
-            return None;
-        }
-        self.closest_among(maps)
-    }
+    // fn closest_with_content_schema(&self, schema: &MapContentSchema) -> Option<Arc<MapSchema>> {
+    //     let maps = MAPS.with_content_schema(schema);
+    //     if maps.is_empty() {
+    //         return None;
+    //     }
+    //     self.closest_among(maps)
+    // }
 
-    /// Returns the closest map from the `Character` containing the given
-    /// content `type`.
-    fn closest_of_type(&self, r#type: MapContentType) -> Option<Arc<MapSchema>> {
-        let maps = MAPS.of_type(r#type);
-        if maps.is_empty() {
-            return None;
-        }
-        self.closest_among(maps)
-    }
+    // /// Returns the closest map from the `Character` containing the given
+    // /// content `type`.
+    // fn closest_of_type(&self, r#type: MapContentType) -> Option<Arc<MapSchema>> {
+    //     let maps = self.maps.of_type(r#type);
+    //     if maps.is_empty() {
+    //         return None;
+    //     }
+    //     self.closest_among(maps)
+    // }
 
-    fn closest_tasksmaster(&self, r#type: Option<TaskType>) -> Option<Arc<MapSchema>> {
-        if let Some(r#type) = r#type {
-            self.closest_with_content_schema(&MapContentSchema {
-                r#type: MapContentType::TasksMaster,
-                code: r#type.to_string(),
-            })
-        } else {
-            self.closest_of_type(MapContentType::TasksMaster)
-        }
-    }
+    // fn closest_tasksmaster(&self, r#type: Option<TaskType>) -> Option<Arc<MapSchema>> {
+    //     if let Some(r#type) = r#type {
+    //         self.closest_with_content_schema(&MapContentSchema {
+    //             r#type: MapContentType::TasksMaster,
+    //             code: r#type.to_string(),
+    //         })
+    //     } else {
+    //         self.closest_of_type(MapContentType::TasksMaster)
+    //     }
+    // }
 }
 
 // #[derive(Debug, Copy, Clone, PartialEq, AsRefStr, Display)]

@@ -1,17 +1,18 @@
-use crate::{items::ItemSchemaExt, ITEMS};
+use crate::items::{ItemSchemaExt, Items};
 use artifactsmmo_openapi::models::ItemSchema;
 use itertools::Itertools;
 use std::sync::Arc;
 
 use super::CharacterData;
 
-pub struct BaseInventory {
+pub struct Inventory {
     data: CharacterData,
+    items: Arc<Items>,
 }
 
-impl BaseInventory {
-    pub fn new(data: CharacterData) -> Self {
-        Self { data }
+impl Inventory {
+    pub fn new(data: CharacterData, items: Arc<Items>) -> Self {
+        Self { data, items }
     }
 
     /// Returns the amount of item in the `Character` inventory.
@@ -63,7 +64,7 @@ impl BaseInventory {
     }
 
     pub fn contains_mats_for(&self, item: &str, quantity: i32) -> bool {
-        ITEMS
+        self.items
             .mats_of(item)
             .iter()
             .all(|m| self.total_of(&m.code) >= m.quantity * quantity)
@@ -77,7 +78,7 @@ impl BaseInventory {
             .iter()
             .flatten()
             .filter_map(|i| {
-                ITEMS
+                self.items
                     .get(&i.code)
                     .filter(|i| i.is_consumable_at(self.data.read().unwrap().level))
             })

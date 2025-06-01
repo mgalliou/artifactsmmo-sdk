@@ -8,6 +8,7 @@ use artifactsmmo_openapi::{
 };
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct CharactersApi {
     configuration: Arc<Configuration>,
 }

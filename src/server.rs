@@ -1,19 +1,19 @@
-use crate::API;
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::StatusResponseSchema;
 use chrono::{DateTime, TimeDelta, Utc};
 use log::{debug, error};
-use std::sync::{LazyLock, RwLock};
-
-pub static SERVER: LazyLock<Server> = LazyLock::new(Server::new);
+use std::sync::{Arc, RwLock};
 
 #[derive(Default)]
 pub struct Server {
+    api: Arc<ArtifactApi>,
     pub server_offset: RwLock<TimeDelta>,
 }
 
 impl Server {
-    fn new() -> Self {
+    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
         let server = Self {
+            api,
             server_offset: RwLock::new(TimeDelta::default()),
         };
         server.update_offset();
@@ -21,7 +21,7 @@ impl Server {
     }
 
     pub fn status(&self) -> Option<StatusResponseSchema> {
-        API.server.status()
+        self.api.server.status()
     }
 
     pub fn time(&self) -> Option<DateTime<Utc>> {

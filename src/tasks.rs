@@ -1,10 +1,8 @@
-use crate::{PersistedData, API};
+use crate::PersistedData;
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::TaskFullSchema;
 use itertools::Itertools;
-use std::sync::{Arc, LazyLock, RwLock};
-
-pub static TASKS: LazyLock<Tasks> = LazyLock::new(|| Tasks::new(API.clone()));
+use std::sync::{Arc, RwLock};
 
 pub struct Tasks {
     data: RwLock<Vec<Arc<TaskFullSchema>>>,
@@ -30,7 +28,7 @@ impl PersistedData<Vec<Arc<TaskFullSchema>>> for Tasks {
 }
 
 impl Tasks {
-    fn new(api: Arc<ArtifactApi>) -> Self {
+    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
         let tasks = Self {
             data: Default::default(),
             api,

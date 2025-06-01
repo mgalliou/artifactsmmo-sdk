@@ -1,20 +1,17 @@
-use crate::API;
 use artifactsmmo_openapi::models::{BankSchema, SimpleItemSchema};
-use std::sync::{Arc, LazyLock, RwLock};
+use std::sync::{Arc, RwLock};
 
 #[derive(Default)]
-pub struct BaseBank {
+pub struct Bank {
     pub details: RwLock<Arc<BankSchema>>,
     pub content: RwLock<Arc<Vec<SimpleItemSchema>>>,
 }
 
-pub static BASE_BANK: LazyLock<Arc<BaseBank>> = LazyLock::new(|| Arc::new(BaseBank::new()));
-
-impl BaseBank {
-    pub fn new() -> Self {
+impl Bank {
+    pub(crate) fn new(details: BankSchema, content: Vec<SimpleItemSchema>) -> Self {
         Self {
-            details: RwLock::new(Arc::new(*API.bank.details().unwrap().data)),
-            content: RwLock::new(Arc::new(API.bank.items(None).unwrap())),
+            details: RwLock::new(Arc::new(details)),
+            content: RwLock::new(Arc::new(content)),
         }
     }
 

@@ -1,16 +1,15 @@
-use crate::{
-    gear::{Gear, Slot},
-    ITEMS, MAPS,
-};
-use artifactsmmo_openapi::models::{CharacterSchema, ItemSchema, MapSchema, TaskType};
+use crate::gear::Slot;
+use artifactsmmo_openapi::models::{CharacterSchema, TaskType};
 use chrono::{DateTime, Utc};
 use std::sync::{Arc, RwLock};
 
+pub use character::Character;
+pub use inventory::Inventory;
 pub use skill::Skill;
 
 pub mod action;
-pub mod base_character;
-pub mod base_inventory;
+pub mod character;
+pub mod inventory;
 pub mod request_handler;
 pub mod skill;
 
@@ -31,11 +30,6 @@ pub trait HasCharacterData {
 
     fn level(&self) -> i32 {
         self.data().level
-    }
-
-    fn map(&self) -> Arc<MapSchema> {
-        let (x, y) = self.position();
-        MAPS.get(x, y).unwrap()
     }
 
     fn skill_xp(&self, skill: Skill) -> i32 {
@@ -157,31 +151,32 @@ pub trait HasCharacterData {
             .map(|cd| DateTime::parse_from_rfc3339(cd).ok().map(|dt| dt.to_utc()))?
     }
 
-    /// Returns the current `Gear` of the `Character`, containing item schemas.
-    fn gear(&self) -> Gear {
-        let d = self.data();
-        Gear {
-            weapon: ITEMS.get(&d.weapon_slot),
-            shield: ITEMS.get(&d.shield_slot),
-            helmet: ITEMS.get(&d.helmet_slot),
-            body_armor: ITEMS.get(&d.body_armor_slot),
-            leg_armor: ITEMS.get(&d.leg_armor_slot),
-            boots: ITEMS.get(&d.boots_slot),
-            ring1: ITEMS.get(&d.ring1_slot),
-            ring2: ITEMS.get(&d.ring2_slot),
-            amulet: ITEMS.get(&d.amulet_slot),
-            artifact1: ITEMS.get(&d.artifact1_slot),
-            artifact2: ITEMS.get(&d.artifact2_slot),
-            artifact3: ITEMS.get(&d.artifact3_slot),
-            utility1: ITEMS.get(&d.utility1_slot),
-            utility2: ITEMS.get(&d.utility2_slot),
-        }
-    }
+    //TODO:
+    // Returns the current `Gear` of the `Character`, containing item schemas.
+    // fn gear(&self) -> Gear {
+    //     let d = self.data();
+    //     Gear {
+    //         weapon: ITEMS.get(&d.weapon_slot),
+    //         shield: ITEMS.get(&d.shield_slot),
+    //         helmet: ITEMS.get(&d.helmet_slot),
+    //         body_armor: ITEMS.get(&d.body_armor_slot),
+    //         leg_armor: ITEMS.get(&d.leg_armor_slot),
+    //         boots: ITEMS.get(&d.boots_slot),
+    //         ring1: ITEMS.get(&d.ring1_slot),
+    //         ring2: ITEMS.get(&d.ring2_slot),
+    //         amulet: ITEMS.get(&d.amulet_slot),
+    //         artifact1: ITEMS.get(&d.artifact1_slot),
+    //         artifact2: ITEMS.get(&d.artifact2_slot),
+    //         artifact3: ITEMS.get(&d.artifact3_slot),
+    //         utility1: ITEMS.get(&d.utility1_slot),
+    //         utility2: ITEMS.get(&d.utility2_slot),
+    //     }
+    // }
 
     /// Returns the item equiped in the `given` slot.
-    fn equiped_in(&self, slot: Slot) -> Option<Arc<ItemSchema>> {
+    fn equiped_in(&self, slot: Slot) -> String {
         let d = self.data();
-        ITEMS.get(match slot {
+        match slot {
             Slot::Weapon => &d.weapon_slot,
             Slot::Shield => &d.shield_slot,
             Slot::Helmet => &d.helmet_slot,
@@ -198,6 +193,7 @@ pub trait HasCharacterData {
             Slot::Utility2 => &d.utility2_slot,
             Slot::Bag => &d.bag_slot,
             Slot::Rune => &d.rune_slot,
-        })
+        }
+        .clone()
     }
 }

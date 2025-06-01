@@ -51,6 +51,7 @@ use artifactsmmo_openapi::{
 };
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct MyCharacterApi {
     configuration: Arc<Configuration>,
 }

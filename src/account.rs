@@ -7,26 +7,29 @@ use std::{
 
 #[derive(Default)]
 pub struct Account {
-    characters: Arc<HashMap<usize, CharacterData>>,
+    pub name: String,
+    characters_data: Arc<HashMap<usize, CharacterData>>,
 }
 
 impl Account {
-    pub fn new(api: &Arc<ArtifactApi>, name: &str) -> Self {
+    pub(crate) fn new(api: &Arc<ArtifactApi>, name: String) -> Self {
+        let characters_data = Arc::new(
+            api.account
+                .characters(&name)
+                .unwrap()
+                .data
+                .into_iter()
+                .enumerate()
+                .map(|(id, data)| (id, Arc::new(RwLock::new(Arc::new(data)))))
+                .collect::<_>(),
+        );
         Self {
-            characters: Arc::new(
-                api.account
-                    .characters(name)
-                    .unwrap()
-                    .data
-                    .into_iter()
-                    .enumerate()
-                    .map(|(id, data)| (id, Arc::new(RwLock::new(Arc::new(data)))))
-                    .collect::<_>(),
-            ),
+            name,
+            characters_data,
         }
     }
 
-    pub fn characters(&self) -> Arc<HashMap<usize, CharacterData>> {
-        self.characters.clone()
+    pub(crate) fn characters_data(&self) -> Arc<HashMap<usize, CharacterData>> {
+        self.characters_data.clone()
     }
 }
