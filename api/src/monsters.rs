@@ -33,6 +33,7 @@ impl MonstersApi {
         while !finished {
             let resp = get_all_monsters_monsters_get(
                 &self.configuration,
+                None,
                 min_level,
                 max_level,
                 drop,

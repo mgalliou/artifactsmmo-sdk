@@ -7,7 +7,7 @@ use artifactsmmo_openapi::{
         },
         Error,
     },
-    models::{CraftSkill, ItemResponseSchema, ItemSchema, ItemType},
+    models::{ItemResponseSchema, ItemSchema},
 };
 use std::sync::Arc;
 
@@ -21,27 +21,19 @@ impl ItemsApi {
         Self { configuration }
     }
 
-    pub fn all(
-        &self,
-        min_level: Option<i32>,
-        max_level: Option<i32>,
-        name: Option<&str>,
-        r#type: Option<ItemType>,
-        craft_skill: Option<CraftSkill>,
-        craft_material: Option<&str>,
-    ) -> Result<Vec<ItemSchema>, Error<GetAllItemsItemsGetError>> {
+    pub fn all(&self) -> Result<Vec<ItemSchema>, Error<GetAllItemsItemsGetError>> {
         let mut items: Vec<ItemSchema> = vec![];
         let mut current_page = 1;
         let mut finished = false;
         while !finished {
             let resp = get_all_items_items_get(
                 &self.configuration,
-                min_level,
-                max_level,
-                name,
-                r#type,
-                craft_skill,
-                craft_material,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
                 Some(current_page),
                 Some(100),
             );

@@ -8,7 +8,7 @@ use artifactsmmo_openapi::{
             action_crafting_my_name_action_crafting_post,
             action_delete_item_my_name_action_delete_post,
             action_deposit_bank_gold_my_name_action_bank_deposit_gold_post,
-            action_deposit_bank_my_name_action_bank_deposit_post,
+            action_deposit_bank_item_my_name_action_bank_deposit_item_post,
             action_equip_item_my_name_action_equip_post, action_fight_my_name_action_fight_post,
             action_gathering_my_name_action_gathering_post, action_move_my_name_action_move_post,
             action_recycling_my_name_action_recycling_post, action_rest_my_name_action_rest_post,
@@ -18,14 +18,14 @@ use artifactsmmo_openapi::{
             action_unequip_item_my_name_action_unequip_post,
             action_use_item_my_name_action_use_post,
             action_withdraw_bank_gold_my_name_action_bank_withdraw_gold_post,
-            action_withdraw_bank_my_name_action_bank_withdraw_post,
+            action_withdraw_bank_item_my_name_action_bank_withdraw_item_post,
             ActionAcceptNewTaskMyNameActionTaskNewPostError,
             ActionBuyBankExpansionMyNameActionBankBuyExpansionPostError,
             ActionCompleteTaskMyNameActionTaskCompletePostError,
             ActionCraftingMyNameActionCraftingPostError,
             ActionDeleteItemMyNameActionDeletePostError,
             ActionDepositBankGoldMyNameActionBankDepositGoldPostError,
-            ActionDepositBankMyNameActionBankDepositPostError,
+            ActionDepositBankItemMyNameActionBankDepositItemPostError,
             ActionEquipItemMyNameActionEquipPostError, ActionFightMyNameActionFightPostError,
             ActionGatheringMyNameActionGatheringPostError, ActionMoveMyNameActionMovePostError,
             ActionRecyclingMyNameActionRecyclingPostError, ActionRestMyNameActionRestPostError,
@@ -34,7 +34,7 @@ use artifactsmmo_openapi::{
             ActionTaskTradeMyNameActionTaskTradePostError,
             ActionUnequipItemMyNameActionUnequipPostError, ActionUseItemMyNameActionUsePostError,
             ActionWithdrawBankGoldMyNameActionBankWithdrawGoldPostError,
-            ActionWithdrawBankMyNameActionBankWithdrawPostError,
+            ActionWithdrawBankItemMyNameActionBankWithdrawItemPostError,
         },
         Error,
     },
@@ -170,32 +170,30 @@ impl MyCharacterApi {
     pub fn deposit(
         &self,
         name: &str,
-        code: &str,
-        quantity: i32,
+        items: Vec<SimpleItemSchema>,
     ) -> Result<
         BankItemTransactionResponseSchema,
-        Error<ActionDepositBankMyNameActionBankDepositPostError>,
+        Error<ActionDepositBankItemMyNameActionBankDepositItemPostError>,
     > {
-        action_deposit_bank_my_name_action_bank_deposit_post(
+        action_deposit_bank_item_my_name_action_bank_deposit_item_post(
             &self.configuration,
             name,
-            SimpleItemSchema::new(code.to_owned(), quantity),
+            items,
         )
     }
 
     pub fn withdraw(
         &self,
         name: &str,
-        code: &str,
-        quantity: i32,
+        items: Vec<SimpleItemSchema>,
     ) -> Result<
         BankItemTransactionResponseSchema,
-        Error<ActionWithdrawBankMyNameActionBankWithdrawPostError>,
+        Error<ActionWithdrawBankItemMyNameActionBankWithdrawItemPostError>,
     > {
-        action_withdraw_bank_my_name_action_bank_withdraw_post(
+        action_withdraw_bank_item_my_name_action_bank_withdraw_item_post(
             &self.configuration,
             name,
-            SimpleItemSchema::new(code.to_owned(), quantity),
+            items,
         )
     }
 

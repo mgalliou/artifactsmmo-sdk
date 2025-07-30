@@ -1,5 +1,5 @@
 use artifactsmmo_openapi::{
-    apis::{configuration::Configuration, default_api::get_status_get},
+    apis::{configuration::Configuration, server_details_api::get_server_details_get},
     models::StatusResponseSchema,
 };
 use std::sync::Arc;
@@ -14,7 +14,8 @@ impl ServerApi {
         Self { configuration }
     }
 
+    //TODO: return result
     pub fn status(&self) -> Option<StatusResponseSchema> {
-        get_status_get(&self.configuration).ok()
+        get_server_details_get(&self.configuration).ok()
     }
 }
