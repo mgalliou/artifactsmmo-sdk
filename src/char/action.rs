@@ -1,6 +1,7 @@
 use super::request_handler::{RequestError, ResponseSchema};
 use crate::gear::Slot;
 use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_openapi::models::SimpleItemSchema;
 use strum_macros::{Display, EnumIs};
 
 #[derive(Debug, EnumIs, Display)]
@@ -28,13 +29,11 @@ pub enum Action<'a> {
         item: &'a str,
         quantity: i32,
     },
-    Deposit {
-        item: &'a str,
-        quantity: i32,
+    DepositItem {
+        items: &'a [SimpleItemSchema],
     },
-    Withdraw {
-        item: &'a str,
-        quantity: i32,
+    WithdrawItem {
+        items: &'a [SimpleItemSchema],
     },
     DepositGold {
         quantity: i32,
@@ -72,7 +71,7 @@ impl Action<'_> {
         match self {
             Action::Move { x, y } => api
                 .my_character
-                .move_to(name, *x, *y)
+                .r#move(name, *x, *y)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Fight => api
@@ -110,14 +109,14 @@ impl Action<'_> {
                 .delete(name, item, *quantity)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::Deposit { item, quantity } => api
+            Action::DepositItem { items } => api
                 .my_character
-                .deposit(name, item, *quantity)
+                .deposit(name, items)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::Withdraw { item, quantity } => api
+            Action::WithdrawItem { items } => api
                 .my_character
-                .withdraw(name, item, *quantity)
+                .withdraw(name, items)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::DepositGold { quantity } => api

@@ -2,7 +2,7 @@ use crate::{
     Account, Bank, Character, Events, Items, Maps, Monsters, Resources, Server, Tasks, TasksRewards,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 pub struct Client {
     pub account: Arc<Account>,
@@ -14,14 +14,11 @@ pub struct Client {
     pub tasks: Arc<Tasks>,
     pub tasks_rewards: Arc<TasksRewards>,
     pub maps: Arc<Maps>,
-    pub bank: Arc<Bank>,
-    pub characters: Vec<Arc<Character>>,
 }
 
 impl Client {
     pub fn new(url: String, account_name: String, token: String) -> Self {
         let api = Arc::new(ArtifactApi::new(url, token.clone()));
-        let account = Arc::new(Account::new(&api, account_name));
         let bank = Arc::new(Bank::new(
             *api.bank.details().unwrap().data,
             api.bank.items(None).unwrap(),
@@ -38,13 +35,17 @@ impl Client {
         ));
         let maps = Arc::new(Maps::new(&api, events.clone()));
         let server = Arc::new(Server::new(api.clone()));
-        let characters = account
-            .characters_data()
-            .iter()
+        let characters = api
+            .account
+            .characters(&account_name)
+            .unwrap()
+            .data
+            .into_iter()
+            .enumerate()
             .map(|(id, data)| {
                 Character::new(
-                    *id,
-                    data.clone(),
+                    id,
+                    Arc::new(RwLock::new(Arc::new(data))),
                     bank.clone(),
                     items.clone(),
                     resources.clone(),
@@ -56,16 +57,15 @@ impl Client {
             })
             .map(Arc::new)
             .collect::<_>();
+        let account = Arc::new(Account::new(account_name, bank.clone(), characters));
         Self {
             account,
-            bank,
             items,
-            tasks: Arc::new(Tasks::new(api.clone())),
             monsters,
             resources,
-            characters,
             server,
             events,
+            tasks: Arc::new(Tasks::new(api.clone())),
             tasks_rewards,
             maps,
         }

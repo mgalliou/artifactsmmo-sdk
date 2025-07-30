@@ -221,16 +221,20 @@ impl Character {
         Ok(())
     }
 
-    pub fn withdraw(
-        &self,
-        item_code: &str,
-        quantity: i32,
-    ) -> Result<SimpleItemSchema, WithdrawError> {
-        self.can_withdraw(item_code, quantity)?;
-        Ok(self.inner.request_withdraw(item_code, quantity)?)
+    pub fn withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
+        self.can_withdraw_items(items)?;
+        Ok(self.inner.request_withdraw_item(items)?)
     }
 
-    pub fn can_withdraw(&self, item_code: &str, quantity: i32) -> Result<(), WithdrawError> {
+    pub fn can_withdraw_items(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
+        //TODO: add check for inventory slot and quantity availability
+        for item in items.iter() {
+            self.can_withdraw_item(&item.code, item.quantity)?
+        }
+        Ok(())
+    }
+
+    pub fn can_withdraw_item(&self, item_code: &str, quantity: i32) -> Result<(), WithdrawError> {
         if self.items.get(item_code).is_none() {
             return Err(WithdrawError::ItemNotFound);
         };
@@ -246,16 +250,20 @@ impl Character {
         Ok(())
     }
 
-    pub fn deposit(
-        &self,
-        item_code: &str,
-        quantity: i32,
-    ) -> Result<SimpleItemSchema, DepositError> {
-        self.can_deposit(item_code, quantity)?;
-        Ok(self.inner.request_deposit(item_code, quantity)?)
+    pub fn deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), DepositError> {
+        self.can_deposit_items(items)?;
+        Ok(self.inner.request_deposit_item(items)?)
     }
 
-    fn can_deposit(&self, item_code: &str, quantity: i32) -> Result<(), DepositError> {
+    pub fn can_deposit_items(&self, items: &[SimpleItemSchema]) -> Result<(), DepositError> {
+        //TODO: add check for bank slot availability
+        for item in items.iter() {
+            self.can_deposit_item(&item.code, item.quantity)?
+        }
+        Ok(())
+    }
+
+    fn can_deposit_item(&self, item_code: &str, quantity: i32) -> Result<(), DepositError> {
         if self.items.get(item_code).is_none() {
             return Err(DepositError::ItemNotFound);
         };
@@ -1141,19 +1149,19 @@ mod tests {
             },
         ]);
         assert!(matches!(
-            char.can_withdraw("random_item", 1),
+            char.can_withdraw_item("random_item", 1),
             Err(WithdrawError::ItemNotFound)
         ));
         assert!(matches!(
-            char.can_withdraw("copper_dagger", 2),
+            char.can_withdraw_item("copper_dagger", 2),
             Err(WithdrawError::InsufficientQuantity)
         ));
         assert!(matches!(
-            char.can_withdraw("iron_sword", 101),
+            char.can_withdraw_item("iron_sword", 101),
             Err(WithdrawError::InsufficientInventorySpace)
         ));
         assert!(matches!(
-            char.can_withdraw("iron_sword", 10),
+            char.can_withdraw_item("iron_sword", 10),
             Err(WithdrawError::NoBankOnMap)
         ));
         let char = Character::from(CharacterSchema {
@@ -1172,7 +1180,7 @@ mod tests {
                 quantity: 101,
             },
         ]);
-        assert!(char.can_withdraw("iron_sword", 10).is_ok());
+        assert!(char.can_withdraw_item("iron_sword", 10).is_ok());
     }
     //TODO: add more tests
 }

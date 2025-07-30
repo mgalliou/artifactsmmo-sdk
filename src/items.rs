@@ -41,7 +41,7 @@ impl PersistedData<HashMap<String, Arc<ItemSchema>>> for Items {
     fn data_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
         self.api
             .items
-            .all(None, None, None, None, None, None)
+            .all()
             .unwrap()
             .into_iter()
             .map(|item| (item.code.clone(), Arc::new(item)))

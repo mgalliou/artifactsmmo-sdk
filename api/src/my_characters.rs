@@ -61,7 +61,7 @@ impl MyCharacterApi {
         MyCharacterApi { configuration }
     }
 
-    pub fn move_to(
+    pub fn r#move(
         &self,
         name: &str,
         x: i32,
@@ -170,7 +170,7 @@ impl MyCharacterApi {
     pub fn deposit(
         &self,
         name: &str,
-        items: Vec<SimpleItemSchema>,
+        items: &[SimpleItemSchema],
     ) -> Result<
         BankItemTransactionResponseSchema,
         Error<ActionDepositBankItemMyNameActionBankDepositItemPostError>,
@@ -178,14 +178,14 @@ impl MyCharacterApi {
         action_deposit_bank_item_my_name_action_bank_deposit_item_post(
             &self.configuration,
             name,
-            items,
+            items.to_vec(),
         )
     }
 
     pub fn withdraw(
         &self,
         name: &str,
-        items: Vec<SimpleItemSchema>,
+        items: &[SimpleItemSchema],
     ) -> Result<
         BankItemTransactionResponseSchema,
         Error<ActionWithdrawBankItemMyNameActionBankWithdrawItemPostError>,
@@ -193,7 +193,7 @@ impl MyCharacterApi {
         action_withdraw_bank_item_my_name_action_bank_withdraw_item_post(
             &self.configuration,
             name,
-            items,
+            items.to_vec(),
         )
     }
 

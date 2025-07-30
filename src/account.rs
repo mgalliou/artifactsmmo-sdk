@@ -1,35 +1,20 @@
-use crate::char::CharacterData;
-use artifactsmmo_api_wrapper::ArtifactApi;
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::sync::Arc;
+
+use crate::{Bank, Character};
 
 #[derive(Default)]
 pub struct Account {
     pub name: String,
-    characters_data: Arc<HashMap<usize, CharacterData>>,
+    pub bank: Arc<Bank>,
+    pub characters: Vec<Arc<Character>>,
 }
 
 impl Account {
-    pub(crate) fn new(api: &Arc<ArtifactApi>, name: String) -> Self {
-        let characters_data = Arc::new(
-            api.account
-                .characters(&name)
-                .unwrap()
-                .data
-                .into_iter()
-                .enumerate()
-                .map(|(id, data)| (id, Arc::new(RwLock::new(Arc::new(data)))))
-                .collect::<_>(),
-        );
+    pub(crate) fn new(name: String, bank: Arc<Bank>, characters: Vec<Arc<Character>>) -> Self {
         Self {
             name,
-            characters_data,
+            bank,
+            characters,
         }
-    }
-
-    pub(crate) fn characters_data(&self) -> Arc<HashMap<usize, CharacterData>> {
-        self.characters_data.clone()
     }
 }

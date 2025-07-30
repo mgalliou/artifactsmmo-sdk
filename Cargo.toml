@@ -4,12 +4,11 @@ members = ["api"]
 
 [package]
 name = "artifactsmmo-sdk"
-version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-artifactsmmo-api-wrapper = { path = "api/", version = "0.1.0" }
-artifactsmmo-openapi = { path = "../artifactsmmo-openapi/", version = "4.3.0" }
+artifactsmmo-api-wrapper = { path = "api/" }
+artifactsmmo-openapi = { path = "../artifactsmmo-openapi/", version = "5.0" }
 chrono = "0.4"
 derive_more = { version = "2.0", features = ["try_from"] }
 downcast-rs = "2.0"

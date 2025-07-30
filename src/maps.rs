@@ -35,10 +35,7 @@ impl Maps {
         self.events.active().iter().for_each(|e| {
             if DateTime::parse_from_rfc3339(&e.expiration).unwrap() < Utc::now() {
                 if let Some(map) = self.data.get(&(e.map.x, e.map.y)) {
-                    let mut new_map = (*map.read().unwrap().clone()).clone();
-                    new_map.content = None;
-                    new_map.skin = e.previous_skin.clone();
-                    *map.write().unwrap() = Arc::new(new_map);
+                    *map.write().unwrap() = Arc::new(*e.previous_map.clone())
                 }
             }
         });
@@ -46,10 +43,7 @@ impl Maps {
         self.events.active().iter().for_each(|e| {
             if DateTime::parse_from_rfc3339(&e.expiration).unwrap() > Utc::now() {
                 if let Some(map) = self.data.get(&(e.map.x, e.map.y)) {
-                    let mut new_map = (*map.read().unwrap().clone()).clone();
-                    new_map.content = e.map.content.clone();
-                    new_map.skin = e.map.skin.clone();
-                    *map.write().unwrap() = Arc::new(new_map);
+                    *map.write().unwrap() = Arc::new(*e.map.clone())
                 }
             }
         });

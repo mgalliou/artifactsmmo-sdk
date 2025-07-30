@@ -41,7 +41,7 @@ dependencies = [
 
 [[package]]
 name = "artifactsmmo-openapi"
-version = "4.3.0"
+version = "5.0.0"
 dependencies = [
  "reqwest",
  "serde",
@@ -53,7 +53,7 @@ dependencies = [
 
 [[package]]
 name = "artifactsmmo-sdk"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "artifactsmmo-api-wrapper",
  "artifactsmmo-openapi",

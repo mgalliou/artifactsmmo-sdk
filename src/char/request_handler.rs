@@ -65,7 +65,7 @@ impl CharacterRequestHandler {
         let mut bank_details: Option<RwLockWriteGuard<'_, Arc<BankSchema>>> = None;
 
         self.wait_for_cooldown();
-        if action.is_deposit() || action.is_withdraw() {
+        if action.is_deposit_item() || action.is_withdraw_item() {
             bank_content = Some(
                 self.bank
                     .content
@@ -195,28 +195,14 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.details)
     }
 
-    pub fn request_deposit(
-        &self,
-        item: &str,
-        quantity: i32,
-    ) -> Result<SimpleItemSchema, RequestError> {
-        self.request_action(Action::Deposit { item, quantity })
-            .map(|_| SimpleItemSchema {
-                code: item.to_owned(),
-                quantity,
-            })
+    pub fn request_deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
+        self.request_action(Action::DepositItem { items })
+            .map(|_| ())
     }
 
-    pub fn request_withdraw(
-        &self,
-        item: &str,
-        quantity: i32,
-    ) -> Result<SimpleItemSchema, RequestError> {
-        self.request_action(Action::Withdraw { item, quantity })
-            .map(|_| SimpleItemSchema {
-                code: item.to_owned(),
-                quantity,
-            })
+    pub fn request_withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
+        self.request_action(Action::WithdrawItem { items })
+            .map(|_| ())
     }
 
     pub fn request_deposit_gold(&self, quantity: i32) -> Result<i32, RequestError> {
@@ -512,15 +498,15 @@ impl ResponseSchema for DeleteItemResponseSchema {
 
 impl ResponseSchema for BankItemTransactionResponseSchema {
     fn to_string(&self) -> String {
-        if self.data.cooldown.reason == ActionType::Withdraw {
+        if self.data.cooldown.reason == ActionType::WithdrawItem {
             format!(
-                "{}: withdrawed '{}' from the bank. {}s",
-                self.data.character.name, self.data.item.code, self.data.cooldown.remaining_seconds
+                "{}: withdrawed '{:?}' from the bank. {}s",
+                self.data.character.name, self.data.items, self.data.cooldown.remaining_seconds
             )
         } else {
             format!(
-                "{}: deposited '{}' to the bank. {}s",
-                self.data.character.name, self.data.item.code, self.data.cooldown.remaining_seconds
+                "{}: deposited '{:?}' to the bank. {}s",
+                self.data.character.name, self.data.items, self.data.cooldown.remaining_seconds
             )
         }
     }
@@ -532,7 +518,7 @@ impl ResponseSchema for BankItemTransactionResponseSchema {
 
 impl ResponseSchema for BankGoldTransactionResponseSchema {
     fn to_string(&self) -> String {
-        if self.data.cooldown.reason == ActionType::Withdraw {
+        if self.data.cooldown.reason == ActionType::WithdrawGold {
             format!(
                 "{}: withdrawed gold from the bank. {}s",
                 self.data.character.name, self.data.cooldown.remaining_seconds
