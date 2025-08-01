@@ -1,7 +1,7 @@
 use artifactsmmo_openapi::models::{BankSchema, SimpleItemSchema};
 use std::sync::{Arc, RwLock};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Bank {
     pub details: RwLock<Arc<BankSchema>>,
     pub content: RwLock<Arc<Vec<SimpleItemSchema>>>,

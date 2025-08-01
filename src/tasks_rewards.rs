@@ -4,7 +4,7 @@ use artifactsmmo_openapi::models::DropRateSchema;
 use itertools::Itertools;
 use std::sync::{Arc, RwLock};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct TasksRewards {
     data: RwLock<Vec<Arc<DropRateSchema>>>,
     api: Arc<ArtifactApi>,

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{Bank, Character};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Account {
     pub name: String,
     pub bank: Arc<Bank>,

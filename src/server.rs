@@ -4,7 +4,7 @@ use chrono::{DateTime, TimeDelta, Utc};
 use log::{debug, error};
 use std::sync::{Arc, RwLock};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Server {
     api: Arc<ArtifactApi>,
     pub server_offset: RwLock<TimeDelta>,

@@ -4,6 +4,7 @@ use crate::{
 use artifactsmmo_api_wrapper::ArtifactApi;
 use std::sync::{Arc, RwLock};
 
+#[derive(Default, Debug)]
 pub struct Client {
     pub account: Arc<Account>,
     pub server: Arc<Server>,
@@ -18,7 +19,7 @@ pub struct Client {
 
 impl Client {
     pub fn new(url: String, account_name: String, token: String) -> Self {
-        let api = Arc::new(ArtifactApi::new(url, token.clone()));
+        let api = Arc::new(ArtifactApi::new(url, token));
         let bank = Arc::new(Bank::new(
             *api.bank.details().unwrap().data,
             api.bank.items(None).unwrap(),

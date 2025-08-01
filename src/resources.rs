@@ -7,7 +7,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Resources {
     data: RwLock<HashMap<String, Arc<ResourceSchema>>>,
     api: Arc<ArtifactApi>,

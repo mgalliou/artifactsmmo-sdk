@@ -22,6 +22,7 @@ use sdk_derive::FromRequestError;
 use std::sync::Arc;
 use thiserror::Error;
 
+#[derive(Default, Debug)]
 pub struct Character {
     pub id: usize,
     inner: CharacterRequestHandler,

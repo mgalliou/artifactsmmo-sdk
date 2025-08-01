@@ -26,7 +26,7 @@ use std::{
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Items {
     data: RwLock<HashMap<String, Arc<ItemSchema>>>,
     api: Arc<ArtifactApi>,

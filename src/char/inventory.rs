@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use super::CharacterData;
 
+#[derive(Default, Debug)]
 pub struct Inventory {
     data: CharacterData,
     items: Arc<Items>,

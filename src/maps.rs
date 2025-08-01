@@ -7,7 +7,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Maps {
     data: HashMap<(i32, i32), RwLock<Arc<MapSchema>>>,
     events: Arc<Events>,

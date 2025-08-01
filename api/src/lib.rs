@@ -25,7 +25,7 @@ pub mod resources;
 pub mod server;
 pub mod tasks;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct ArtifactApi {
     pub account: AccountApi,
     pub bank: BankApi,

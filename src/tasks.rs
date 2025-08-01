@@ -4,6 +4,7 @@ use artifactsmmo_openapi::models::TaskFullSchema;
 use itertools::Itertools;
 use std::sync::{Arc, RwLock};
 
+#[derive(Default, Debug)]
 pub struct Tasks {
     data: RwLock<Vec<Arc<TaskFullSchema>>>,
     api: Arc<ArtifactApi>,

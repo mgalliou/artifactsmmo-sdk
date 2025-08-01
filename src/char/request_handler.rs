@@ -37,7 +37,7 @@ use thiserror::Error;
 /// First layer of abstraction around the character API.
 /// It is responsible for handling the character action requests responce and errors
 /// by updating character and bank data, and retrying requests in case of errors.
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct CharacterRequestHandler {
     api: Arc<ArtifactApi>,
     data: CharacterData,

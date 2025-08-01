@@ -6,7 +6,7 @@ use itertools::Itertools;
 use log::debug;
 use std::sync::{Arc, RwLock};
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Events {
     data: RwLock<Vec<Arc<EventSchema>>>,
     api: Arc<ArtifactApi>,
