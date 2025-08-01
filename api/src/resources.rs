@@ -21,7 +21,7 @@ impl ResourcesApi {
         Self { configuration }
     }
 
-    pub fn all(
+    pub async fn all(
         &self,
         min_level: Option<i32>,
         max_level: Option<i32>,
@@ -40,7 +40,7 @@ impl ResourcesApi {
                 drop,
                 Some(current_page),
                 Some(100),
-            );
+            ).await;
             match resp {
                 Ok(resp) => {
                     resources.extend(resp.data);
@@ -60,10 +60,10 @@ impl ResourcesApi {
         Ok(resources)
     }
 
-    pub fn info(
+    pub async fn info(
         &self,
         code: &str,
     ) -> Result<ResourceResponseSchema, Error<GetResourceResourcesCodeGetError>> {
-        get_resource_resources_code_get(&self.configuration, code)
+        get_resource_resources_code_get(&self.configuration, code).await
     }
 }

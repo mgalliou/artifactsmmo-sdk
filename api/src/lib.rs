@@ -41,7 +41,7 @@ pub struct ArtifactApi {
 }
 
 impl ArtifactApi {
-    pub fn new(base_path: String, token: String) -> Self {
+    pub async fn new(base_path: String, token: String) -> Self {
         let conf = Arc::new({
             let mut c = Configuration::new();
             c.base_path = base_path;

@@ -1,5 +1,6 @@
 use crate::items::{ItemSchemaExt, Items};
-use artifactsmmo_openapi::models::ItemSchema;
+use artifactsmmo_openapi::models::{InventorySlot, ItemSchema};
+use futures::{stream, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use std::sync::Arc;
 
@@ -16,10 +17,10 @@ impl Inventory {
     }
 
     /// Returns the amount of item in the `Character` inventory.
-    pub fn total_items(&self) -> i32 {
+    pub async fn total_items(&self) -> i32 {
         self.data
             .read()
-            .unwrap()
+            .await
             .inventory
             .iter()
             .flatten()
@@ -28,23 +29,23 @@ impl Inventory {
     }
 
     /// Returns the maximum number of item the inventory can contain.
-    pub fn max_items(&self) -> i32 {
-        self.data.read().unwrap().inventory_max_items
+    pub async fn max_items(&self) -> i32 {
+        self.data.read().await.inventory_max_items
     }
 
     /// Returns the free spaces in the `Character` inventory.
-    pub fn free_space(&self) -> i32 {
-        self.max_items() - self.total_items()
+    pub async fn free_space(&self) -> i32 {
+        self.max_items().await - self.total_items().await
     }
 
     /// Checks if the `Character` inventory is full (all slots are occupied or
     /// `inventory_max_items` is reached).
-    pub fn is_full(&self) -> bool {
-        self.total_items() >= self.max_items()
+    pub async fn is_full(&self) -> bool {
+        self.total_items().await >= self.max_items().await
             || self
                 .data
                 .read()
-                .unwrap()
+                .await
                 .inventory
                 .iter()
                 .flatten()
@@ -52,10 +53,10 @@ impl Inventory {
     }
 
     /// Returns the amount of the given item `code` in the `Character` inventory.
-    pub fn total_of(&self, item: &str) -> i32 {
+    pub async fn total_of(&self, item: &str) -> i32 {
         self.data
             .read()
-            .unwrap()
+            .await
             .inventory
             .iter()
             .flatten()
@@ -63,25 +64,23 @@ impl Inventory {
             .map_or(0, |i| i.quantity)
     }
 
-    pub fn contains_mats_for(&self, item: &str, quantity: i32) -> bool {
-        self.items
-            .mats_of(item)
-            .iter()
-            .all(|m| self.total_of(&m.code) >= m.quantity * quantity)
+    pub async fn contains_mats_for(&self, item: &str, quantity: i32) -> bool {
+        stream::iter(self.items.mats_of(item).await)
+            .all(async |m| self.total_of(&m.code).await >= m.quantity * quantity)
+            .await
     }
 
-    pub fn consumable_food(&self) -> Vec<Arc<ItemSchema>> {
-        self.data
-            .read()
-            .unwrap()
-            .inventory
-            .iter()
-            .flatten()
-            .filter_map(|i| {
+    pub async fn consumable_food(&self) -> Vec<Arc<ItemSchema>> {
+        let data = self.data.read().await;
+
+        stream::iter(data.inventory.iter().flatten())
+            .filter_map(async |slot| {
                 self.items
-                    .get(&i.code)
-                    .filter(|i| i.is_consumable_at(self.data.read().unwrap().level))
+                    .get(&slot.code)
+                    .await
+                    .filter(|i| i.is_consumable_at(data.level))
             })
-            .collect_vec()
+            .collect::<Vec<_>>()
+            .await
     }
 }

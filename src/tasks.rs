@@ -2,7 +2,8 @@ use crate::PersistedData;
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::TaskFullSchema;
 use itertools::Itertools;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub struct Tasks {
     data: RwLock<Vec<Arc<TaskFullSchema>>>,
@@ -12,28 +13,29 @@ pub struct Tasks {
 impl PersistedData<Vec<Arc<TaskFullSchema>>> for Tasks {
     const PATH: &'static str = ".cache/tasks.json";
 
-    fn data_from_api(&self) -> Vec<Arc<TaskFullSchema>> {
+    async fn data_from_api(&self) -> Vec<Arc<TaskFullSchema>> {
         self.api
             .tasks
             .all(None, None, None, None)
+            .await
             .unwrap()
             .into_iter()
             .map(Arc::new)
             .collect_vec()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    async fn refresh_data(&self) {
+        *self.data.write().unwrap() = self.data_from_api().await;
     }
 }
 
 impl Tasks {
-    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
+    pub(crate) async fn new(api: Arc<ArtifactApi>) -> Self {
         let tasks = Self {
             data: Default::default(),
             api,
         };
-        *tasks.data.write().unwrap() = tasks.retrieve_data();
+        *tasks.data.write().unwrap() = tasks.retrieve_data().await;
         tasks
     }
 

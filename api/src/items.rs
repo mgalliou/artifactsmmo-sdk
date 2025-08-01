@@ -21,7 +21,7 @@ impl ItemsApi {
         Self { configuration }
     }
 
-    pub fn all(&self) -> Result<Vec<ItemSchema>, Error<GetAllItemsItemsGetError>> {
+    pub async fn all(&self) -> Result<Vec<ItemSchema>, Error<GetAllItemsItemsGetError>> {
         let mut items: Vec<ItemSchema> = vec![];
         let mut current_page = 1;
         let mut finished = false;
@@ -36,7 +36,7 @@ impl ItemsApi {
                 None,
                 Some(current_page),
                 Some(100),
-            );
+            ).await;
             match resp {
                 Ok(resp) => {
                     items.extend(resp.data);
@@ -56,7 +56,7 @@ impl ItemsApi {
         Ok(items)
     }
 
-    pub fn info(&self, code: &str) -> Result<ItemResponseSchema, Error<GetItemItemsCodeGetError>> {
-        get_item_items_code_get(&self.configuration, code)
+    pub async fn info(&self, code: &str) -> Result<ItemResponseSchema, Error<GetItemItemsCodeGetError>> {
+        get_item_items_code_get(&self.configuration, code).await
     }
 }

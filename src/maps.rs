@@ -4,8 +4,9 @@ use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema};
 use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
+use tokio::sync::RwLock;
 
 #[derive(Default)]
 pub struct Maps {
@@ -14,11 +15,12 @@ pub struct Maps {
 }
 
 impl Maps {
-    pub(crate) fn new(api: &Arc<ArtifactApi>, events: Arc<Events>) -> Self {
+    pub(crate) async fn new(api: &Arc<ArtifactApi>, events: Arc<Events>) -> Self {
         Self {
             data: api
                 .maps
                 .all(None, None)
+                .await
                 .unwrap()
                 .into_iter()
                 .map(|m| ((m.x, m.y), RwLock::new(Arc::new(m))))

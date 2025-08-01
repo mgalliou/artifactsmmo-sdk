@@ -17,13 +17,17 @@ itertools = "0.14"
 log = "0.4"
 nutype = "0.6"
 ordered-float = "5.0"
-reqwest = { version = "^0.12", features = ["json", "blocking", "multipart"] }
+reqwest = { version = "^0.12", default-features = false, features = ["json", "multipart", "rustls-tls"] }
+tokio = { version = "1", features = ["full"] }
 sdk_derive = { version = "0.1", path = "derive" }
 serde = { version = "^1.0", features = ["rc"] }
 serde_json = "^1.0"
 strum = "0.27"
 strum_macros = "0.27"
 thiserror = "2.0"
+async-recursion = "1.1.1"
+futures = "0.3.31"
+async-trait = "0.1.88"
 
 [target.x86_64-pc-windows-msvc]
 rustflags = ["-C", "link-arg=-fuse-ld=lld"]

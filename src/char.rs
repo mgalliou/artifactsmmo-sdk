@@ -1,7 +1,8 @@
 use crate::gear::Slot;
 use artifactsmmo_openapi::models::{CharacterSchema, TaskType};
 use chrono::{DateTime, Utc};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub use character::Character;
 pub use inventory::Inventory;
@@ -16,24 +17,24 @@ pub mod skill;
 pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 
 pub trait HasCharacterData {
-    fn data(&self) -> Arc<CharacterSchema>;
+    async fn data(&self) -> Arc<CharacterSchema>;
 
-    fn name(&self) -> String {
-        self.data().name.to_owned()
+    async fn name(&self) -> String {
+        self.data().await.name.to_owned()
     }
 
     /// Returns the `Character` position (coordinates).
-    fn position(&self) -> (i32, i32) {
-        let d = self.data();
+    async fn position(&self) -> (i32, i32) {
+        let d = self.data().await;
         (d.x, d.y)
     }
 
-    fn level(&self) -> i32 {
-        self.data().level
+    async fn level(&self) -> i32 {
+        self.data().await.level
     }
 
-    fn skill_xp(&self, skill: Skill) -> i32 {
-        let d = self.data();
+    async fn skill_xp(&self, skill: Skill) -> i32 {
+        let d = self.data().await;
         match skill {
             Skill::Combat => d.xp,
             Skill::Mining => d.mining_xp,
@@ -47,8 +48,8 @@ pub trait HasCharacterData {
         }
     }
 
-    fn skill_max_xp(&self, skill: Skill) -> i32 {
-        let d = self.data();
+    async fn skill_max_xp(&self, skill: Skill) -> i32 {
+        let d = self.data().await;
         match skill {
             Skill::Combat => d.max_xp,
             Skill::Mining => d.mining_max_xp,
@@ -62,21 +63,21 @@ pub trait HasCharacterData {
         }
     }
 
-    fn max_health(&self) -> i32 {
-        self.data().max_hp
+    async fn max_health(&self) -> i32 {
+        self.data().await.max_hp
     }
 
-    fn health(&self) -> i32 {
-        self.data().hp
+    async fn health(&self) -> i32 {
+        self.data().await.hp
     }
 
-    fn missing_hp(&self) -> i32 {
-        self.max_health() - self.health()
+    async fn missing_hp(&self) -> i32 {
+        self.max_health().await - self.health().await
     }
 
     /// Returns the `Character` level in the given `skill`.
-    fn skill_level(&self, skill: Skill) -> i32 {
-        let d = self.data();
+    async fn skill_level(&self, skill: Skill) -> i32 {
+        let d = self.data().await;
         match skill {
             Skill::Combat => d.level,
             Skill::Mining => d.mining_level,
@@ -90,14 +91,15 @@ pub trait HasCharacterData {
         }
     }
 
-    fn gold(&self) -> i32 {
-        self.data().gold
+    async fn gold(&self) -> i32 {
+        self.data().await.gold
     }
 
-    fn quantity_in_slot(&self, s: Slot) -> i32 {
+    // TODO: return 1 if item is equipped
+    async fn quantity_in_slot(&self, s: Slot) -> i32 {
         match s {
-            Slot::Utility1 => self.data().utility1_slot_quantity,
-            Slot::Utility2 => self.data().utility2_slot_quantity,
+            Slot::Utility1 => self.data().await.utility1_slot_quantity,
+            Slot::Utility2 => self.data().await.utility2_slot_quantity,
             Slot::Weapon
             | Slot::Shield
             | Slot::Helmet
@@ -115,37 +117,37 @@ pub trait HasCharacterData {
         }
     }
 
-    fn task(&self) -> String {
-        self.data().task.to_owned()
+    async fn task(&self) -> String {
+        self.data().await.task.to_owned()
     }
 
-    fn task_type(&self) -> Option<TaskType> {
-        match self.data().task_type.as_str() {
+    async fn task_type(&self) -> Option<TaskType> {
+        match self.data().await.task_type.as_str() {
             "monsters" => Some(TaskType::Monsters),
             "items" => Some(TaskType::Items),
             _ => None,
         }
     }
 
-    fn task_progress(&self) -> i32 {
-        self.data().task_progress
+    async fn task_progress(&self) -> i32 {
+        self.data().await.task_progress
     }
 
-    fn task_total(&self) -> i32 {
-        self.data().task_total
+    async fn task_total(&self) -> i32 {
+        self.data().await.task_total
     }
 
-    fn task_missing(&self) -> i32 {
-        self.task_total() - self.task_progress()
+    async fn task_missing(&self) -> i32 {
+        self.task_total().await - self.task_progress().await
     }
 
-    fn task_finished(&self) -> bool {
-        !self.task().is_empty() && self.task_progress() >= self.task_total()
+    async fn task_finished(&self) -> bool {
+        !self.task().await.is_empty() && self.task_progress().await >= self.task_total().await
     }
 
     /// Returns the cooldown expiration timestamp of the `Character`.
-    fn cooldown_expiration(&self) -> Option<DateTime<Utc>> {
-        self.data()
+    async fn cooldown_expiration(&self) -> Option<DateTime<Utc>> {
+        self.data().await
             .cooldown_expiration
             .as_ref()
             .map(|cd| DateTime::parse_from_rfc3339(cd).ok().map(|dt| dt.to_utc()))?
@@ -174,8 +176,8 @@ pub trait HasCharacterData {
     // }
 
     /// Returns the item equiped in the `given` slot.
-    fn equiped_in(&self, slot: Slot) -> String {
-        let d = self.data();
+    async fn equiped_in(&self, slot: Slot) -> String {
+        let d = self.data().await;
         match slot {
             Slot::Weapon => &d.weapon_slot,
             Slot::Shield => &d.shield_slot,

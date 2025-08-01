@@ -15,7 +15,7 @@ impl ServerApi {
     }
 
     //TODO: return result
-    pub fn status(&self) -> Option<StatusResponseSchema> {
-        get_server_details_get(&self.configuration).ok()
+    pub async fn status(&self) -> Option<StatusResponseSchema> {
+        get_server_details_get(&self.configuration).await.ok()
     }
 }

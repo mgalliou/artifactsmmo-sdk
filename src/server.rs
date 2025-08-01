@@ -2,7 +2,8 @@ use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::StatusResponseSchema;
 use chrono::{DateTime, TimeDelta, Utc};
 use log::{debug, error};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Default)]
 pub struct Server {
@@ -11,30 +12,30 @@ pub struct Server {
 }
 
 impl Server {
-    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
+    pub(crate) async fn new(api: Arc<ArtifactApi>) -> Self {
         let server = Self {
             api,
             server_offset: RwLock::new(TimeDelta::default()),
         };
-        server.update_offset();
+        server.update_offset().await;
         server
     }
 
-    pub fn status(&self) -> Option<StatusResponseSchema> {
-        self.api.server.status()
+    pub async fn status(&self) -> Option<StatusResponseSchema> {
+        self.api.server.status().await
     }
 
-    pub fn time(&self) -> Option<DateTime<Utc>> {
-        let status = self.status()?;
+    pub async fn time(&self) -> Option<DateTime<Utc>> {
+        let status = self.status().await?;
         let Ok(time) = DateTime::parse_from_rfc3339(&status.data.server_time) else {
             return None;
         };
         Some(time.to_utc())
     }
 
-    pub fn update_offset(&self) {
+    pub async fn update_offset(&self) {
         let now = Utc::now();
-        let Some(server_time) = self.time() else {
+        let Some(server_time) = self.time().await else {
             error!("failed to update time offset");
             return;
         };

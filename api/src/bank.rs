@@ -21,11 +21,11 @@ impl BankApi {
         BankApi { configuration }
     }
 
-    pub fn details(&self) -> Result<BankResponseSchema, Error<GetBankDetailsMyBankGetError>> {
-        get_bank_details_my_bank_get(&self.configuration)
+    pub async fn details(&self) -> Result<BankResponseSchema, Error<GetBankDetailsMyBankGetError>> {
+        get_bank_details_my_bank_get(&self.configuration).await
     }
 
-    pub fn items(
+    pub async fn items(
         &self,
         code: Option<&str>,
     ) -> Result<Vec<SimpleItemSchema>, Error<GetBankItemsMyBankItemsGetError>> {
@@ -38,7 +38,7 @@ impl BankApi {
                 code,
                 Some(current_page),
                 Some(100),
-            );
+            ).await;
             match resp {
                 Ok(resp) => {
                     items.extend(resp.data);

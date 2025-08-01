@@ -4,8 +4,9 @@ use artifactsmmo_openapi::models::MonsterSchema;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::Arc,
 };
+use tokio::sync::RwLock;
 
 #[derive(Default)]
 pub struct Monsters {
@@ -17,29 +18,30 @@ pub struct Monsters {
 impl PersistedData<HashMap<String, Arc<MonsterSchema>>> for Monsters {
     const PATH: &'static str = ".cache/monsters.json";
 
-    fn data_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
+    async fn data_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
         self.api
             .monsters
             .all(None, None, None)
+            .await
             .unwrap()
             .into_iter()
             .map(|m| (m.code.clone(), Arc::new(m)))
             .collect()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    async fn refresh_data(&self) {
+        *self.data.write().unwrap() = self.data_from_api().await;
     }
 }
 
 impl Monsters {
-    pub(crate) fn new(api: Arc<ArtifactApi>, events: Arc<Events>) -> Self {
+    pub(crate) async fn new(api: Arc<ArtifactApi>, events: Arc<Events>) -> Self {
         let monsters = Self {
             data: Default::default(),
             api,
             events,
         };
-        *monsters.data.write().unwrap() = monsters.retrieve_data();
+        *monsters.data.write().unwrap() = monsters.retrieve_data().await;
         monsters
     }
 
@@ -48,7 +50,7 @@ impl Monsters {
     }
 
     pub fn all(&self) -> Vec<Arc<MonsterSchema>> {
-        self.data.read().unwrap().values().cloned().collect_vec()
+        self.data.read().await.unwrap().values().cloned().collect_vec()
     }
 
     pub fn dropping(&self, item: &str) -> Vec<Arc<MonsterSchema>> {

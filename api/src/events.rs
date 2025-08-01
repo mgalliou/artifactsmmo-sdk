@@ -21,13 +21,13 @@ impl EventsApi {
         EventsApi { configuration }
     }
 
-    pub fn all(&self) -> Result<Vec<EventSchema>, Error<GetAllEventsEventsGetError>> {
+    pub async fn all(&self) -> Result<Vec<EventSchema>, Error<GetAllEventsEventsGetError>> {
         let mut events: Vec<EventSchema> = vec![];
         let mut current_page = 1;
         let mut finished = false;
         while !finished {
             let resp =
-                get_all_events_events_get(&self.configuration, None, Some(current_page), Some(100));
+                get_all_events_events_get(&self.configuration, None, Some(current_page), Some(100)).await;
             match resp {
                 Ok(resp) => {
                     events.extend(resp.data);
@@ -47,7 +47,7 @@ impl EventsApi {
         Ok(events)
     }
 
-    pub fn active(
+    pub async fn active(
         &self,
     ) -> Result<Vec<ActiveEventSchema>, Error<GetAllActiveEventsEventsActiveGetError>> {
         let mut events: Vec<ActiveEventSchema> = vec![];
@@ -58,7 +58,7 @@ impl EventsApi {
                 &self.configuration,
                 Some(current_page),
                 Some(100),
-            );
+            ).await;
             match resp {
                 Ok(resp) => {
                     events.extend(resp.data);

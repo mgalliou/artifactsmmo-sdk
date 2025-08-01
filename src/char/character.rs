@@ -63,53 +63,53 @@ impl Character {
         }
     }
 
-    fn map(&self) -> Arc<MapSchema> {
-        let (x, y) = self.position();
+    async fn map(&self) -> Arc<MapSchema> {
+        let (x, y) = self.position().await;
         self.maps.get(x, y).unwrap()
     }
 
-    pub fn fight(&self) -> Result<FightSchema, FightError> {
-        self.can_fight()?;
-        Ok(self.inner.request_fight()?)
+    pub async fn fight(&self) -> Result<FightSchema, FightError> {
+        self.can_fight().await?;
+        Ok(self.inner.request_fight().await?)
     }
 
-    pub fn can_fight(&self) -> Result<(), FightError> {
-        let Some(monster_code) = self.map().monster() else {
+    pub async fn can_fight(&self) -> Result<(), FightError> {
+        let Some(monster_code) = self.map().await.monster() else {
             return Err(FightError::NoMonsterOnMap);
         };
         let Some(monster) = self.monsters.get(&monster_code) else {
             return Err(FightError::NoMonsterOnMap);
         };
-        if self.inventory.free_space() < monster.max_drop_quantity() {
+        if self.inventory.free_space().await < monster.max_drop_quantity() {
             return Err(FightError::InsufficientInventorySpace);
         }
         Ok(())
     }
 
-    pub fn gather(&self) -> Result<SkillDataSchema, GatherError> {
-        self.can_gather()?;
-        Ok(self.inner.request_gather()?)
+    pub async fn gather(&self) -> Result<SkillDataSchema, GatherError> {
+        self.can_gather().await?;
+        Ok(self.inner.request_gather().await?)
     }
 
-    pub fn can_gather(&self) -> Result<(), GatherError> {
-        let Some(resource_code) = self.map().resource() else {
+    pub async fn can_gather(&self) -> Result<(), GatherError> {
+        let Some(resource_code) = self.map().await.resource() else {
             return Err(GatherError::NoResourceOnMap);
         };
-        let Some(resource) = self.resources.get(&resource_code) else {
+        let Some(resource) = self.resources.get(&resource_code).await else {
             return Err(GatherError::NoResourceOnMap);
         };
-        if self.skill_level(resource.skill.into()) < resource.level {
+        if self.skill_level(resource.skill.into()).await < resource.level {
             return Err(GatherError::SkillLevelInsufficient);
         }
-        if self.inventory.free_space() < resource.max_drop_quantity() {
+        if self.inventory.free_space().await < resource.max_drop_quantity() {
             return Err(GatherError::InsufficientInventorySpace);
         }
         Ok(())
     }
 
-    pub fn r#move(&self, x: i32, y: i32) -> Result<MapSchema, MoveError> {
+    pub async fn r#move(&self, x: i32, y: i32) -> Result<MapSchema, MoveError> {
         self.can_move(x, y)?;
-        Ok(self.inner.request_move(x, y)?)
+        Ok(self.inner.request_move(x, y).await?)
     }
 
     pub fn can_move(&self, x: i32, y: i32) -> Result<(), MoveError> {
@@ -119,70 +119,74 @@ impl Character {
         Ok(())
     }
 
-    pub fn rest(&self) -> Result<i32, RestError> {
-        if self.health() < self.max_health() {
-            return Ok(self.inner.request_rest()?);
+    pub async fn rest(&self) -> Result<i32, RestError> {
+        if self.health().await < self.max_health().await {
+            return Ok(self.inner.request_rest().await?);
         }
         Ok(0)
     }
 
-    pub fn r#use(&self, item_code: &str, quantity: i32) -> Result<(), UseError> {
-        self.can_use(item_code, quantity)?;
-        Ok(self.inner.request_use_item(item_code, quantity)?)
+    pub async fn r#use(&self, item_code: &str, quantity: i32) -> Result<(), UseError> {
+        self.can_use(item_code, quantity).await?;
+        Ok(self.inner.request_use_item(item_code, quantity).await?)
     }
 
-    pub fn can_use(&self, item_code: &str, quantity: i32) -> Result<(), UseError> {
-        let Some(item) = self.items.get(item_code) else {
+    pub async fn can_use(&self, item_code: &str, quantity: i32) -> Result<(), UseError> {
+        let Some(item) = self.items.get(item_code).await else {
             return Err(UseError::ItemNotFound);
         };
         if !item.is_consumable() {
             return Err(UseError::ItemNotConsumable);
         }
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory.total_of(item_code).await < quantity {
             return Err(UseError::InsufficientQuantity);
         }
-        if self.level() < item.level {
+        if self.level().await < item.level {
             return Err(UseError::InsufficientCharacterLevel);
         }
         Ok(())
     }
 
-    pub fn craft(&self, item_code: &str, quantity: i32) -> Result<SkillInfoSchema, CraftError> {
-        self.can_craft(item_code, quantity)?;
-        Ok(self.inner.request_craft(item_code, quantity)?)
+    pub async fn craft(
+        &self,
+        item_code: &str,
+        quantity: i32,
+    ) -> Result<SkillInfoSchema, CraftError> {
+        self.can_craft(item_code, quantity).await?;
+        Ok(self.inner.request_craft(item_code, quantity).await?)
     }
 
-    pub fn can_craft(&self, item_code: &str, quantity: i32) -> Result<(), CraftError> {
-        let Some(item) = self.items.get(item_code) else {
+    pub async fn can_craft(&self, item_code: &str, quantity: i32) -> Result<(), CraftError> {
+        let Some(item) = self.items.get(item_code).await else {
             return Err(CraftError::ItemNotFound);
         };
         let Some(skill) = item.skill_to_craft() else {
             return Err(CraftError::ItemNotCraftable);
         };
-        if self.skill_level(skill) < item.level {
+        if self.skill_level(skill).await < item.level {
             return Err(CraftError::InsufficientSkillLevel);
         }
-        if !self.inventory.contains_mats_for(item_code, quantity) {
+        if !self.inventory.contains_mats_for(item_code, quantity).await {
             return Err(CraftError::InsufficientMaterials);
         }
         // TODO: check if InssuficientInventorySpace can happen
-        if !self.map().content_code_is(skill.as_ref()) {
+        if !self.map().await.content_code_is(skill.as_ref()) {
             return Err(CraftError::NoWorkshopOnMap);
         }
         Ok(())
     }
 
-    pub fn recycle(
+    pub async fn recycle(
         &self,
         item_code: &str,
         quantity: i32,
     ) -> Result<RecyclingItemsSchema, RecycleError> {
-        self.can_recycle(item_code, quantity)?;
-        Ok(self.inner.request_recycle(item_code, quantity)?)
+        self.can_recycle(item_code, quantity).await?;
+        Ok(self.inner.request_recycle(item_code, quantity).await?)
     }
 
-    pub fn can_recycle(&self, item_code: &str, quantity: i32) -> Result<(), RecycleError> {
-        let Some(item) = self.items.get(item_code) else {
+    pub async fn can_recycle(&self, item_code: &str, quantity: i32) -> Result<(), RecycleError> {
+        let Some(item) = self.items.get(item_code).await else {
             return Err(RecycleError::ItemNotFound);
         };
         let Some(skill) = item.skill_to_craft() else {
@@ -191,296 +195,321 @@ impl Character {
         if skill.is_cooking() || skill.is_alchemy() {
             return Err(RecycleError::ItemNotRecyclable);
         }
-        if self.skill_level(skill) < item.level {
+        if self.skill_level(skill).await < item.level {
             return Err(RecycleError::InsufficientSkillLevel);
         }
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory.total_of(item_code).await < quantity {
             return Err(RecycleError::InsufficientQuantity);
         }
-        if self.inventory.free_space() + quantity < item.recycled_quantity() {
+        if self.inventory.free_space().await + quantity < item.recycled_quantity() {
             return Err(RecycleError::InsufficientInventorySpace);
         }
-        if !self.map().content_code_is(skill.as_ref()) {
+        if !self.map().await.content_code_is(skill.as_ref()) {
             return Err(RecycleError::NoWorkshopOnMap);
         }
         Ok(())
     }
 
-    pub fn delete(&self, item_code: &str, quantity: i32) -> Result<SimpleItemSchema, DeleteError> {
-        self.can_delete(item_code, quantity)?;
-        Ok(self.inner.request_delete(item_code, quantity)?)
+    pub async fn delete(
+        &self,
+        item_code: &str,
+        quantity: i32,
+    ) -> Result<SimpleItemSchema, DeleteError> {
+        self.can_delete(item_code, quantity).await?;
+        Ok(self.inner.request_delete(item_code, quantity).await?)
     }
 
-    pub fn can_delete(&self, item_code: &str, quantity: i32) -> Result<(), DeleteError> {
-        if self.items.get(item_code).is_none() {
+    pub async fn can_delete(&self, item_code: &str, quantity: i32) -> Result<(), DeleteError> {
+        if self.items.get(item_code).await.is_none() {
             return Err(DeleteError::ItemNotFound);
         };
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory.total_of(item_code).await < quantity {
             return Err(DeleteError::InsufficientQuantity);
         }
         Ok(())
     }
 
-    pub fn withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
-        self.can_withdraw_items(items)?;
-        Ok(self.inner.request_withdraw_item(items)?)
+    pub async fn withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
+        self.can_withdraw_items(items).await?;
+        Ok(self.inner.request_withdraw_item(items).await?)
     }
 
-    pub fn can_withdraw_items(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
+    pub async fn can_withdraw_items(
+        &self,
+        items: &[SimpleItemSchema],
+    ) -> Result<(), WithdrawError> {
         //TODO: add check for inventory slot and quantity availability
         for item in items.iter() {
-            self.can_withdraw_item(&item.code, item.quantity)?
+            self.can_withdraw_item(&item.code, item.quantity).await?
         }
         Ok(())
     }
 
-    pub fn can_withdraw_item(&self, item_code: &str, quantity: i32) -> Result<(), WithdrawError> {
-        if self.items.get(item_code).is_none() {
+    pub async fn can_withdraw_item(
+        &self,
+        item_code: &str,
+        quantity: i32,
+    ) -> Result<(), WithdrawError> {
+        if self.items.get(item_code).await.is_none() {
             return Err(WithdrawError::ItemNotFound);
         };
-        if self.bank.total_of(item_code) < quantity {
+        if self.bank.total_of(item_code).await < quantity {
             return Err(WithdrawError::InsufficientQuantity);
         }
-        if self.inventory.free_space() < quantity {
+        if self.inventory.free_space().await < quantity {
             return Err(WithdrawError::InsufficientInventorySpace);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.map().await.content_type_is(MapContentType::Bank) {
             return Err(WithdrawError::NoBankOnMap);
         }
         Ok(())
     }
 
-    pub fn deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), DepositError> {
-        self.can_deposit_items(items)?;
-        Ok(self.inner.request_deposit_item(items)?)
+    pub async fn deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), DepositError> {
+        self.can_deposit_items(items).await?;
+        Ok(self.inner.request_deposit_item(items).await?)
     }
 
-    pub fn can_deposit_items(&self, items: &[SimpleItemSchema]) -> Result<(), DepositError> {
+    pub async fn can_deposit_items(&self, items: &[SimpleItemSchema]) -> Result<(), DepositError> {
         //TODO: add check for bank slot availability
         for item in items.iter() {
-            self.can_deposit_item(&item.code, item.quantity)?
+            self.can_deposit_item(&item.code, item.quantity).await?
         }
         Ok(())
     }
 
-    fn can_deposit_item(&self, item_code: &str, quantity: i32) -> Result<(), DepositError> {
-        if self.items.get(item_code).is_none() {
+    async fn can_deposit_item(&self, item_code: &str, quantity: i32) -> Result<(), DepositError> {
+        if self.items.get(item_code).await.is_none() {
             return Err(DepositError::ItemNotFound);
         };
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory.total_of(item_code).await < quantity {
             return Err(DepositError::InsufficientQuantity);
         }
-        if self.bank.total_of(item_code) <= 0 && self.bank.free_slots() <= 0 {
+        if self.bank.total_of(item_code).await <= 0 && self.bank.free_slots().await <= 0 {
             return Err(DepositError::InsufficientBankSpace);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.map().await.content_type_is(MapContentType::Bank) {
             return Err(DepositError::NoBankOnMap);
         }
         Ok(())
     }
 
-    pub fn withdraw_gold(&self, quantity: i32) -> Result<i32, GoldWithdrawError> {
-        self.can_withdraw_gold(quantity)?;
-        Ok(self.inner.request_withdraw_gold(quantity)?)
+    pub async fn withdraw_gold(&self, quantity: i32) -> Result<i32, GoldWithdrawError> {
+        self.can_withdraw_gold(quantity).await;
+        Ok(self.inner.request_withdraw_gold(quantity).await?)
     }
 
-    pub fn can_withdraw_gold(&self, quantity: i32) -> Result<(), GoldWithdrawError> {
-        if self.bank.gold() < quantity {
+    pub async fn can_withdraw_gold(&self, quantity: i32) -> Result<(), GoldWithdrawError> {
+        if self.bank.gold().await < quantity {
             return Err(GoldWithdrawError::InsufficientGold);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.map().await.content_type_is(MapContentType::Bank) {
             return Err(GoldWithdrawError::NoBankOnMap);
         }
         Ok(())
     }
 
-    pub fn deposit_gold(&self, quantity: i32) -> Result<i32, GoldDepositError> {
-        self.can_deposit_gold(quantity)?;
-        Ok(self.inner.request_deposit_gold(quantity)?)
+    pub async fn deposit_gold(&self, quantity: i32) -> Result<i32, GoldDepositError> {
+        self.can_deposit_gold(quantity).await?;
+        Ok(self.inner.request_deposit_gold(quantity).await?)
     }
 
-    pub fn can_deposit_gold(&self, quantity: i32) -> Result<(), GoldDepositError> {
-        if self.gold() < quantity {
+    pub async fn can_deposit_gold(&self, quantity: i32) -> Result<(), GoldDepositError> {
+        if self.gold().await < quantity {
             return Err(GoldDepositError::InsufficientGold);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.map().await.content_type_is(MapContentType::Bank) {
             return Err(GoldDepositError::NoBankOnMap);
         }
         Ok(())
     }
 
-    pub fn expand_bank(&self) -> Result<i32, BankExpansionError> {
-        self.can_expand_bank()?;
-        Ok(self.inner.request_expand_bank()?)
+    pub async fn expand_bank(&self) -> Result<i32, BankExpansionError> {
+        self.can_expand_bank().await?;
+        Ok(self.inner.request_expand_bank().await?)
     }
 
-    pub fn can_expand_bank(&self) -> Result<(), BankExpansionError> {
-        if self.gold() < self.bank.details().next_expansion_cost {
+    pub async fn can_expand_bank(&self) -> Result<(), BankExpansionError> {
+        if self.gold().await < self.bank.details().await.next_expansion_cost {
             return Err(BankExpansionError::InsufficientGold);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.map().await.content_type_is(MapContentType::Bank) {
             return Err(BankExpansionError::NoBankOnMap);
         }
         Ok(())
     }
 
-    pub fn equip(&self, item_code: &str, slot: Slot, quantity: i32) -> Result<(), EquipError> {
-        self.can_equip(item_code, slot, quantity)?;
-        Ok(self.inner.request_equip(item_code, slot, quantity)?)
+    pub async fn equip(
+        &self,
+        item_code: &str,
+        slot: Slot,
+        quantity: i32,
+    ) -> Result<(), EquipError> {
+        self.can_equip(item_code, slot, quantity).await?;
+        Ok(self.inner.request_equip(item_code, slot, quantity).await?)
     }
 
-    pub fn can_equip(&self, item_code: &str, slot: Slot, quantity: i32) -> Result<(), EquipError> {
-        let Some(item) = self.items.get(item_code) else {
+    pub async fn can_equip(
+        &self,
+        item_code: &str,
+        slot: Slot,
+        quantity: i32,
+    ) -> Result<(), EquipError> {
+        let Some(item) = self.items.get(item_code).await else {
             return Err(EquipError::ItemNotFound);
         };
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory.total_of(item_code).await < quantity {
             return Err(EquipError::InsufficientQuantity);
         }
-        if let Some(equiped) = self.items.get(&self.equiped_in(slot)) {
+        if let Some(equiped) = self.items.get(&self.equiped_in(slot).await).await {
             if equiped.code == item_code {
                 if slot.max_quantity() <= 1 {
                     return Err(EquipError::ItemAlreadyEquiped);
-                } else if self.quantity_in_slot(slot) + quantity > slot.max_quantity() {
+                } else if self.quantity_in_slot(slot).await + quantity > slot.max_quantity() {
                     return Err(EquipError::QuantityGreaterThanSlotMaxixum);
                 }
             } else {
                 return Err(EquipError::SlotNotEmpty);
             }
         }
-        if self.level() < item.level {
+        if self.level().await < item.level {
             return Err(EquipError::InsufficientCharacterLevel);
         }
-        if self.inventory.free_space() + item.inventory_space() <= 0 {
+        if self.inventory.free_space().await + item.inventory_space() <= 0 {
             return Err(EquipError::InsufficientInventorySpace);
         }
         Ok(())
     }
 
-    pub fn unequip(&self, slot: Slot, quantity: i32) -> Result<(), UnequipError> {
-        self.can_unequip(slot, quantity)?;
-        Ok(self.inner.request_unequip(slot, quantity)?)
+    pub async fn unequip(&self, slot: Slot, quantity: i32) -> Result<(), UnequipError> {
+        self.can_unequip(slot, quantity).await?;
+        Ok(self.inner.request_unequip(slot, quantity).await?)
     }
 
-    pub fn can_unequip(&self, slot: Slot, quantity: i32) -> Result<(), UnequipError> {
-        if self.items.get(&self.equiped_in(slot)).is_none() {
+    pub async fn can_unequip(&self, slot: Slot, quantity: i32) -> Result<(), UnequipError> {
+        if self.items.get(&self.equiped_in(slot).await).await.is_none() {
             return Err(UnequipError::SlotEmpty);
         }
-        if self.quantity_in_slot(slot) < quantity {
+        if self.quantity_in_slot(slot).await < quantity {
             return Err(UnequipError::InsufficientQuantity);
         }
-        if self.inventory.free_space() < quantity {
+        if self.inventory.free_space().await < quantity {
             return Err(UnequipError::InsufficientInventorySpace);
         }
         Ok(())
     }
 
-    pub fn accept_task(&self) -> Result<TaskSchema, TaskAcceptationError> {
-        self.can_accept_task()?;
-        Ok(self.inner.request_accept_task()?)
+    pub async fn accept_task(&self) -> Result<TaskSchema, TaskAcceptationError> {
+        self.can_accept_task().await?;
+        Ok(self.inner.request_accept_task().await?)
     }
 
-    pub fn can_accept_task(&self) -> Result<(), TaskAcceptationError> {
-        if !self.task().is_empty() {
+    pub async fn can_accept_task(&self) -> Result<(), TaskAcceptationError> {
+        if !self.task().await.is_empty() {
             return Err(TaskAcceptationError::TaskAlreadyInProgress);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster) {
+        if !self.map().await.content_type_is(MapContentType::TasksMaster) {
             return Err(TaskAcceptationError::NoTasksMasterOnMap);
         }
         Ok(())
     }
 
-    pub fn task_trade(
+    pub async fn task_trade(
         &self,
         item_code: &str,
         quantity: i32,
     ) -> Result<TaskTradeSchema, TaskTradeError> {
-        self.can_task_trade(item_code, quantity)?;
-        Ok(self.inner.request_task_trade(item_code, quantity)?)
+        self.can_task_trade(item_code, quantity).await;
+        Ok(self.inner.request_task_trade(item_code, quantity).await?)
     }
 
-    pub fn can_task_trade(&self, item_code: &str, quantity: i32) -> Result<(), TaskTradeError> {
-        if self.items.get(item_code).is_none() {
+    pub async fn can_task_trade(
+        &self,
+        item_code: &str,
+        quantity: i32,
+    ) -> Result<(), TaskTradeError> {
+        if self.items.get(item_code).await.is_none() {
             return Err(TaskTradeError::ItemNotFound);
         };
-        if item_code != self.task() {
+        if item_code != self.task().await {
             return Err(TaskTradeError::WrongTask);
         }
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory.total_of(item_code).await < quantity {
             return Err(TaskTradeError::InsufficientQuantity);
         }
-        if self.task_missing() < quantity {
+        if self.task_missing().await < quantity {
             return Err(TaskTradeError::SuperfluousQuantity);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster)
-            || !self.map().content_code_is("items")
+        if !self.map().await.content_type_is(MapContentType::TasksMaster)
+            || !self.map().await.content_code_is("items")
         {
             return Err(TaskTradeError::WrongOrNoTasksMasterOnMap);
         }
         Ok(())
     }
 
-    pub fn complete_task(&self) -> Result<RewardsSchema, TaskCompletionError> {
-        self.can_complete_task()?;
-        Ok(self.inner.request_complete_task()?)
+    pub async fn complete_task(&self) -> Result<RewardsSchema, TaskCompletionError> {
+        self.can_complete_task().await?;
+        Ok(self.inner.request_complete_task().await?)
     }
 
-    pub fn can_complete_task(&self) -> Result<(), TaskCompletionError> {
-        let Some(task_type) = self.task_type() else {
+    pub async fn can_complete_task(&self) -> Result<(), TaskCompletionError> {
+        let Some(task_type) = self.task_type().await else {
             return Err(TaskCompletionError::NoCurrentTask);
         };
-        if !self.task_finished() {
+        if !self.task_finished().await {
             return Err(TaskCompletionError::TaskNotFullfilled);
         }
-        if self.inventory.free_space() < 2 {
+        if self.inventory.free_space().await < 2 {
             return Err(TaskCompletionError::InsufficientInventorySpace);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster)
-            || !self.map().content_code_is(&task_type.to_string())
+        if !self.map().await.content_type_is(MapContentType::TasksMaster)
+            || !self.map().await.content_code_is(&task_type.to_string())
         {
             return Err(TaskCompletionError::WrongOrNoTasksMasterOnMap);
         }
         Ok(())
     }
 
-    pub fn cancel_task(&self) -> Result<(), TaskCancellationError> {
-        self.can_cancel_task()?;
-        Ok(self.inner.request_cancel_task()?)
+    pub async fn cancel_task(&self) -> Result<(), TaskCancellationError> {
+        self.can_cancel_task().await?;
+        Ok(self.inner.request_cancel_task().await?)
     }
 
-    pub fn can_cancel_task(&self) -> Result<(), TaskCancellationError> {
-        let Some(task_type) = self.task_type() else {
+    pub async fn can_cancel_task(&self) -> Result<(), TaskCancellationError> {
+        let Some(task_type) = self.task_type().await else {
             return Err(TaskCancellationError::NoCurrentTask);
         };
-        if self.inventory.total_of("tasks_coin") < 1 {
+        if self.inventory.total_of("tasks_coin").await < 1 {
             return Err(TaskCancellationError::InsufficientTasksCoinQuantity);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster)
-            || !self.map().content_code_is(&task_type.to_string())
+        if !self.map().await.content_type_is(MapContentType::TasksMaster)
+            || !self.map().await.content_code_is(&task_type.to_string())
         {
             return Err(TaskCancellationError::WrongOrNoTasksMasterOnMap);
         }
         Ok(())
     }
 
-    pub fn exchange_tasks_coin(&self) -> Result<RewardsSchema, TasksCoinExchangeError> {
-        self.can_exchange_tasks_coin()?;
-        Ok(self.inner.request_task_exchange()?)
+    pub async fn exchange_tasks_coin(&self) -> Result<RewardsSchema, TasksCoinExchangeError> {
+        self.can_exchange_tasks_coin().await?;
+        Ok(self.inner.request_task_exchange().await?)
     }
 
-    pub fn can_exchange_tasks_coin(&self) -> Result<(), TasksCoinExchangeError> {
-        if self.inventory.total_of("tasks_coin") < 6 {
+    pub async fn can_exchange_tasks_coin(&self) -> Result<(), TasksCoinExchangeError> {
+        if self.inventory.total_of("tasks_coin").await < 6 {
             return Err(TasksCoinExchangeError::InsufficientTasksCoinQuantity);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster) {
+        if !self.map().await.content_type_is(MapContentType::TasksMaster) {
             return Err(TasksCoinExchangeError::NoTasksMasterOnMap);
         }
         // TODO: check for conditions when InsufficientInventorySpace can happen
         Ok(())
     }
 
-    //pub fn exchange_gift(&self) -> Result<RewardsSchema, GiftExchangeError> {
+    //pub async fn exchange_gift(&self) -> Result<RewardsSchema, GiftExchangeError> {
     //    self.can_exchange_gift()?;
-    //    Ok(self.inner.request_gift_exchange()?)
+    //    Ok(self.inner.request_gift_exchange().await?)
     //}
 
     // pub fn can_exchange_gift(&self) -> Result<(), GiftExchangeError> {
@@ -496,8 +525,8 @@ impl Character {
 }
 
 impl HasCharacterData for Character {
-    fn data(&self) -> Arc<CharacterSchema> {
-        self.inner.data()
+    async fn data(&self) -> Arc<CharacterSchema> {
+        self.inner.data().await
     }
 }
 
@@ -833,7 +862,7 @@ pub enum GiftExchangeError {
 mod tests {
     use super::*;
     use artifactsmmo_openapi::models::InventorySlot;
-    use std::sync::RwLock;
+    use tokio::sync::RwLock;
 
     impl From<CharacterSchema> for Character {
         fn from(value: CharacterSchema) -> Self {
@@ -935,8 +964,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn can_use() {
+    #[tokio::test]
+    async fn can_use() {
         let item1 = "cooked_chicken";
         let item2 = "cooked_shrimp";
         let char = Character::from(CharacterSchema {
@@ -956,26 +985,26 @@ mod tests {
             ..Default::default()
         });
         assert!(matches!(
-            char.can_use("random_item", 1),
+            char.can_use("random_item", 1).await,
             Err(UseError::ItemNotFound)
         ));
         assert!(matches!(
-            char.can_use("copper", 1),
+            char.can_use("copper", 1).await,
             Err(UseError::ItemNotConsumable)
         ));
         assert!(matches!(
-            char.can_use(item1, 5),
+            char.can_use(item1, 5).await,
             Err(UseError::InsufficientQuantity)
         ));
         assert!(matches!(
-            char.can_use(item2, 1),
+            char.can_use(item2, 1).await,
             Err(UseError::InsufficientCharacterLevel)
         ));
-        assert!(char.can_use(item1, 1).is_ok());
+        assert!(char.can_use(item1, 1).await.is_ok());
     }
 
-    #[test]
-    fn can_craft() {
+    #[tokio::test]
+    async fn can_craft() {
         let char = Character::from(CharacterSchema {
             cooking_level: 1,
             inventory: Some(vec![
@@ -994,27 +1023,27 @@ mod tests {
             ..Default::default()
         });
         assert!(matches!(
-            char.can_craft("random_item", 1),
+            char.can_craft("random_item", 1).await,
             Err(CraftError::ItemNotFound)
         ));
         assert!(matches!(
-            char.can_craft("copper_ore", 1),
+            char.can_craft("copper_ore", 1).await,
             Err(CraftError::ItemNotCraftable)
         ));
         assert!(matches!(
-            char.can_craft("cooked_chicken", 1),
+            char.can_craft("cooked_chicken", 1).await,
             Err(CraftError::InsufficientMaterials)
         ));
         assert!(matches!(
-            char.can_craft("cooked_gudgeon", 5),
+            char.can_craft("cooked_gudgeon", 5).await,
             Err(CraftError::InsufficientMaterials)
         ));
         assert!(matches!(
-            char.can_craft("cooked_shrimp", 1),
+            char.can_craft("cooked_shrimp", 1).await,
             Err(CraftError::InsufficientSkillLevel)
         ));
         assert!(matches!(
-            char.can_craft("cooked_gudgeon", 1),
+            char.can_craft("cooked_gudgeon", 1).await,
             Err(CraftError::NoWorkshopOnMap)
         ));
         let char = Character::from(CharacterSchema {
@@ -1029,11 +1058,11 @@ mod tests {
             y: 1,
             ..Default::default()
         });
-        assert!(char.can_craft("cooked_gudgeon", 1).is_ok());
+        assert!(char.can_craft("cooked_gudgeon", 1).await.is_ok());
     }
 
-    #[test]
-    fn can_recycle() {
+    #[tokio::test]
+    async fn can_recycle() {
         let char = Character::from(CharacterSchema {
             cooking_level: 1,
             weaponcrafting_level: 1,
@@ -1058,23 +1087,23 @@ mod tests {
             ..Default::default()
         });
         assert!(matches!(
-            char.can_recycle("random_item", 1),
+            char.can_recycle("random_item", 1).await,
             Err(RecycleError::ItemNotFound)
         ));
         assert!(matches!(
-            char.can_recycle("cooked_gudgeon", 1),
+            char.can_recycle("cooked_gudgeon", 1).await,
             Err(RecycleError::ItemNotRecyclable)
         ));
         assert!(matches!(
-            char.can_recycle("wooden_staff", 1),
+            char.can_recycle("wooden_staff", 1).await,
             Err(RecycleError::InsufficientQuantity)
         ));
         assert!(matches!(
-            char.can_recycle("iron_sword", 1),
+            char.can_recycle("iron_sword", 1).await,
             Err(RecycleError::InsufficientSkillLevel)
         ));
         assert!(matches!(
-            char.can_recycle("copper_dagger", 1),
+            char.can_recycle("copper_dagger", 1).await,
             Err(RecycleError::NoWorkshopOnMap)
         ));
         let char = Character::from(CharacterSchema {
@@ -1090,7 +1119,7 @@ mod tests {
             ..Default::default()
         });
         assert!(matches!(
-            char.can_recycle("copper_dagger", 1),
+            char.can_recycle("copper_dagger", 1).await,
             Err(RecycleError::InsufficientInventorySpace)
         ));
         let char = Character::from(CharacterSchema {
@@ -1105,11 +1134,11 @@ mod tests {
             y: 1,
             ..Default::default()
         });
-        assert!(char.can_recycle("copper_dagger", 1).is_ok());
+        assert!(char.can_recycle("copper_dagger", 1).await.is_ok());
     }
 
-    #[test]
-    fn can_delete() {
+    #[tokio::test]
+    async fn can_delete() {
         let char = Character::from(CharacterSchema {
             cooking_level: 1,
             weaponcrafting_level: 1,
@@ -1122,18 +1151,18 @@ mod tests {
             ..Default::default()
         });
         assert!(matches!(
-            char.can_delete("random_item", 1),
+            char.can_delete("random_item", 1).await,
             Err(DeleteError::ItemNotFound)
         ));
         assert!(matches!(
-            char.can_delete("copper_dagger", 2),
+            char.can_delete("copper_dagger", 2).await,
             Err(DeleteError::InsufficientQuantity)
         ));
-        assert!(char.can_delete("copper_dagger", 1).is_ok());
+        assert!(char.can_delete("copper_dagger", 1).await.is_ok());
     }
 
-    #[test]
-    fn can_withdraw() {
+    #[tokio::test]
+    async fn can_withdraw() {
         let char = Character::from(CharacterSchema {
             inventory_max_items: 100,
             ..Default::default()
@@ -1149,19 +1178,19 @@ mod tests {
             },
         ]);
         assert!(matches!(
-            char.can_withdraw_item("random_item", 1),
+            char.can_withdraw_item("random_item", 1).await,
             Err(WithdrawError::ItemNotFound)
         ));
         assert!(matches!(
-            char.can_withdraw_item("copper_dagger", 2),
+            char.can_withdraw_item("copper_dagger", 2).await,
             Err(WithdrawError::InsufficientQuantity)
         ));
         assert!(matches!(
-            char.can_withdraw_item("iron_sword", 101),
+            char.can_withdraw_item("iron_sword", 101).await,
             Err(WithdrawError::InsufficientInventorySpace)
         ));
         assert!(matches!(
-            char.can_withdraw_item("iron_sword", 10),
+            char.can_withdraw_item("iron_sword", 10).await,
             Err(WithdrawError::NoBankOnMap)
         ));
         let char = Character::from(CharacterSchema {
@@ -1180,7 +1209,7 @@ mod tests {
                 quantity: 101,
             },
         ]);
-        assert!(char.can_withdraw_item("iron_sword", 10).is_ok());
+        assert!(char.can_withdraw_item("iron_sword", 10).await.is_ok());
     }
     //TODO: add more tests
 }

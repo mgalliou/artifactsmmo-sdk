@@ -21,7 +21,7 @@ impl MapsApi {
         Self { configuration }
     }
 
-    pub fn all(
+    pub async fn all(
         &self,
         content_type: Option<MapContentType>,
         content_code: Option<&str>,
@@ -36,7 +36,7 @@ impl MapsApi {
                 content_code,
                 Some(current_page),
                 Some(100),
-            );
+            ).await;
             match resp {
                 Ok(resp) => {
                     maps.extend(resp.data);
@@ -56,7 +56,7 @@ impl MapsApi {
         Ok(maps)
     }
 
-    pub fn info(&self, x: i32, y: i32) -> Result<MapResponseSchema, Error<GetMapMapsXyGetError>> {
-        get_map_maps_xy_get(&self.configuration, x, y)
+    pub async fn info(&self, x: i32, y: i32) -> Result<MapResponseSchema, Error<GetMapMapsXyGetError>> {
+        get_map_maps_xy_get(&self.configuration, x, y).await
     }
 }

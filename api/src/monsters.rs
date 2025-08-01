@@ -21,7 +21,7 @@ impl MonstersApi {
         Self { configuration }
     }
 
-    pub fn all(
+    pub async fn all(
         &self,
         min_level: Option<i32>,
         max_level: Option<i32>,
@@ -39,7 +39,7 @@ impl MonstersApi {
                 drop,
                 Some(current_page),
                 Some(100),
-            );
+            ).await;
             match resp {
                 Ok(resp) => {
                     monsters.extend(resp.data);
@@ -59,10 +59,10 @@ impl MonstersApi {
         Ok(monsters)
     }
 
-    pub fn info(
+    pub async fn info(
         &self,
         code: &str,
     ) -> Result<MonsterResponseSchema, Error<GetMonsterMonstersCodeGetError>> {
-        get_monster_monsters_code_get(&self.configuration, code)
+        get_monster_monsters_code_get(&self.configuration, code).await
     }
 }

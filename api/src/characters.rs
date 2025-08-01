@@ -18,10 +18,10 @@ impl CharactersApi {
         Self { configuration }
     }
 
-    pub fn get(
+    pub async fn get(
         &self,
         name: &str,
     ) -> Result<CharacterResponseSchema, Error<GetCharacterCharactersNameGetError>> {
-        get_character_characters_name_get(&self.configuration, name)
+        get_character_characters_name_get(&self.configuration, name).await
     }
 }

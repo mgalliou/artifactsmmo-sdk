@@ -14,17 +14,13 @@ use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
     CraftSchema, ItemSchema, MonsterSchema, ResourceSchema, SimpleEffectSchema, SimpleItemSchema,
 };
+use futures::{stream, StreamExt};
 use itertools::Itertools;
 use log::debug;
-use std::{
-    collections::HashMap,
-    fmt,
-    str::FromStr,
-    sync::{Arc, RwLock},
-    vec::Vec,
-};
+use std::{collections::HashMap, fmt, str::FromStr, sync::Arc, vec::Vec};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
+use tokio::sync::RwLock;
 
 #[derive(Default)]
 pub struct Items {
@@ -38,23 +34,24 @@ pub struct Items {
 impl PersistedData<HashMap<String, Arc<ItemSchema>>> for Items {
     const PATH: &'static str = ".cache/items.json";
 
-    fn data_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
+    async fn data_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
         self.api
             .items
             .all()
+            .await
             .unwrap()
             .into_iter()
             .map(|item| (item.code.clone(), Arc::new(item)))
             .collect()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    async fn refresh_data(&self) {
+        *self.data.write().await = self.data_from_api().await;
     }
 }
 
 impl Items {
-    pub(crate) fn new(
+    pub(crate) async fn new(
         api: Arc<ArtifactApi>,
         resources: Arc<Resources>,
         monsters: Arc<Monsters>,
@@ -67,37 +64,41 @@ impl Items {
             monsters,
             tasks_rewards,
         };
-        *items.data.write().unwrap() = items.retrieve_data();
+        *items.data.write().await = items.retrieve_data().await;
         items
     }
 
     /// Takes an item `code` and return its schema.
-    pub fn get(&self, code: &str) -> Option<Arc<ItemSchema>> {
-        self.data.read().unwrap().get(code).cloned()
+    pub async fn get(&self, code: &str) -> Option<Arc<ItemSchema>> {
+        self.data.read().await.get(code).cloned()
     }
 
-    pub fn all(&self) -> Vec<Arc<ItemSchema>> {
-        self.data.read().unwrap().values().cloned().collect_vec()
+    pub async fn all(&self) -> Vec<Arc<ItemSchema>> {
+        self.data.read().await.values().cloned().collect_vec()
     }
 
     /// Takes an item `code` and return the mats required to craft it.
-    pub fn mats_of(&self, code: &str) -> Vec<SimpleItemSchema> {
-        self.get(code).iter().flat_map(|i| i.mats()).collect_vec()
+    pub async fn mats_of(&self, code: &str) -> Vec<SimpleItemSchema> {
+        self.get(code)
+            .await
+            .iter()
+            .flat_map(|i| i.mats())
+            .collect_vec()
     }
 
     /// Takes an item `code` and returns the mats down to the raw materials
     /// required to craft it.
-    pub fn base_mats_of(&self, code: &str) -> Vec<SimpleItemSchema> {
-        self.mats_of(code)
-            .iter()
-            .flat_map(|mat| {
-                if self.mats_of(&mat.code).is_empty() {
+    pub async fn base_mats_of(&self, code: &str) -> Vec<SimpleItemSchema> {
+        stream::iter(self.mats_of(code).await.iter())
+            .flat_map(async |mat| {
+                if self.mats_of(&mat.code).await.is_empty() {
                     vec![SimpleItemSchema {
                         code: mat.code.clone(),
                         quantity: mat.quantity,
                     }]
                 } else {
                     self.mats_of(&mat.code)
+                        .await
                         .iter()
                         .map(|b| SimpleItemSchema {
                             code: b.code.clone(),
@@ -106,7 +107,8 @@ impl Items {
                         .collect_vec()
                 }
             })
-            .collect_vec()
+            .collect::<Vec<_>>()
+            .await
     }
 
     /// Takes an `resource` code and returns the items that can be crafted
@@ -126,16 +128,17 @@ impl Items {
     }
 
     /// Takes an item `code` and returns the items directly crafted with it.
-    pub fn crafted_with(&self, code: &str) -> Vec<Arc<ItemSchema>> {
+    pub async fn crafted_with(&self, code: &str) -> Vec<Arc<ItemSchema>> {
         self.all()
+            .await
             .iter()
             .filter(|i| i.is_crafted_with(code))
             .cloned()
             .collect_vec()
     }
 
-    pub fn require_task_reward(&self, code: &str) -> bool {
-        self.base_mats_of(code).iter().any(|m| {
+    pub async fn require_task_reward(&self, code: &str) -> bool {
+        self.base_mats_of(code).await.iter().any(|m| {
             [
                 JASPER_CRYSTAL,
                 MAGICAL_CURE,
@@ -148,8 +151,8 @@ impl Items {
 
     /// Takes an item `code` and returns the only item it can be crafted in, or
     /// `None` otherwise.
-    pub fn unique_craft(&self, code: &str) -> Option<Arc<ItemSchema>> {
-        let crafts = self.crafted_with(code);
+    pub async fn unique_craft(&self, code: &str) -> Option<Arc<ItemSchema>> {
+        let crafts = self.crafted_with(code).await;
         if crafts.len() == 1 {
             return Some(crafts[0].clone());
         }
@@ -157,27 +160,38 @@ impl Items {
     }
 
     /// Takes an item `code` and returns the items crafted with it as base mat.
-    pub fn crafted_with_base_mat(&self, code: &str) -> Vec<Arc<ItemSchema>> {
-        self.all()
-            .iter()
-            .filter(|i| self.is_crafted_with_base_mat(&i.code, code))
-            .cloned()
-            .collect_vec()
+    pub async fn crafted_with_base_mat(&self, code: &str) -> Vec<Arc<ItemSchema>> {
+        stream::iter(self.all().await)
+            .filter_map(|i| async {
+                if self.is_crafted_with_base_mat(&i.code, code).await {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
+            .await
     }
 
     /// Takes an item `code` and checks if it is crafted with `mat` as a base
     /// material.
-    pub fn is_crafted_with_base_mat(&self, code: &str, mat: &str) -> bool {
-        self.base_mats_of(code).iter().any(|m| m.code == mat)
+    pub async fn is_crafted_with_base_mat(&self, code: &str, mat: &str) -> bool {
+        self.base_mats_of(code).await.iter().any(|m| m.code == mat)
     }
 
-    pub fn mats_mob_average_lvl(&self, code: &str) -> i32 {
-        let mob_mats = self
-            .mats_of(code)
-            .iter()
-            .filter_map(|i| self.get(&i.code))
-            .filter(|i| i.subtype == SubType::Mob)
-            .collect_vec();
+    pub async fn mats_mob_average_lvl(&self, code: &str) -> i32 {
+        let mob_mats = stream::iter(self.mats_of(code).await.iter())
+            .filter_map(async |i| {
+                self.get(&i.code).await.and_then(|i| {
+                    if i.subtype == SubType::Mob {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .collect::<Vec<_>>()
+            .await;
         let len = mob_mats.len();
         if len > 0 {
             return mob_mats.iter().map(|i| i.level).sum::<i32>() / mob_mats.len() as i32;
@@ -185,10 +199,11 @@ impl Items {
         0
     }
 
-    pub fn mats_mob_max_lvl(&self, code: &str) -> i32 {
+    pub async fn mats_mob_max_lvl(&self, code: &str) -> i32 {
         self.mats_of(code)
+            .await
             .iter()
-            .filter_map(|i| self.get(&i.code))
+            .filter_map(async |i| self.get(&i.code).await)
             .filter(|i| i.subtype == SubType::Mob)
             .max_by_key(|i| i.level)
             .map_or(0, |i| i.level)
@@ -196,12 +211,16 @@ impl Items {
 
     /// Takes an item `code` and returns the amount of inventory space the mats
     /// required to craft it are taking.
-    pub fn mats_quantity_for(&self, code: &str) -> i32 {
-        self.mats_of(code).iter().map(|mat| mat.quantity).sum()
+    pub async fn mats_quantity_for(&self, code: &str) -> i32 {
+        self.mats_of(code)
+            .await
+            .iter()
+            .map(|mat| mat.quantity)
+            .sum()
     }
 
-    pub fn recycled_quantity_for(&self, code: &str) -> i32 {
-        let mats_quantity_for = self.mats_quantity_for(code);
+    pub async fn recycled_quantity_for(&self, code: &str) -> i32 {
+        let mats_quantity_for = self.mats_quantity_for(code).await;
         mats_quantity_for / 5 + if mats_quantity_for % 5 > 0 { 1 } else { 0 }
     }
 
@@ -221,8 +240,8 @@ impl Items {
 
     /// Takes an item `code` and aggregate the drop rates of its base materials
     /// to cumpute an average drop rate.
-    pub fn base_mats_drop_rate(&self, code: &str) -> f32 {
-        let base_mats = self.base_mats_of(code);
+    pub async fn base_mats_drop_rate(&self, code: &str) -> f32 {
+        let base_mats = self.base_mats_of(code).await;
         if base_mats.is_empty() {
             return 0.0;
         }
@@ -238,24 +257,27 @@ impl Items {
         average
     }
 
-    pub fn equipable_at_level(&self, level: i32, r#type: Type) -> Vec<Arc<ItemSchema>> {
+    pub async fn equipable_at_level(&self, level: i32, r#type: Type) -> Vec<Arc<ItemSchema>> {
         self.all()
+            .await
             .iter()
             .filter(|i| i.r#type == r#type && i.level <= level)
             .cloned()
             .collect_vec()
     }
 
-    pub fn best_consumable_foods(&self, level: i32) -> Vec<Arc<ItemSchema>> {
+    pub async fn best_consumable_foods(&self, level: i32) -> Vec<Arc<ItemSchema>> {
         self.all()
+            .await
             .iter()
             .filter(|i| i.is_consumable_at(level))
             .cloned()
             .collect_vec()
     }
 
-    pub fn restoring_utilities(&self, level: i32) -> Vec<Arc<ItemSchema>> {
+    pub async fn restoring_utilities(&self, level: i32) -> Vec<Arc<ItemSchema>> {
         self.all()
+            .await
             .iter()
             .filter(|i| i.r#type().is_utility() && i.restore() > 0 && i.level >= level)
             .cloned()

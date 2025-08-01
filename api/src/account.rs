@@ -21,11 +21,11 @@ impl AccountApi {
         Self { configuration }
     }
 
-    pub fn characters(
+    pub async fn characters(
         &self,
         account: &str,
     ) -> Result<CharactersListSchema, Error<GetAccountCharactersAccountsAccountCharactersGetError>>
     {
-        get_account_characters_accounts_account_characters_get(&self.configuration, account)
+        get_account_characters_accounts_account_characters_get(&self.configuration, account).await
     }
 }

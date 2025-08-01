@@ -21,6 +21,8 @@ use artifactsmmo_openapi::{
         TaskTradeSchema, UseItemResponseSchema,
     },
 };
+use async_recursion::async_recursion;
+use async_trait::async_trait;
 use chrono::Utc;
 use downcast_rs::{impl_downcast, Downcast};
 use log::{debug, error, info, warn};
@@ -28,11 +30,11 @@ use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
     fmt::{self, Display, Formatter},
-    sync::{Arc, RwLockWriteGuard},
-    thread::sleep,
-    time::Duration,
+    sync::Arc,
 };
 use thiserror::Error;
+use tokio::sync::RwLockWriteGuard;
+use tokio::time::{sleep, Duration};
 
 /// First layer of abstraction around the character API.
 /// It is responsible for handling the character action requests responce and errors
@@ -60,28 +62,21 @@ impl CharacterRequestHandler {
         }
     }
 
-    fn request_action(&self, action: Action) -> Result<Box<dyn ResponseSchema>, RequestError> {
+    #[async_recursion(?Send)]
+    async fn request_action(
+        &self,
+        action: Action<'async_recursion>,
+    ) -> Result<Box<dyn ResponseSchema>, RequestError> {
+        self.wait_for_cooldown().await;
         let mut bank_content: Option<RwLockWriteGuard<'_, Arc<Vec<SimpleItemSchema>>>> = None;
         let mut bank_details: Option<RwLockWriteGuard<'_, Arc<BankSchema>>> = None;
-
-        self.wait_for_cooldown();
         if action.is_deposit_item() || action.is_withdraw_item() {
-            bank_content = Some(
-                self.bank
-                    .content
-                    .write()
-                    .expect("bank_content to be writable"),
-            );
+            bank_content = Some(self.bank.content.write().await);
         }
         if action.is_deposit_gold() || action.is_withdraw_gold() || action.is_expand_bank() {
-            bank_details = Some(
-                self.bank
-                    .details
-                    .write()
-                    .expect("bank_details to be writable"),
-            );
+            bank_details = Some(self.bank.details.write().await);
         }
-        match action.request(&self.name(), &self.api) {
+        match action.request(&self.name().await, &self.api).await {
             Ok(res) => {
                 info!("{}", res.to_string());
                 self.update_data(res.character().clone());
@@ -110,13 +105,14 @@ impl CharacterRequestHandler {
             Err(e) => {
                 drop(bank_content);
                 drop(bank_details);
-                self.handle_request_error(action, e)
+                self.handle_request_error(action, e).await
             }
         }
     }
 
-    pub fn request_move(&self, x: i32, y: i32) -> Result<MapSchema, RequestError> {
+    pub async fn request_move(&self, x: i32, y: i32) -> Result<MapSchema, RequestError> {
         self.request_action(Action::Move { x, y })
+            .await
             .and_then(|r| {
                 r.downcast::<CharacterMovementResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -124,8 +120,9 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.destination)
     }
 
-    pub fn request_fight(&self) -> Result<FightSchema, RequestError> {
+    pub async fn request_fight(&self) -> Result<FightSchema, RequestError> {
         self.request_action(Action::Fight)
+            .await
             .and_then(|r| {
                 r.downcast::<CharacterFightResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -133,8 +130,9 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.fight)
     }
 
-    pub fn request_rest(&self) -> Result<i32, RequestError> {
+    pub async fn request_rest(&self) -> Result<i32, RequestError> {
         self.request_action(Action::Rest)
+            .await
             .and_then(|r| {
                 r.downcast::<CharacterRestResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -142,13 +140,15 @@ impl CharacterRequestHandler {
             .map(|s| s.data.hp_restored)
     }
 
-    pub fn request_use_item(&self, item: &str, quantity: i32) -> Result<(), RequestError> {
+    pub async fn request_use_item(&self, item: &str, quantity: i32) -> Result<(), RequestError> {
         self.request_action(Action::UseItem { item, quantity })
+            .await
             .map(|_| ())
     }
 
-    pub fn request_gather(&self) -> Result<SkillDataSchema, RequestError> {
+    pub async fn request_gather(&self) -> Result<SkillDataSchema, RequestError> {
         self.request_action(Action::Gather)
+            .await
             .and_then(|r| {
                 r.downcast::<SkillResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -156,12 +156,13 @@ impl CharacterRequestHandler {
             .map(|s| *s.data)
     }
 
-    pub fn request_craft(
+    pub async fn request_craft(
         &self,
         item: &str,
         quantity: i32,
     ) -> Result<SkillInfoSchema, RequestError> {
         self.request_action(Action::Craft { item, quantity })
+            .await
             .and_then(|r| {
                 r.downcast::<SkillResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -169,12 +170,13 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.details)
     }
 
-    pub fn request_delete(
+    pub async fn request_delete(
         &self,
         item: &str,
         quantity: i32,
     ) -> Result<SimpleItemSchema, RequestError> {
         self.request_action(Action::Delete { item, quantity })
+            .await
             .and_then(|r| {
                 r.downcast::<DeleteItemResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -182,12 +184,13 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.item)
     }
 
-    pub fn request_recycle(
+    pub async fn request_recycle(
         &self,
         item: &str,
         quantity: i32,
     ) -> Result<RecyclingItemsSchema, RequestError> {
         self.request_action(Action::Recycle { item, quantity })
+            .await
             .and_then(|r| {
                 r.downcast::<RecyclingResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -195,18 +198,27 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.details)
     }
 
-    pub fn request_deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
+    pub async fn request_deposit_item(
+        &self,
+        items: &[SimpleItemSchema],
+    ) -> Result<(), RequestError> {
         self.request_action(Action::DepositItem { items })
+            .await
             .map(|_| ())
     }
 
-    pub fn request_withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
+    pub async fn request_withdraw_item(
+        &self,
+        items: &[SimpleItemSchema],
+    ) -> Result<(), RequestError> {
         self.request_action(Action::WithdrawItem { items })
+            .await
             .map(|_| ())
     }
 
-    pub fn request_deposit_gold(&self, quantity: i32) -> Result<i32, RequestError> {
+    pub async fn request_deposit_gold(&self, quantity: i32) -> Result<i32, RequestError> {
         self.request_action(Action::DepositGold { quantity })
+            .await
             .and_then(|r| {
                 r.downcast::<BankGoldTransactionResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -214,8 +226,9 @@ impl CharacterRequestHandler {
             .map(|s| s.data.bank.quantity)
     }
 
-    pub fn request_withdraw_gold(&self, quantity: i32) -> Result<i32, RequestError> {
+    pub async fn request_withdraw_gold(&self, quantity: i32) -> Result<i32, RequestError> {
         self.request_action(Action::WithdrawGold { quantity })
+            .await
             .and_then(|r| {
                 r.downcast::<BankGoldTransactionResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -223,8 +236,9 @@ impl CharacterRequestHandler {
             .map(|s| s.data.bank.quantity)
     }
 
-    pub fn request_expand_bank(&self) -> Result<i32, RequestError> {
+    pub async fn request_expand_bank(&self) -> Result<i32, RequestError> {
         self.request_action(Action::ExpandBank)
+            .await
             .and_then(|r| {
                 r.downcast::<BankExtensionTransactionResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -232,22 +246,30 @@ impl CharacterRequestHandler {
             .map(|s| s.data.transaction.price)
     }
 
-    pub fn request_equip(&self, item: &str, slot: Slot, quantity: i32) -> Result<(), RequestError> {
+    pub async fn request_equip(
+        &self,
+        item: &str,
+        slot: Slot,
+        quantity: i32,
+    ) -> Result<(), RequestError> {
         self.request_action(Action::Equip {
             item,
             slot,
             quantity,
         })
+        .await
         .map(|_| ())
     }
 
-    pub fn request_unequip(&self, slot: Slot, quantity: i32) -> Result<(), RequestError> {
+    pub async fn request_unequip(&self, slot: Slot, quantity: i32) -> Result<(), RequestError> {
         self.request_action(Action::Unequip { slot, quantity })
+            .await
             .map(|_| ())
     }
 
-    pub fn request_accept_task(&self) -> Result<TaskSchema, RequestError> {
+    pub async fn request_accept_task(&self) -> Result<TaskSchema, RequestError> {
         self.request_action(Action::AcceptTask)
+            .await
             .and_then(|r| {
                 r.downcast::<TaskResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -255,8 +277,9 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.task)
     }
 
-    pub fn request_complete_task(&self) -> Result<RewardsSchema, RequestError> {
+    pub async fn request_complete_task(&self) -> Result<RewardsSchema, RequestError> {
         self.request_action(Action::CompleteTask)
+            .await
             .and_then(|r| {
                 r.downcast::<RewardDataResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -264,16 +287,17 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.rewards)
     }
 
-    pub fn request_cancel_task(&self) -> Result<(), RequestError> {
-        self.request_action(Action::CancelTask).map(|_| ())
+    pub async fn request_cancel_task(&self) -> Result<(), RequestError> {
+        self.request_action(Action::CancelTask).await.map(|_| ())
     }
 
-    pub fn request_task_trade(
+    pub async fn request_task_trade(
         &self,
         item: &str,
         quantity: i32,
     ) -> Result<TaskTradeSchema, RequestError> {
         self.request_action(Action::TaskTrade { item, quantity })
+            .await
             .and_then(|r| {
                 r.downcast::<TaskTradeResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -281,8 +305,9 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.trade)
     }
 
-    pub fn request_task_exchange(&self) -> Result<RewardsSchema, RequestError> {
+    pub async fn request_task_exchange(&self) -> Result<RewardsSchema, RequestError> {
         self.request_action(Action::TaskExchange)
+            .await
             .and_then(|r| {
                 r.downcast::<RewardDataResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -290,8 +315,9 @@ impl CharacterRequestHandler {
             .map(|s| *s.data.rewards)
     }
 
-    //pub fn request_gift_exchange(&self) -> Result<RewardsSchema, RequestError> {
+    //pub async fn request_gift_exchange(&self) -> Result<RewardsSchema, RequestError> {
     //    self.request_action(Action::ChristmasExchange)
+    //        .await
     //        .and_then(|r| {
     //            r.downcast::<RewardDataResponseSchema>()
     //                .map_err(|_| RequestError::DowncastError)
@@ -299,14 +325,15 @@ impl CharacterRequestHandler {
     //        .map(|s| *s.data.rewards)
     //}
 
-    fn handle_request_error(
+    #[async_recursion(?Send)]
+    async fn handle_request_error(
         &self,
-        action: Action,
+        action: Action<'async_recursion>,
         e: RequestError,
     ) -> Result<Box<dyn ResponseSchema>, RequestError> {
         error!(
             "{}: request error during action {:?}: {:?}",
-            self.name(),
+            self.name().await,
             action,
             e
         );
@@ -315,81 +342,82 @@ impl CharacterRequestHandler {
                 if res.error.code == 499 {
                     error!(
                         "{}: code 499 received, resyncronizing server time",
-                        self.name()
+                        self.name().await
                     );
-                    self.server.update_offset();
-                    return self.request_action(action);
+                    self.server.update_offset().await;
+                    return self.request_action(action).await;
                 }
                 if res.error.code == 500 || res.error.code == 520 {
                     error!(
                         "{}: unknown error ({}), retrying in 10 secondes.",
-                        self.name(),
+                        self.name().await,
                         res.error.code
                     );
-                    sleep(Duration::from_secs(10));
-                    return self.request_action(action);
+                    sleep(Duration::from_secs(10)).await;
+                    return self.request_action(action).await;
                 }
             }
             RequestError::Reqwest(ref req) => {
                 if req.is_timeout() {
-                    error!("{}: request timed-out, retrying...", self.name());
-                    return self.request_action(action);
+                    error!("{}: request timed-out, retrying...", self.name().await);
+                    return self.request_action(action).await;
                 }
             }
             RequestError::Serde(_) | RequestError::Io(_) | RequestError::DowncastError => {
-                warn!("{}: refreshing data", self.name());
-                self.refresh_data()
+                warn!("{}: refreshing data", self.name().await);
+                self.refresh_data().await
             }
         }
         Err(e)
     }
 
-    fn wait_for_cooldown(&self) {
-        let s = self.remaining_cooldown();
+    async fn wait_for_cooldown(&self) {
+        let s = self.remaining_cooldown().await;
         if s.is_zero() {
             return;
         }
         debug!(
             "{}: cooling down for {}.{} secondes.",
-            self.name(),
+            self.name().await,
             s.as_secs(),
             s.subsec_millis()
         );
-        sleep(s);
+        sleep(s).await;
     }
 
     /// Returns the remaining cooldown duration of the `Character`.
-    fn remaining_cooldown(&self) -> Duration {
-        if let Some(exp) = self.cooldown_expiration() {
-            let synced = Utc::now() - *self.server.server_offset.read().unwrap();
+    async fn remaining_cooldown(&self) -> std::time::Duration {
+        if let Some(exp) = self.cooldown_expiration().await {
+            let synced = Utc::now() - *self.server.server_offset.read().await;
             if synced.cmp(&exp.to_utc()) == Ordering::Less {
                 return (exp.to_utc() - synced).to_std().unwrap();
             }
         }
-        Duration::from_secs(0)
+        std::time::Duration::from_secs(0)
     }
 
     /// Refresh the `Character` schema from API.
-    pub fn refresh_data(&self) {
-        let Ok(resp) = self.api.character.get(&self.name()) else {
+    pub async fn refresh_data(&self) {
+        let Ok(resp) = self.api.character.get(&self.name().await).await else {
             return;
         };
-        self.update_data(*resp.data)
+        self.update_data(*resp.data).await
     }
 
     /// Update the `Character` schema with the given `schema.
-    pub fn update_data(&self, schema: CharacterSchema) {
-        *self.data.write().unwrap() = Arc::new(schema)
+    pub async fn update_data(&self, schema: CharacterSchema) {
+        *self.data.write().await = Arc::new(schema)
     }
 }
 
 impl HasCharacterData for CharacterRequestHandler {
-    fn data(&self) -> Arc<CharacterSchema> {
-        self.data.read().unwrap().clone()
+    async fn data(&self) -> Arc<CharacterSchema> {
+        self.data.read().await.clone()
     }
 }
 
-pub trait ResponseSchema: Downcast {
+#[async_trait]
+pub trait ResponseSchema: Downcast + Send {
     fn character(&self) -> &CharacterSchema;
     fn to_string(&self) -> String;
 }

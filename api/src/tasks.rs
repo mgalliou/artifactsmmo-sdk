@@ -21,7 +21,7 @@ impl TasksApi {
         Self { configuration }
     }
 
-    pub fn all(
+    pub async fn all(
         &self,
         min_level: Option<i32>,
         max_level: Option<i32>,
@@ -40,7 +40,7 @@ impl TasksApi {
                 r#type,
                 Some(current_page),
                 Some(100),
-            );
+            ).await;
             match resp {
                 Ok(resp) => {
                     tasks.extend(resp.data);
@@ -60,7 +60,7 @@ impl TasksApi {
         Ok(tasks)
     }
 
-    pub fn rewards(
+    pub async fn rewards(
         &self,
     ) -> Result<Vec<DropRateSchema>, Error<GetAllTasksRewardsTasksRewardsGetError>> {
         let mut drops: Vec<DropRateSchema> = vec![];
@@ -71,7 +71,7 @@ impl TasksApi {
                 &self.configuration,
                 Some(current_page),
                 Some(100),
-            );
+            ).await;
             match resp {
                 Ok(resp) => {
                     drops.extend(resp.data);

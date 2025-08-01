@@ -63,7 +63,7 @@ pub enum Action<'a> {
 }
 
 impl Action<'_> {
-    pub fn request(
+    pub async fn request(
         &self,
         name: &str,
         api: &ArtifactApi,
@@ -72,66 +72,79 @@ impl Action<'_> {
             Action::Move { x, y } => api
                 .my_character
                 .r#move(name, *x, *y)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Fight => api
                 .my_character
                 .fight(name)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Rest => api
                 .my_character
                 .rest(name)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::UseItem { item, quantity } => api
                 .my_character
                 .use_item(name, item, *quantity)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Gather => api
                 .my_character
                 .gather(name)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Craft { item, quantity } => api
                 .my_character
                 .craft(name, item, *quantity)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Recycle { item, quantity } => api
                 .my_character
                 .recycle(name, item, *quantity)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Delete { item, quantity } => api
                 .my_character
                 .delete(name, item, *quantity)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::DepositItem { items } => api
                 .my_character
                 .deposit(name, items)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::WithdrawItem { items } => api
                 .my_character
                 .withdraw(name, items)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::DepositGold { quantity } => api
                 .my_character
                 .deposit_gold(name, *quantity)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::WithdrawGold { quantity } => api
                 .my_character
                 .withdraw_gold(name, *quantity)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::ExpandBank => api
                 .my_character
                 .expand_bank(name)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Equip {
@@ -141,42 +154,50 @@ impl Action<'_> {
             } => api
                 .my_character
                 .equip(name, item, (*slot).into(), Some(*quantity))
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Unequip { slot, quantity } => {
                 api.my_character
                     .unequip(name, (*slot).into(), Some(*quantity))
+                    .await
             }
             .map(|r| r.into())
             .map_err(|e| e.into()),
             Action::AcceptTask => api
                 .my_character
                 .accept_task(name)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::TaskTrade { item, quantity } => api
                 .my_character
                 .trade_task(name, item, *quantity)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::CompleteTask => api
                 .my_character
                 .complete_task(name)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::CancelTask => api
                 .my_character
                 .cancel_task(name)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::TaskExchange => api
                 .my_character
                 .task_exchange(name)
+                .await
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             //Action::ChristmasExchange => api
             //    .my_character
             //    .christmas_exchange(name)
+            //    .await
             //    .map(|r| r.into())
             //    .map_err(|e| e.into()),
         }

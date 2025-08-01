@@ -2,7 +2,8 @@ use crate::PersistedData;
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::DropRateSchema;
 use itertools::Itertools;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Default)]
 pub struct TasksRewards {
@@ -13,28 +14,29 @@ pub struct TasksRewards {
 impl PersistedData<Vec<Arc<DropRateSchema>>> for TasksRewards {
     const PATH: &'static str = ".cache/tasks_rewards.json";
 
-    fn data_from_api(&self) -> Vec<Arc<DropRateSchema>> {
+    async fn data_from_api(&self) -> Vec<Arc<DropRateSchema>> {
         self.api
             .tasks
             .rewards()
+            .await
             .unwrap()
             .into_iter()
             .map(Arc::new)
             .collect_vec()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    async fn refresh_data(&self) {
+        *self.data.write().unwrap() = self.data_from_api().await;
     }
 }
 
 impl TasksRewards {
-    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
+    pub(crate) async fn new(api: Arc<ArtifactApi>) -> Self {
         let rewards = Self {
             data: Default::default(),
             api,
         };
-        *rewards.data.write().unwrap() = rewards.retrieve_data();
+        *rewards.data.write().unwrap() = rewards.retrieve_data().await;
         rewards
     }
 
