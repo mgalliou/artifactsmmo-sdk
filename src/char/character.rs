@@ -51,12 +51,12 @@ impl Character {
         Self {
             id,
             inner: CharacterRequestHandler::new(
-                api.clone(),
+                api,
                 data.clone(),
                 bank.clone(),
                 server.clone(),
             ),
-            inventory: Arc::new(Inventory::new(data.clone(), items.clone())),
+            inventory: Arc::new(Inventory::new(data, items.clone())),
             bank,
             items,
             resources,
