@@ -21,12 +21,10 @@ use artifactsmmo_openapi::{
         TaskTradeSchema, UseItemResponseSchema,
     },
 };
-use chrono::Utc;
 use downcast_rs::{impl_downcast, Downcast};
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{
-    cmp::Ordering,
     fmt::{self, Display, Formatter},
     sync::{Arc, RwLockWriteGuard},
     thread::sleep,
@@ -359,16 +357,6 @@ impl CharacterRequestHandler {
     }
 
     /// Returns the remaining cooldown duration of the `Character`.
-    fn remaining_cooldown(&self) -> Duration {
-        if let Some(exp) = self.cooldown_expiration() {
-            let synced = Utc::now() - *self.server.server_offset.read().unwrap();
-            if synced.cmp(&exp.to_utc()) == Ordering::Less {
-                return (exp.to_utc() - synced).to_std().unwrap();
-            }
-        }
-        Duration::from_secs(0)
-    }
-
     /// Refresh the `Character` schema from API.
     pub fn refresh_data(&self) {
         let Ok(resp) = self.api.character.get(&self.name()) else {
@@ -386,6 +374,10 @@ impl CharacterRequestHandler {
 impl HasCharacterData for CharacterRequestHandler {
     fn data(&self) -> Arc<CharacterSchema> {
         self.data.read().unwrap().clone()
+    }
+
+    fn server(&self) -> Arc<Server> {
+        self.server.clone()
     }
 }
 

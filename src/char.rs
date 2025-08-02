@@ -1,7 +1,7 @@
-use crate::gear::Slot;
+use crate::{gear::Slot, Server};
 use artifactsmmo_openapi::models::{CharacterSchema, TaskType};
 use chrono::{DateTime, Utc};
-use std::sync::{Arc, RwLock};
+use std::{cmp::Ordering, sync::{Arc, RwLock}, time::Duration};
 
 pub use character::Character;
 pub use inventory::Inventory;
@@ -17,6 +17,7 @@ pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 
 pub trait HasCharacterData {
     fn data(&self) -> Arc<CharacterSchema>;
+    fn server(&self) -> Arc<Server>;
 
     fn name(&self) -> String {
         self.data().name.to_owned()
@@ -149,6 +150,16 @@ pub trait HasCharacterData {
             .cooldown_expiration
             .as_ref()
             .map(|cd| DateTime::parse_from_rfc3339(cd).ok().map(|dt| dt.to_utc()))?
+    }
+
+    fn remaining_cooldown(&self) -> Duration {
+        if let Some(exp) = self.cooldown_expiration() {
+            let synced = Utc::now() - *self.server().server_offset.read().unwrap();
+            if synced.cmp(&exp.to_utc()) == Ordering::Less {
+                return (exp.to_utc() - synced).to_std().unwrap();
+            }
+        }
+        Duration::from_secs(0)
     }
 
     //TODO:

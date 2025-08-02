@@ -32,6 +32,7 @@ pub struct Character {
     resources: Arc<Resources>,
     monsters: Arc<Monsters>,
     maps: Arc<Maps>,
+    server: Arc<Server>,
 }
 
 impl Character {
@@ -61,6 +62,7 @@ impl Character {
             resources,
             monsters,
             maps,
+            server,
         }
     }
 
@@ -499,6 +501,10 @@ impl Character {
 impl HasCharacterData for Character {
     fn data(&self) -> Arc<CharacterSchema> {
         self.inner.data()
+    }
+
+    fn server(&self) -> Arc<Server> {
+        self.server.clone()
     }
 }
 
