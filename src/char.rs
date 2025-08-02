@@ -1,7 +1,11 @@
 use crate::{gear::Slot, Server};
 use artifactsmmo_openapi::models::{CharacterSchema, TaskType};
 use chrono::{DateTime, Utc};
-use std::{cmp::Ordering, sync::{Arc, RwLock}, time::Duration};
+use std::{
+    cmp::Ordering,
+    sync::{Arc, RwLock},
+    time::Duration,
+};
 
 pub use character::Character;
 pub use inventory::Inventory;
@@ -112,7 +116,13 @@ pub trait HasCharacterData {
             | Slot::Artifact2
             | Slot::Artifact3
             | Slot::Bag
-            | Slot::Rune => 1,
+            | Slot::Rune => {
+                if self.equiped_in(s).is_empty() {
+                    0
+                } else {
+                    1
+                }
+            }
         }
     }
 
