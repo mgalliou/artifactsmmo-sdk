@@ -50,12 +50,7 @@ impl Character {
     ) -> Self {
         Self {
             id,
-            inner: CharacterRequestHandler::new(
-                api,
-                data.clone(),
-                bank.clone(),
-                server.clone(),
-            ),
+            inner: CharacterRequestHandler::new(api, data.clone(), bank.clone(), server.clone()),
             inventory: Arc::new(Inventory::new(data, items.clone())),
             bank,
             items,
@@ -66,7 +61,7 @@ impl Character {
         }
     }
 
-    fn map(&self) -> Arc<MapSchema> {
+    fn current_map(&self) -> Arc<MapSchema> {
         let (x, y) = self.position();
         self.maps.get(x, y).unwrap()
     }
@@ -77,7 +72,7 @@ impl Character {
     }
 
     pub fn can_fight(&self) -> Result<(), FightError> {
-        let Some(monster_code) = self.map().monster() else {
+        let Some(monster_code) = self.current_map().monster() else {
             return Err(FightError::NoMonsterOnMap);
         };
         let Some(monster) = self.monsters.get(&monster_code) else {
@@ -95,7 +90,7 @@ impl Character {
     }
 
     pub fn can_gather(&self) -> Result<(), GatherError> {
-        let Some(resource_code) = self.map().resource() else {
+        let Some(resource_code) = self.current_map().resource() else {
             return Err(GatherError::NoResourceOnMap);
         };
         let Some(resource) = self.resources.get(&resource_code) else {
@@ -169,7 +164,7 @@ impl Character {
             return Err(CraftError::InsufficientMaterials);
         }
         // TODO: check if InssuficientInventorySpace can happen
-        if !self.map().content_code_is(skill.as_ref()) {
+        if !self.current_map().content_code_is(skill.as_ref()) {
             return Err(CraftError::NoWorkshopOnMap);
         }
         Ok(())
@@ -203,7 +198,7 @@ impl Character {
         if self.inventory.free_space() + quantity < item.recycled_quantity() {
             return Err(RecycleError::InsufficientInventorySpace);
         }
-        if !self.map().content_code_is(skill.as_ref()) {
+        if !self.current_map().content_code_is(skill.as_ref()) {
             return Err(RecycleError::NoWorkshopOnMap);
         }
         Ok(())
@@ -247,7 +242,7 @@ impl Character {
         if self.inventory.free_space() < quantity {
             return Err(WithdrawError::InsufficientInventorySpace);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.current_map().content_type_is(MapContentType::Bank) {
             return Err(WithdrawError::NoBankOnMap);
         }
         Ok(())
@@ -276,7 +271,7 @@ impl Character {
         if self.bank.total_of(item_code) <= 0 && self.bank.free_slots() <= 0 {
             return Err(DepositError::InsufficientBankSpace);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.current_map().content_type_is(MapContentType::Bank) {
             return Err(DepositError::NoBankOnMap);
         }
         Ok(())
@@ -291,7 +286,7 @@ impl Character {
         if self.bank.gold() < quantity {
             return Err(GoldWithdrawError::InsufficientGold);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.current_map().content_type_is(MapContentType::Bank) {
             return Err(GoldWithdrawError::NoBankOnMap);
         }
         Ok(())
@@ -306,7 +301,7 @@ impl Character {
         if self.gold() < quantity {
             return Err(GoldDepositError::InsufficientGold);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.current_map().content_type_is(MapContentType::Bank) {
             return Err(GoldDepositError::NoBankOnMap);
         }
         Ok(())
@@ -321,7 +316,7 @@ impl Character {
         if self.gold() < self.bank.details().next_expansion_cost {
             return Err(BankExpansionError::InsufficientGold);
         }
-        if !self.map().content_type_is(MapContentType::Bank) {
+        if !self.current_map().content_type_is(MapContentType::Bank) {
             return Err(BankExpansionError::NoBankOnMap);
         }
         Ok(())
@@ -386,7 +381,10 @@ impl Character {
         if !self.task().is_empty() {
             return Err(TaskAcceptationError::TaskAlreadyInProgress);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster) {
+        if !self
+            .current_map()
+            .content_type_is(MapContentType::TasksMaster)
+        {
             return Err(TaskAcceptationError::NoTasksMasterOnMap);
         }
         Ok(())
@@ -414,8 +412,10 @@ impl Character {
         if self.task_missing() < quantity {
             return Err(TaskTradeError::SuperfluousQuantity);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster)
-            || !self.map().content_code_is("items")
+        if !self
+            .current_map()
+            .content_type_is(MapContentType::TasksMaster)
+            || !self.current_map().content_code_is("items")
         {
             return Err(TaskTradeError::WrongOrNoTasksMasterOnMap);
         }
@@ -437,8 +437,10 @@ impl Character {
         if self.inventory.free_space() < 2 {
             return Err(TaskCompletionError::InsufficientInventorySpace);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster)
-            || !self.map().content_code_is(&task_type.to_string())
+        if !self
+            .current_map()
+            .content_type_is(MapContentType::TasksMaster)
+            || !self.current_map().content_code_is(&task_type.to_string())
         {
             return Err(TaskCompletionError::WrongOrNoTasksMasterOnMap);
         }
@@ -457,8 +459,10 @@ impl Character {
         if self.inventory.total_of("tasks_coin") < 1 {
             return Err(TaskCancellationError::InsufficientTasksCoinQuantity);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster)
-            || !self.map().content_code_is(&task_type.to_string())
+        if !self
+            .current_map()
+            .content_type_is(MapContentType::TasksMaster)
+            || !self.current_map().content_code_is(&task_type.to_string())
         {
             return Err(TaskCancellationError::WrongOrNoTasksMasterOnMap);
         }
@@ -474,7 +478,10 @@ impl Character {
         if self.inventory.total_of("tasks_coin") < 6 {
             return Err(TasksCoinExchangeError::InsufficientTasksCoinQuantity);
         }
-        if !self.map().content_type_is(MapContentType::TasksMaster) {
+        if !self
+            .current_map()
+            .content_type_is(MapContentType::TasksMaster)
+        {
             return Err(TasksCoinExchangeError::NoTasksMasterOnMap);
         }
         // TODO: check for conditions when InsufficientInventorySpace can happen
