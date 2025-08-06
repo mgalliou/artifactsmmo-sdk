@@ -61,7 +61,7 @@ impl Character {
         }
     }
 
-    fn current_map(&self) -> Arc<MapSchema> {
+    pub fn current_map(&self) -> Arc<MapSchema> {
         let (x, y) = self.position();
         self.maps.get(x, y).unwrap()
     }

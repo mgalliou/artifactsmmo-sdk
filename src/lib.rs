@@ -22,6 +22,7 @@ pub use server::Server;
 pub use tasks::Tasks;
 pub use tasks_rewards::TasksRewards;
 
+pub mod error;
 pub mod account;
 pub mod bank;
 pub mod char;
