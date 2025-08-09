@@ -1,5 +1,5 @@
 use crate::items::{ItemSchemaExt, Items};
-use artifactsmmo_openapi::models::ItemSchema;
+use artifactsmmo_openapi::models::{InventorySlot, ItemSchema, SimpleItemSchema};
 use itertools::Itertools;
 use std::sync::Arc;
 
@@ -14,6 +14,17 @@ pub struct Inventory {
 impl Inventory {
     pub fn new(data: CharacterData, items: Arc<Items>) -> Self {
         Self { data, items }
+    }
+
+    pub fn content(&self) -> Vec<InventorySlot> {
+        self.data
+            .read()
+            .unwrap()
+            .inventory
+            .iter()
+            .flatten()
+            .cloned()
+            .collect_vec()
     }
 
     /// Returns the amount of item in the `Character` inventory.
