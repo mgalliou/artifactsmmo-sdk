@@ -1,5 +1,5 @@
 use crate::items::{ItemSchemaExt, Items};
-use artifactsmmo_openapi::models::{InventorySlot, ItemSchema, SimpleItemSchema};
+use artifactsmmo_openapi::models::{InventorySlot, ItemSchema};
 use itertools::Itertools;
 use std::sync::Arc;
 

@@ -22,6 +22,8 @@ pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 pub trait HasCharacterData {
     fn data(&self) -> Arc<CharacterSchema>;
     fn server(&self) -> Arc<Server>;
+    fn refresh_data(&self);
+    fn update_data(&self, schema: CharacterSchema);
 
     fn name(&self) -> String {
         self.data().name.to_owned()
@@ -171,28 +173,6 @@ pub trait HasCharacterData {
         }
         Duration::from_secs(0)
     }
-
-    //TODO:
-    // Returns the current `Gear` of the `Character`, containing item schemas.
-    // fn gear(&self) -> Gear {
-    //     let d = self.data();
-    //     Gear {
-    //         weapon: ITEMS.get(&d.weapon_slot),
-    //         shield: ITEMS.get(&d.shield_slot),
-    //         helmet: ITEMS.get(&d.helmet_slot),
-    //         body_armor: ITEMS.get(&d.body_armor_slot),
-    //         leg_armor: ITEMS.get(&d.leg_armor_slot),
-    //         boots: ITEMS.get(&d.boots_slot),
-    //         ring1: ITEMS.get(&d.ring1_slot),
-    //         ring2: ITEMS.get(&d.ring2_slot),
-    //         amulet: ITEMS.get(&d.amulet_slot),
-    //         artifact1: ITEMS.get(&d.artifact1_slot),
-    //         artifact2: ITEMS.get(&d.artifact2_slot),
-    //         artifact3: ITEMS.get(&d.artifact3_slot),
-    //         utility1: ITEMS.get(&d.utility1_slot),
-    //         utility2: ITEMS.get(&d.utility2_slot),
-    //     }
-    // }
 
     /// Returns the item equiped in the `given` slot.
     fn equiped_in(&self, slot: Slot) -> String {

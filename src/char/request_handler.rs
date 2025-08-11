@@ -355,20 +355,6 @@ impl CharacterRequestHandler {
         );
         sleep(s);
     }
-
-    /// Returns the remaining cooldown duration of the `Character`.
-    /// Refresh the `Character` schema from API.
-    pub fn refresh_data(&self) {
-        let Ok(resp) = self.api.character.get(&self.name()) else {
-            return;
-        };
-        self.update_data(*resp.data)
-    }
-
-    /// Update the `Character` schema with the given `schema.
-    pub fn update_data(&self, schema: CharacterSchema) {
-        *self.data.write().unwrap() = Arc::new(schema)
-    }
 }
 
 impl HasCharacterData for CharacterRequestHandler {
@@ -378,6 +364,17 @@ impl HasCharacterData for CharacterRequestHandler {
 
     fn server(&self) -> Arc<Server> {
         self.server.clone()
+    }
+
+    fn refresh_data(&self) {
+        let Ok(resp) = self.api.character.get(&self.name()) else {
+            return;
+        };
+        self.update_data(*resp.data)
+    }
+
+    fn update_data(&self, schema: CharacterSchema) {
+        *self.data.write().unwrap() = Arc::new(schema)
     }
 }
 

@@ -11,6 +11,7 @@ use crate::{
     monsters::{MonsterSchemaExt, Monsters},
     resources::{ResourceSchemaExt, Resources},
     server::Server,
+    Gear,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
@@ -503,6 +504,26 @@ impl Character {
     //     // TODO: check for conditions when InsufficientInventorySpace can happen
     //     Ok(())
     // }
+
+    pub fn gear(&self) -> Gear {
+        let d = self.data();
+        Gear {
+            weapon: self.items.get(&d.weapon_slot),
+            shield: self.items.get(&d.shield_slot),
+            helmet: self.items.get(&d.helmet_slot),
+            body_armor: self.items.get(&d.body_armor_slot),
+            leg_armor: self.items.get(&d.leg_armor_slot),
+            boots: self.items.get(&d.boots_slot),
+            ring1: self.items.get(&d.ring1_slot),
+            ring2: self.items.get(&d.ring2_slot),
+            amulet: self.items.get(&d.amulet_slot),
+            artifact1: self.items.get(&d.artifact1_slot),
+            artifact2: self.items.get(&d.artifact2_slot),
+            artifact3: self.items.get(&d.artifact3_slot),
+            utility1: self.items.get(&d.utility1_slot),
+            utility2: self.items.get(&d.utility2_slot),
+        }
+    }
 }
 
 impl HasCharacterData for Character {
@@ -512,6 +533,14 @@ impl HasCharacterData for Character {
 
     fn server(&self) -> Arc<Server> {
         self.server.clone()
+    }
+
+    fn refresh_data(&self) {
+        self.inner.refresh_data();
+    }
+
+    fn update_data(&self, schema: CharacterSchema) {
+        self.inner.update_data(schema);
     }
 }
 
