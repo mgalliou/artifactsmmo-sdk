@@ -361,8 +361,11 @@ impl Character {
     }
 
     pub fn can_unequip(&self, slot: Slot, quantity: i32) -> Result<(), UnequipError> {
-        if self.items.get(&self.equiped_in(slot)).is_none() {
+        let Some(equiped) = self.items.get(&self.equiped_in(slot)) else {
             return Err(UnequipError::SlotEmpty);
+        };
+        if equiped.health() >= self.health() {
+            return Err(UnequipError::InsufficientHealth);
         }
         if self.quantity_in_slot(slot) < quantity {
             return Err(UnequipError::InsufficientQuantity);
@@ -553,6 +556,7 @@ const WRONG_TASK: isize = 474;
 const TASK_ALREADY_COMPLETED_OR_TOO_MANY_ITEM_TRADED: isize = 475;
 const ITEM_NOT_CONSUMABLE: isize = 476;
 const MISSING_ITEM_OR_INSUFFICIENT_QUANTITY: isize = 478;
+const INSUFFICIENT_HEALTH: isize = 483;
 const SUPERFLOUS_UTILITY_QUANTITY: isize = 484;
 const ITEM_ALREADY_EQUIPED: isize = 485;
 //const ACTION_ALREADY_IN_PROGRESS: isize = 486;
@@ -774,10 +778,12 @@ pub enum EquipError {
 #[try_from(repr)]
 #[repr(isize)]
 pub enum UnequipError {
-    #[error("Slot is empty")]
-    SlotEmpty = INVALID_SLOT_STATE,
     #[error("Insufficient quantity")]
     InsufficientQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
+    #[error("Insufficient health")]
+    InsufficientHealth = INSUFFICIENT_HEALTH,
+    #[error("Slot is empty")]
+    SlotEmpty = INVALID_SLOT_STATE,
     #[error("Insufficient inventory space")]
     InsufficientInventorySpace = INVENTORY_FULL,
     #[error(transparent)]
