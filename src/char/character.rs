@@ -106,12 +106,15 @@ impl Character {
         Ok(())
     }
 
-    pub fn r#move(&self, x: i32, y: i32) -> Result<MapSchema, MoveError> {
+    pub fn r#move(&self, x: i32, y: i32) -> Result<Arc<MapSchema>, MoveError> {
         self.can_move(x, y)?;
         Ok(self.inner.request_move(x, y)?)
     }
 
     pub fn can_move(&self, x: i32, y: i32) -> Result<(), MoveError> {
+        if self.position() == (x, y) {
+            return Err(MoveError::AlreadyOnMap);
+        }
         if self.maps.get(x, y).is_none() {
             return Err(MoveError::MapNotFound);
         }
@@ -563,6 +566,7 @@ const ITEM_ALREADY_EQUIPED: isize = 485;
 const NO_TASK: isize = 487;
 const TASK_NOT_COMPLETED: isize = 488;
 const TASK_ALREADY_IN_PROGRESS: isize = 489;
+const ALREADY_ON_MAP: isize = 490;
 const INVALID_SLOT_STATE: isize = 491;
 const CHARACTER_GOLD_INSUFFICIENT: isize = 492;
 const SKILL_LEVEL_INSUFFICIENT: isize = 493;
@@ -602,8 +606,10 @@ pub enum GatherError {
 #[try_from(repr)]
 #[repr(isize)]
 pub enum MoveError {
-    #[error("MapNotFound")]
-    MapNotFound = ENTITY_NOT_FOUND_ON_MAP,
+    #[error("Map not found")]
+    MapNotFound = ENTITY_NOT_FOUND,
+    #[error("Already on map")]
+    AlreadyOnMap = ALREADY_ON_MAP,
     #[error(transparent)]
     UnhandledError(RequestError),
 }

@@ -113,13 +113,13 @@ impl CharacterRequestHandler {
         }
     }
 
-    pub fn request_move(&self, x: i32, y: i32) -> Result<MapSchema, RequestError> {
+    pub fn request_move(&self, x: i32, y: i32) -> Result<Arc<MapSchema>, RequestError> {
         self.request_action(Action::Move { x, y })
             .and_then(|r| {
                 r.downcast::<CharacterMovementResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
-            .map(|s| *s.data.destination)
+            .map(|s| Arc::new(*s.data.destination))
     }
 
     pub fn request_fight(&self) -> Result<FightSchema, RequestError> {
