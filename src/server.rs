@@ -38,8 +38,7 @@ impl Server {
             error!("failed to update time offset");
             return;
         };
-        let round_trip = now - Utc::now();
-        *self.server_offset.write().unwrap() = now - server_time + (round_trip / 2);
+        *self.server_offset.write().unwrap() = now - server_time;
         debug!("system time: {}", now);
         debug!("server time: {}", server_time);
         debug!(
