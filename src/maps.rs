@@ -1,6 +1,6 @@
 use crate::{char::Skill, events::Events};
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema};
+use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema, TaskType};
 use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
@@ -101,6 +101,60 @@ impl Maps {
             Skill::Fishing => None,
         }
     }
+
+    pub fn closest_with_content_code_from(
+        &self,
+        map: Arc<MapSchema>,
+        code: &str,
+    ) -> Option<Arc<MapSchema>> {
+        let maps = self.with_content_code(code);
+        if maps.is_empty() {
+            return None;
+        }
+        map.closest_among(maps)
+    }
+
+    fn closest_with_content_schema_from(
+        &self,
+        map: Arc<MapSchema>,
+        schema: &MapContentSchema,
+    ) -> Option<Arc<MapSchema>> {
+        let maps = self.with_content_schema(schema);
+        if maps.is_empty() {
+            return None;
+        }
+        map.closest_among(maps)
+    }
+
+    pub fn closest_of_type_from(
+        &self,
+        map: Arc<MapSchema>,
+        r#type: MapContentType,
+    ) -> Option<Arc<MapSchema>> {
+        let maps = self.of_type(r#type);
+        if maps.is_empty() {
+            return None;
+        }
+        map.closest_among(maps)
+    }
+
+    pub fn closest_tasksmaster_from(
+        &self,
+        map: Arc<MapSchema>,
+        r#type: Option<TaskType>,
+    ) -> Option<Arc<MapSchema>> {
+        if let Some(r#type) = r#type {
+            self.closest_with_content_schema_from(
+                map,
+                &MapContentSchema {
+                    r#type: MapContentType::TasksMaster,
+                    code: r#type.to_string(),
+                },
+            )
+        } else {
+            self.closest_of_type_from(map, MapContentType::TasksMaster)
+        }
+    }
 }
 
 pub trait MapSchemaExt {
@@ -111,10 +165,6 @@ pub trait MapSchemaExt {
     fn monster(&self) -> Option<String>;
     fn resource(&self) -> Option<String>;
     fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>>;
-    // fn closest_with_content_code(&self, code: &str) -> Option<Arc<MapSchema>>;
-    // fn closest_with_content_schema(&self, schema: &MapContentSchema) -> Option<Arc<MapSchema>>;
-    // fn closest_of_type(&self, r#type: MapContentType) -> Option<Arc<MapSchema>>;
-    // fn closest_tasksmaster(&self, r#type: Option<TaskType>) -> Option<Arc<MapSchema>>;
 }
 
 impl MapSchemaExt for MapSchema {
@@ -149,63 +199,7 @@ impl MapSchemaExt for MapSchema {
     fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>> {
         Maps::closest_from_amoung(self.x, self.y, others)
     }
-
-    // fn closest_with_content_code(&self, code: &str) -> Option<Arc<MapSchema>> {
-    //     let maps = MAPS.with_content_code(code);
-    //     if maps.is_empty() {
-    //         return None;
-    //     }
-    //     self.closest_among(maps)
-    // }
-
-    // fn closest_with_content_schema(&self, schema: &MapContentSchema) -> Option<Arc<MapSchema>> {
-    //     let maps = MAPS.with_content_schema(schema);
-    //     if maps.is_empty() {
-    //         return None;
-    //     }
-    //     self.closest_among(maps)
-    // }
-
-    // /// Returns the closest map from the `Character` containing the given
-    // /// content `type`.
-    // fn closest_of_type(&self, r#type: MapContentType) -> Option<Arc<MapSchema>> {
-    //     let maps = self.maps.of_type(r#type);
-    //     if maps.is_empty() {
-    //         return None;
-    //     }
-    //     self.closest_among(maps)
-    // }
-
-    // fn closest_tasksmaster(&self, r#type: Option<TaskType>) -> Option<Arc<MapSchema>> {
-    //     if let Some(r#type) = r#type {
-    //         self.closest_with_content_schema(&MapContentSchema {
-    //             r#type: MapContentType::TasksMaster,
-    //             code: r#type.to_string(),
-    //         })
-    //     } else {
-    //         self.closest_of_type(MapContentType::TasksMaster)
-    //     }
-    // }
 }
-
-// #[derive(Debug, Copy, Clone, PartialEq, AsRefStr, Display)]
-// #[strum(serialize_all = "snake_case")]
-// pub enum ContentType {
-//     Monster,
-//     Resource,
-//     Workshop,
-//     Bank,
-//     GrandExchange,
-//     TasksMaster,
-//     SantaClaus,
-// }
-
-// impl PartialEq<ContentType> for String {
-//     fn eq(&self, other: &ContentType) -> bool {
-//         other.as_ref() == *self
-//     }
-// }
-
 #[cfg(test)]
 mod tests {
     //use super::*;
