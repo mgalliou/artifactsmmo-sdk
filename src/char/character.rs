@@ -5,7 +5,6 @@ use super::{
 };
 use crate::{
     bank::Bank,
-    char::Skill,
     gear::Slot,
     items::{ItemSchemaExt, Items},
     maps::{MapSchemaExt, Maps},
@@ -16,9 +15,8 @@ use crate::{
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CharacterSchema, ConditionOperator, FightSchema, ItemSchema, MapContentType, MapSchema,
-    RecyclingItemsSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
-    TaskSchema, TaskTradeSchema,
+    CharacterSchema, FightSchema, MapContentType, MapSchema, RecyclingItemsSchema, RewardsSchema,
+    SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema,
 };
 use derive_more::TryFrom;
 use sdk_derive::FromRequestError;
@@ -352,34 +350,12 @@ impl Character {
             }
         }
         if !self.meets_conditions_for(&item) {
-            return Err(EquipError::ConditionsNotMet)
+            return Err(EquipError::ConditionsNotMet);
         }
         if self.inventory.free_space() + item.inventory_space() <= 0 {
             return Err(EquipError::InsufficientInventorySpace);
         }
         Ok(())
-    }
-
-    pub fn meets_conditions_for(&self, item: &ItemSchema) -> bool {
-        item.conditions.iter().flatten().all(|c| {
-            let value = if c.code == "alchemy_level" {
-                self.skill_level(Skill::Alchemy)
-            } else if c.code == "mining_level" {
-                self.skill_level(Skill::Mining)
-            } else if c.code == "woodcutting_level" {
-                self.skill_level(Skill::Woodcutting)
-            } else if c.code == "fishing_level" {
-                self.skill_level(Skill::Fishing)
-            } else {
-                self.level()
-            };
-            match c.operator {
-                ConditionOperator::Eq => value == c.value,
-                ConditionOperator::Ne => value != c.value,
-                ConditionOperator::Gt => value > c.value,
-                ConditionOperator::Lt => value < c.value,
-            }
-        })
     }
 
     pub fn unequip(&self, slot: Slot, quantity: i32) -> Result<(), UnequipError> {

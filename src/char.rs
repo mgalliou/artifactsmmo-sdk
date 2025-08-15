@@ -1,5 +1,5 @@
 use crate::{gear::Slot, Server};
-use artifactsmmo_openapi::models::{CharacterSchema, TaskType};
+use artifactsmmo_openapi::models::{CharacterSchema, ConditionOperator, ItemSchema, TaskType};
 use chrono::{DateTime, Utc};
 use std::{
     cmp::Ordering,
@@ -196,5 +196,27 @@ pub trait HasCharacterData {
             Slot::Rune => &d.rune_slot,
         }
         .clone()
+    }
+
+    fn meets_conditions_for(&self, item: &ItemSchema) -> bool {
+        item.conditions.iter().flatten().all(|c| {
+            let value = if c.code == "alchemy_level" {
+                self.skill_level(Skill::Alchemy)
+            } else if c.code == "mining_level" {
+                self.skill_level(Skill::Mining)
+            } else if c.code == "woodcutting_level" {
+                self.skill_level(Skill::Woodcutting)
+            } else if c.code == "fishing_level" {
+                self.skill_level(Skill::Fishing)
+            } else {
+                self.level()
+            };
+            match c.operator {
+                ConditionOperator::Eq => value == c.value,
+                ConditionOperator::Ne => value != c.value,
+                ConditionOperator::Gt => value > c.value,
+                ConditionOperator::Lt => value < c.value,
+            }
+        })
     }
 }

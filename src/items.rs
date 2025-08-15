@@ -238,14 +238,6 @@ impl Items {
         average
     }
 
-    pub fn equipable_at_level(&self, level: i32, r#type: Type) -> Vec<Arc<ItemSchema>> {
-        self.all()
-            .iter()
-            .filter(|i| i.r#type == r#type && i.level <= level)
-            .cloned()
-            .collect_vec()
-    }
-
     pub fn best_consumable_foods(&self, level: i32) -> Vec<Arc<ItemSchema>> {
         self.all()
             .iter()
