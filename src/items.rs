@@ -372,6 +372,7 @@ pub trait ItemSchemaExt {
     fn craft_schema(&self) -> Option<CraftSchema>;
     fn skill_to_craft(&self) -> Option<Skill>;
     fn effects(&self) -> Vec<&SimpleEffectSchema>;
+    fn effect_value(&self, effect: &str) -> i32;
     fn attack_damage(&self, r#type: DamageType) -> i32;
     fn attack_damage_against(&self, monster: &MonsterSchema) -> f32;
     fn damage_increase(&self, r#type: DamageType) -> i32;
@@ -379,7 +380,9 @@ pub trait ItemSchemaExt {
     fn health(&self) -> i32;
     fn haste(&self) -> i32;
     fn is_tool(&self) -> bool;
-    fn skill_cooldown_reduction(&self, skijll: Skill) -> i32;
+    fn skill_cooldown_reduction(&self, skill: Skill) -> i32;
+    fn wisdom(&self) -> i32;
+    fn prospecting(&self) -> i32;
     fn heal(&self) -> i32;
     fn restore(&self) -> i32;
     fn inventory_space(&self) -> i32;
@@ -400,6 +403,10 @@ impl ItemSchemaExt for ItemSchema {
 
     fn is_of_type(&self, r#type: Type) -> bool {
         self.r#type == r#type
+    }
+
+    fn is_craftable(&self) -> bool {
+        self.craft_schema().is_some()
     }
 
     fn is_crafted_with(&self, item: &str) -> bool {
@@ -456,14 +463,6 @@ impl ItemSchemaExt for ItemSchema {
             .unwrap_or(0)
     }
 
-    fn resistance(&self, r#type: DamageType) -> i32 {
-        self.effects()
-            .iter()
-            .find(|e| e.code == "res_".to_string() + r#type.as_ref())
-            .map(|e| e.value)
-            .unwrap_or(0)
-    }
-
     fn attack_damage_against(&self, monster: &MonsterSchema) -> f32 {
         DamageType::iter()
             .map(|t| Simulator::average_dmg(self.attack_damage(t), 0, monster.resistance(t)))
@@ -482,52 +481,50 @@ impl ItemSchemaExt for ItemSchema {
             .unwrap_or(0)
     }
 
+    fn resistance(&self, r#type: DamageType) -> i32 {
+        self.effect_value(&("res_".to_string() + r#type.as_ref()))
+    }
+
+    /// TODO: maybe compute both effects
     fn health(&self) -> i32 {
-        self.effects()
-            .iter()
-            .find(|e| e.code == "hp" || e.code == "boost_hp")
-            .map(|e| e.value)
-            .unwrap_or(0)
+        let hp = self.effect_value("hp");
+        if hp < 1 {
+            self.effect_value("boost_hp")
+        } else {
+            hp
+        }
     }
 
     fn haste(&self) -> i32 {
-        self.effects()
-            .iter()
-            .find(|e| e.code == "haste")
-            .map(|e| e.value)
-            .unwrap_or(0)
+        self.effect_value("haste")
+    }
+
+    fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
+        self.effect_value(skill.as_ref())
+    }
+
+    fn wisdom(&self) -> i32 {
+        self.effect_value("wisdom")
+    }
+
+    fn prospecting(&self) -> i32 {
+        self.effect_value("prospecting")
+    }
+
+    fn heal(&self) -> i32 {
+        self.effect_value("heal")
+    }
+
+    fn restore(&self) -> i32 {
+        self.effect_value("restore")
+    }
+
+    fn inventory_space(&self) -> i32 {
+        self.effect_value("inventory_space")
     }
 
     fn is_tool(&self) -> bool {
         Skill::iter().any(|s| self.skill_cooldown_reduction(s) < 0)
-    }
-
-    fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
-        self.effects()
-            .iter()
-            .find_map(|e| (e.code == skill.as_ref()).then_some(e.value))
-            .unwrap_or(0)
-    }
-
-    fn heal(&self) -> i32 {
-        self.effects()
-            .iter()
-            .find_map(|e| (e.code == "heal").then_some(e.value))
-            .unwrap_or(0)
-    }
-
-    fn restore(&self) -> i32 {
-        self.effects()
-            .iter()
-            .find_map(|e| (e.code == "restore").then_some(e.value))
-            .unwrap_or(0)
-    }
-
-    fn inventory_space(&self) -> i32 {
-        self.effects()
-            .iter()
-            .find_map(|e| (e.code == "inventory_space").then_some(e.value))
-            .unwrap_or(0)
     }
 
     fn is_consumable(&self) -> bool {
@@ -565,8 +562,11 @@ impl ItemSchemaExt for ItemSchema {
                 .sum::<f32>()
     }
 
-    fn is_craftable(&self) -> bool {
-        self.craft_schema().is_some()
+    fn effect_value(&self, effect: &str) -> i32 {
+        self.effects()
+            .iter()
+            .find_map(|e| (e.code == effect).then_some(e.value))
+            .unwrap_or(0)
     }
 }
 
