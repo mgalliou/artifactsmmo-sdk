@@ -79,6 +79,26 @@ impl Gear {
         }
     }
 
+    pub fn slot(&self, slot: Slot) -> Option<Arc<ItemSchema>> {
+        match slot {
+            Slot::Weapon => self.weapon.clone(),
+            Slot::Shield => self.shield.clone(),
+            Slot::Helmet => self.helmet.clone(),
+            Slot::BodyArmor => self.body_armor.clone(),
+            Slot::LegArmor => self.leg_armor.clone(),
+            Slot::Boots => self.boots.clone(),
+            Slot::Ring1 => self.ring1.clone(),
+            Slot::Ring2 => self.ring2.clone(),
+            Slot::Amulet => self.amulet.clone(),
+            Slot::Artifact1 => self.artifact1.clone(),
+            Slot::Artifact2 => self.artifact2.clone(),
+            Slot::Artifact3 => self.artifact3.clone(),
+            Slot::Utility1 => self.utility1.clone(),
+            Slot::Utility2 => self.utility2.clone(),
+            _ => None,
+        }
+    }
+
     pub fn attack_damage_against(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
@@ -118,26 +138,6 @@ impl Gear {
             .sum()
     }
 
-    pub fn slot(&self, slot: Slot) -> Option<Arc<ItemSchema>> {
-        match slot {
-            Slot::Weapon => self.weapon.clone(),
-            Slot::Shield => self.shield.clone(),
-            Slot::Helmet => self.helmet.clone(),
-            Slot::BodyArmor => self.body_armor.clone(),
-            Slot::LegArmor => self.leg_armor.clone(),
-            Slot::Boots => self.boots.clone(),
-            Slot::Ring1 => self.ring1.clone(),
-            Slot::Ring2 => self.ring2.clone(),
-            Slot::Amulet => self.amulet.clone(),
-            Slot::Artifact1 => self.artifact1.clone(),
-            Slot::Artifact2 => self.artifact2.clone(),
-            Slot::Artifact3 => self.artifact3.clone(),
-            Slot::Utility1 => self.utility1.clone(),
-            Slot::Utility2 => self.utility2.clone(),
-            _ => None,
-        }
-    }
-
     fn resistance(&self, t: DamageType) -> i32 {
         Slot::iter()
             .map(|s| self.slot(s).map_or(0, |i| i.resistance(t)))
@@ -145,8 +145,20 @@ impl Gear {
     }
 
     pub fn haste(&self) -> i32 {
+        self.effect_value("haste")
+    }
+
+    pub fn wisdom(&self) -> i32 {
+        self.effect_value("wisdom")
+    }
+
+    pub fn prospecting(&self) -> i32 {
+        self.effect_value("prospecting")
+    }
+
+    pub fn effect_value(&self, effect: &str) -> i32 {
         Slot::iter()
-            .map(|s| self.slot(s).map_or(0, |i| i.haste()))
+            .map(|s| self.slot(s).map_or(0, |i| i.effect_value(effect)))
             .sum()
     }
 
