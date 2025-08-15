@@ -484,6 +484,7 @@ impl ItemSchemaExt for ItemSchema {
             .find(|e| {
                 e.code == "dmg_".to_string() + r#type.as_ref()
                     || e.code == "boost_dmg_".to_string() + r#type.as_ref()
+                    || e.code == "dmg"
             })
             .map(|e| e.value)
             .unwrap_or(0)
