@@ -796,7 +796,7 @@ pub enum EquipError {
     QuantityGreaterThanSlotMaxixum = SUPERFLOUS_UTILITY_QUANTITY,
     #[error("Slot not empty")]
     SlotNotEmpty = INVALID_SLOT_STATE,
-    #[error("Insufficient character level")]
+    #[error("Conditions not met")]
     ConditionsNotMet = CHARACTER_LEVEL_INSUFFICIENT,
     #[error("Insufficient inventory space")]
     InsufficientInventorySpace = INVENTORY_FULL,
