@@ -33,18 +33,18 @@ impl Maps {
 
     pub fn refresh_from_events(&self) {
         self.events.active().iter().for_each(|e| {
-            if DateTime::parse_from_rfc3339(&e.expiration).unwrap() < Utc::now() {
-                if let Some(map) = self.data.get(&(e.map.x, e.map.y)) {
-                    *map.write().unwrap() = Arc::new(*e.previous_map.clone())
-                }
+            if DateTime::parse_from_rfc3339(&e.expiration).unwrap() < Utc::now()
+                && let Some(map) = self.data.get(&(e.map.x, e.map.y))
+            {
+                *map.write().unwrap() = Arc::new(*e.previous_map.clone())
             }
         });
         self.events.refresh_active();
         self.events.active().iter().for_each(|e| {
-            if DateTime::parse_from_rfc3339(&e.expiration).unwrap() > Utc::now() {
-                if let Some(map) = self.data.get(&(e.map.x, e.map.y)) {
-                    *map.write().unwrap() = Arc::new(*e.map.clone())
-                }
+            if DateTime::parse_from_rfc3339(&e.expiration).unwrap() > Utc::now()
+                && let Some(map) = self.data.get(&(e.map.x, e.map.y))
+            {
+                *map.write().unwrap() = Arc::new(*e.map.clone())
             }
         });
     }

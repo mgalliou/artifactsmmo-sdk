@@ -15,8 +15,9 @@ use crate::{
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CharacterSchema, FightSchema, MapContentType, MapSchema, RecyclingItemsSchema, RewardsSchema,
-    SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema,
+    CharacterSchema, FightSchema, MapContentType, MapSchema,
+    RecyclingItemsSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
+    TaskSchema, TaskTradeSchema,
 };
 use derive_more::TryFrom;
 use sdk_derive::FromRequestError;
@@ -350,7 +351,7 @@ impl Character {
             }
         }
         if !self.meets_conditions_for(&item) {
-            return Err(EquipError::ConditionsNotMet);
+            return Err(EquipError::ConditionsNotMet)
         }
         if self.inventory.free_space() + item.inventory_space() <= 0 {
             return Err(EquipError::InsufficientInventorySpace);

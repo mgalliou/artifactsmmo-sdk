@@ -290,17 +290,17 @@ impl From<Gear> for Vec<SimpleItemSchema> {
     fn from(val: Gear) -> Self {
         let mut i = Slot::iter()
             .filter_map(|s| {
-                if s.is_ring_1() || s.is_ring_2() {
-                    if let Some(item) = val.slot(s) {
-                        return Some(SimpleItemSchema {
-                            code: item.code.to_owned(),
-                            quantity: if s.is_utility_1() || s.is_utility_2() {
-                                100
-                            } else {
-                                1
-                            },
-                        });
-                    }
+                if (s.is_ring_1() || s.is_ring_2())
+                    && let Some(item) = val.slot(s)
+                {
+                    return Some(SimpleItemSchema {
+                        code: item.code.to_owned(),
+                        quantity: if s.is_utility_1() || s.is_utility_2() {
+                            100
+                        } else {
+                            1
+                        },
+                    });
                 }
                 None
             })

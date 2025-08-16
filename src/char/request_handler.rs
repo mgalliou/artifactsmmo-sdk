@@ -1,7 +1,7 @@
 use super::CharacterData;
 use crate::{
     bank::Bank,
-    char::{action::Action, HasCharacterData},
+    char::{HasCharacterData, action::Action},
     consts::BANK_EXTENSION_SIZE,
     gear::Slot,
     maps::MapSchemaExt,
@@ -21,7 +21,7 @@ use artifactsmmo_openapi::{
         TaskTradeSchema, UseItemResponseSchema,
     },
 };
-use downcast_rs::{impl_downcast, Downcast};
+use downcast_rs::{Downcast, impl_downcast};
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -83,25 +83,24 @@ impl CharacterRequestHandler {
             Ok(res) => {
                 info!("{}", res.to_string());
                 self.update_data(res.character().clone());
-                if let Some(s) = res.downcast_ref::<BankItemTransactionResponseSchema>() {
-                    if let Some(mut content) = bank_content {
-                        *content = s.data.bank.clone().into();
-                    }
-                } else if let Some(s) = res.downcast_ref::<BankGoldTransactionResponseSchema>() {
-                    if let Some(mut details) = bank_details {
-                        let mut new_details = (*details.clone()).clone();
-                        new_details.gold = s.data.bank.quantity;
-                        *details = Arc::new(new_details);
-                    }
+                if let Some(s) = res.downcast_ref::<BankItemTransactionResponseSchema>()
+                    && let Some(mut content) = bank_content
+                {
+                    *content = s.data.bank.clone().into();
+                } else if let Some(s) = res.downcast_ref::<BankGoldTransactionResponseSchema>()
+                    && let Some(mut details) = bank_details
+                {
+                    let mut new_details = (*details.clone()).clone();
+                    new_details.gold = s.data.bank.quantity;
+                    *details = Arc::new(new_details);
                 } else if res
                     .downcast_ref::<BankExtensionTransactionResponseSchema>()
                     .is_some()
+                    && let Some(mut details) = bank_details
                 {
-                    if let Some(mut details) = bank_details {
-                        let mut new_details = (*details.clone()).clone();
-                        new_details.slots += BANK_EXTENSION_SIZE;
-                        *details = Arc::new(new_details);
-                    }
+                    let mut new_details = (*details.clone()).clone();
+                    new_details.slots += BANK_EXTENSION_SIZE;
+                    *details = Arc::new(new_details);
                 };
                 Ok(res)
             }
