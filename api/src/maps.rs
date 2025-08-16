@@ -1,3 +1,4 @@
+use crate::{DataPage, PaginatedApi};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -7,7 +8,7 @@ use artifactsmmo_openapi::{
         },
         Error,
     },
-    models::{MapContentType, MapResponseSchema, MapSchema},
+    models::{DataPageMapSchema, MapResponseSchema, MapSchema},
 };
 use std::sync::Arc;
 
@@ -21,42 +22,32 @@ impl MapsApi {
         Self { configuration }
     }
 
-    pub fn all(
+    pub fn get(&self, x: i32, y: i32) -> Result<MapResponseSchema, Error<GetMapMapsXyGetError>> {
+        get_map_maps_xy_get(&self.configuration, x, y)
+    }
+}
+
+impl PaginatedApi<MapSchema, DataPageMapSchema, GetAllMapsMapsGetError> for MapsApi {
+    fn api_call(
         &self,
-        content_type: Option<MapContentType>,
-        content_code: Option<&str>,
-    ) -> Result<Vec<MapSchema>, Error<GetAllMapsMapsGetError>> {
-        let mut maps: Vec<MapSchema> = vec![];
-        let mut current_page = 1;
-        let mut finished = false;
-        while !finished {
-            let resp = get_all_maps_maps_get(
-                &self.configuration,
-                content_type,
-                content_code,
-                Some(current_page),
-                Some(100),
-            );
-            match resp {
-                Ok(resp) => {
-                    maps.extend(resp.data);
-                    if let Some(Some(pages)) = resp.pages {
-                        if current_page >= pages {
-                            finished = true
-                        }
-                        current_page += 1;
-                    } else {
-                        // No pagination information, assume single page
-                        finished = true
-                    }
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(maps)
+        current_page: i32,
+    ) -> Result<DataPageMapSchema, Error<GetAllMapsMapsGetError>> {
+        get_all_maps_maps_get(
+            &self.configuration,
+            None,
+            None,
+            Some(current_page),
+            Some(100),
+        )
+    }
+}
+
+impl DataPage<MapSchema> for DataPageMapSchema {
+    fn data(self) -> Vec<MapSchema> {
+        self.data
     }
 
-    pub fn info(&self, x: i32, y: i32) -> Result<MapResponseSchema, Error<GetMapMapsXyGetError>> {
-        get_map_maps_xy_get(&self.configuration, x, y)
+    fn pages(&self) -> Option<Option<i32>> {
+        self.pages
     }
 }

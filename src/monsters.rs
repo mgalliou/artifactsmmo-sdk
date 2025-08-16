@@ -1,5 +1,5 @@
 use crate::{events::Events, items::DamageType, PersistedData};
-use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::MonsterSchema;
 use itertools::Itertools;
 use std::{
@@ -20,7 +20,7 @@ impl PersistedData<HashMap<String, Arc<MonsterSchema>>> for Monsters {
     fn data_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
         self.api
             .monsters
-            .all(None, None, None)
+            .all()
             .unwrap()
             .into_iter()
             .map(|m| (m.code.clone(), Arc::new(m)))

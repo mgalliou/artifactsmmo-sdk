@@ -22,12 +22,12 @@ pub use server::Server;
 pub use tasks::Tasks;
 pub use tasks_rewards::TasksRewards;
 
-pub mod error;
 pub mod account;
 pub mod bank;
 pub mod char;
 pub mod client;
 pub mod consts;
+pub mod error;
 pub mod events;
 pub mod gear;
 pub mod item_code;

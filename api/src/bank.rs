@@ -1,3 +1,4 @@
+use crate::{DataPage, PaginatedApi};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -7,7 +8,7 @@ use artifactsmmo_openapi::{
         },
         Error,
     },
-    models::{BankResponseSchema, SimpleItemSchema},
+    models::{BankResponseSchema, DataPageSimpleItemSchema, SimpleItemSchema},
 };
 use std::sync::Arc;
 
@@ -24,37 +25,25 @@ impl BankApi {
     pub fn details(&self) -> Result<BankResponseSchema, Error<GetBankDetailsMyBankGetError>> {
         get_bank_details_my_bank_get(&self.configuration)
     }
+}
 
-    pub fn items(
+impl PaginatedApi<SimpleItemSchema, DataPageSimpleItemSchema, GetBankItemsMyBankItemsGetError>
+    for BankApi
+{
+    fn api_call(
         &self,
-        code: Option<&str>,
-    ) -> Result<Vec<SimpleItemSchema>, Error<GetBankItemsMyBankItemsGetError>> {
-        let mut items: Vec<SimpleItemSchema> = vec![];
-        let mut current_page = 1;
-        let mut finished = false;
-        while !finished {
-            let resp = get_bank_items_my_bank_items_get(
-                &self.configuration,
-                code,
-                Some(current_page),
-                Some(100),
-            );
-            match resp {
-                Ok(resp) => {
-                    items.extend(resp.data);
-                    if let Some(Some(pages)) = resp.pages {
-                        if current_page >= pages {
-                            finished = true
-                        }
-                        current_page += 1;
-                    } else {
-                        // No pagination information, assume single page
-                        finished = true
-                    }
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(items)
+        current_page: i32,
+    ) -> Result<DataPageSimpleItemSchema, Error<GetBankItemsMyBankItemsGetError>> {
+        get_bank_items_my_bank_items_get(&self.configuration, None, Some(current_page), Some(100))
+    }
+}
+
+impl DataPage<SimpleItemSchema> for DataPageSimpleItemSchema {
+    fn data(self) -> Vec<SimpleItemSchema> {
+        self.data
+    }
+
+    fn pages(&self) -> Option<Option<i32>> {
+        self.pages
     }
 }

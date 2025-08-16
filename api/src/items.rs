@@ -1,3 +1,4 @@
+use crate::{DataPage, PaginatedApi};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -7,7 +8,7 @@ use artifactsmmo_openapi::{
         },
         Error,
     },
-    models::{ItemResponseSchema, ItemSchema},
+    models::{DataPageItemSchema, ItemResponseSchema, ItemSchema},
 };
 use std::sync::Arc;
 
@@ -21,42 +22,36 @@ impl ItemsApi {
         Self { configuration }
     }
 
-    pub fn all(&self) -> Result<Vec<ItemSchema>, Error<GetAllItemsItemsGetError>> {
-        let mut items: Vec<ItemSchema> = vec![];
-        let mut current_page = 1;
-        let mut finished = false;
-        while !finished {
-            let resp = get_all_items_items_get(
-                &self.configuration,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                Some(current_page),
-                Some(100),
-            );
-            match resp {
-                Ok(resp) => {
-                    items.extend(resp.data);
-                    if let Some(Some(pages)) = resp.pages {
-                        if current_page >= pages {
-                            finished = true
-                        }
-                        current_page += 1;
-                    } else {
-                        // No pagination information, assume single page
-                        finished = true
-                    }
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(items)
+    pub fn get(&self, code: &str) -> Result<ItemResponseSchema, Error<GetItemItemsCodeGetError>> {
+        get_item_items_code_get(&self.configuration, code)
+    }
+}
+
+impl PaginatedApi<ItemSchema, DataPageItemSchema, GetAllItemsItemsGetError> for ItemsApi {
+    fn api_call(
+        &self,
+        current_page: i32,
+    ) -> Result<DataPageItemSchema, Error<GetAllItemsItemsGetError>> {
+        get_all_items_items_get(
+            &self.configuration,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(current_page),
+            Some(100),
+        )
+    }
+}
+
+impl DataPage<ItemSchema> for DataPageItemSchema {
+    fn data(self) -> Vec<ItemSchema> {
+        self.data
     }
 
-    pub fn info(&self, code: &str) -> Result<ItemResponseSchema, Error<GetItemItemsCodeGetError>> {
-        get_item_items_code_get(&self.configuration, code)
+    fn pages(&self) -> Option<Option<i32>> {
+        self.pages
     }
 }

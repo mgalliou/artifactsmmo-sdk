@@ -2,7 +2,7 @@ use crate::{
     error::ClientError, Account, Bank, Character, Events, Items, Maps, Monsters, Resources, Server,
     Tasks, TasksRewards,
 };
-use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use std::{
     sync::{Arc, RwLock},
     thread,
@@ -34,7 +34,7 @@ impl Client {
                     .map_err(|e| ClientError::Api(Box::new(e)))?;
                 let bank_items = api_clone
                     .bank
-                    .items(None)
+                    .all()
                     .map_err(|e| ClientError::Api(Box::new(e)))?;
                 Ok(Arc::new(Bank::new(*bank_details.data, bank_items)))
             });

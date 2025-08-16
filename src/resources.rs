@@ -1,5 +1,5 @@
 use crate::{events::Events, PersistedData};
-use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::ResourceSchema;
 use itertools::Itertools;
 use std::{
@@ -20,7 +20,7 @@ impl PersistedData<HashMap<String, Arc<ResourceSchema>>> for Resources {
     fn data_from_api(&self) -> HashMap<String, Arc<ResourceSchema>> {
         self.api
             .resources
-            .all(None, None, None, None)
+            .all()
             .unwrap()
             .into_iter()
             .map(|r| (r.code.clone(), Arc::new(r)))

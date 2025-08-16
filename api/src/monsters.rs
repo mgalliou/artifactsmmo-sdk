@@ -1,3 +1,4 @@
+use crate::{DataPage, PaginatedApi};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -7,7 +8,7 @@ use artifactsmmo_openapi::{
         },
         Error,
     },
-    models::{MonsterResponseSchema, MonsterSchema},
+    models::{DataPageMonsterSchema, MonsterResponseSchema, MonsterSchema},
 };
 use std::sync::Arc;
 
@@ -21,48 +22,39 @@ impl MonstersApi {
         Self { configuration }
     }
 
-    pub fn all(
-        &self,
-        min_level: Option<i32>,
-        max_level: Option<i32>,
-        drop: Option<&str>,
-    ) -> Result<Vec<MonsterSchema>, Error<GetAllMonstersMonstersGetError>> {
-        let mut monsters: Vec<MonsterSchema> = vec![];
-        let mut current_page = 1;
-        let mut finished = false;
-        while !finished {
-            let resp = get_all_monsters_monsters_get(
-                &self.configuration,
-                None,
-                min_level,
-                max_level,
-                drop,
-                Some(current_page),
-                Some(100),
-            );
-            match resp {
-                Ok(resp) => {
-                    monsters.extend(resp.data);
-                    if let Some(Some(pages)) = resp.pages {
-                        if current_page >= pages {
-                            finished = true
-                        }
-                        current_page += 1;
-                    } else {
-                        // No pagination information, assume single page
-                        finished = true
-                    }
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(monsters)
-    }
-
-    pub fn info(
+    pub fn get(
         &self,
         code: &str,
     ) -> Result<MonsterResponseSchema, Error<GetMonsterMonstersCodeGetError>> {
         get_monster_monsters_code_get(&self.configuration, code)
+    }
+}
+
+impl PaginatedApi<MonsterSchema, DataPageMonsterSchema, GetAllMonstersMonstersGetError>
+    for MonstersApi
+{
+    fn api_call(
+        &self,
+        current_page: i32,
+    ) -> Result<DataPageMonsterSchema, Error<GetAllMonstersMonstersGetError>> {
+        get_all_monsters_monsters_get(
+            &self.configuration,
+            None,
+            None,
+            None,
+            None,
+            Some(current_page),
+            Some(100),
+        )
+    }
+}
+
+impl DataPage<MonsterSchema> for DataPageMonsterSchema {
+    fn data(self) -> Vec<MonsterSchema> {
+        self.data
+    }
+
+    fn pages(&self) -> Option<Option<i32>> {
+        self.pages
     }
 }

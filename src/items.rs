@@ -10,7 +10,7 @@ use crate::{
     tasks_rewards::TasksRewards,
     PersistedData, Simulator,
 };
-use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{
     CraftSchema, ItemSchema, MonsterSchema, ResourceSchema, SimpleEffectSchema, SimpleItemSchema,
 };

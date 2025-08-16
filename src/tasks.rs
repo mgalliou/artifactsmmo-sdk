@@ -1,5 +1,5 @@
 use crate::PersistedData;
-use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::TaskFullSchema;
 use itertools::Itertools;
 use std::sync::{Arc, RwLock};
@@ -16,7 +16,7 @@ impl PersistedData<Vec<Arc<TaskFullSchema>>> for Tasks {
     fn data_from_api(&self) -> Vec<Arc<TaskFullSchema>> {
         self.api
             .tasks
-            .all(None, None, None, None)
+            .all()
             .unwrap()
             .into_iter()
             .map(Arc::new)

@@ -1,3 +1,4 @@
+use crate::{DataPage, PaginatedApi};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -7,7 +8,7 @@ use artifactsmmo_openapi::{
         },
         Error,
     },
-    models::{GatheringSkill, ResourceResponseSchema, ResourceSchema},
+    models::{DataPageResourceSchema, ResourceResponseSchema, ResourceSchema},
 };
 use std::sync::Arc;
 
@@ -21,49 +22,39 @@ impl ResourcesApi {
         Self { configuration }
     }
 
-    pub fn all(
-        &self,
-        min_level: Option<i32>,
-        max_level: Option<i32>,
-        skill: Option<GatheringSkill>,
-        drop: Option<&str>,
-    ) -> Result<Vec<ResourceSchema>, Error<GetAllResourcesResourcesGetError>> {
-        let mut resources: Vec<ResourceSchema> = vec![];
-        let mut current_page = 1;
-        let mut finished = false;
-        while !finished {
-            let resp = get_all_resources_resources_get(
-                &self.configuration,
-                min_level,
-                max_level,
-                skill,
-                drop,
-                Some(current_page),
-                Some(100),
-            );
-            match resp {
-                Ok(resp) => {
-                    resources.extend(resp.data);
-                    if let Some(Some(pages)) = resp.pages {
-                        if current_page >= pages {
-                            finished = true
-                        }
-                        current_page += 1;
-                    } else {
-                        // No pagination information, assume single page
-                        finished = true
-                    }
-                }
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(resources)
-    }
-
-    pub fn info(
+    pub fn get(
         &self,
         code: &str,
     ) -> Result<ResourceResponseSchema, Error<GetResourceResourcesCodeGetError>> {
         get_resource_resources_code_get(&self.configuration, code)
+    }
+}
+
+impl PaginatedApi<ResourceSchema, DataPageResourceSchema, GetAllResourcesResourcesGetError>
+    for ResourcesApi
+{
+    fn api_call(
+        &self,
+        current_page: i32,
+    ) -> Result<DataPageResourceSchema, Error<GetAllResourcesResourcesGetError>> {
+        get_all_resources_resources_get(
+            &self.configuration,
+            None,
+            None,
+            None,
+            None,
+            Some(current_page),
+            Some(100),
+        )
+    }
+}
+
+impl DataPage<ResourceSchema> for DataPageResourceSchema {
+    fn data(self) -> Vec<ResourceSchema> {
+        self.data
+    }
+
+    fn pages(&self) -> Option<Option<i32>> {
+        self.pages
     }
 }

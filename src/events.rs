@@ -1,5 +1,5 @@
 use crate::PersistedData;
-use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
 use itertools::Itertools;
@@ -61,7 +61,7 @@ impl Events {
         // NOTE: keep `events` locked before updating last refresh
         let mut events = self.active.write().unwrap();
         self.update_last_refresh(now);
-        if let Ok(new) = self.api.events.active() {
+        if let Ok(new) = self.api.active_events.all() {
             *events = new.into_iter().map(Arc::new).collect_vec();
             debug!("events refreshed.");
         }

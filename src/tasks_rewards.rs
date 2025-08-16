@@ -1,5 +1,5 @@
 use crate::PersistedData;
-use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::DropRateSchema;
 use itertools::Itertools;
 use std::sync::{Arc, RwLock};
@@ -15,8 +15,8 @@ impl PersistedData<Vec<Arc<DropRateSchema>>> for TasksRewards {
 
     fn data_from_api(&self) -> Vec<Arc<DropRateSchema>> {
         self.api
-            .tasks
-            .rewards()
+            .tasks_reward
+            .all()
             .unwrap()
             .into_iter()
             .map(Arc::new)

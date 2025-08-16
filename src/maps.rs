@@ -1,5 +1,5 @@
 use crate::{char::Skill, events::Events};
-use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema, TaskType};
 use chrono::{DateTime, Utc};
 use std::{
@@ -18,7 +18,7 @@ impl Maps {
         Self {
             data: api
                 .maps
-                .all(None, None)
+                .all()
                 .unwrap()
                 .into_iter()
                 .map(|m| ((m.x, m.y), RwLock::new(Arc::new(m))))

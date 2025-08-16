@@ -1,4 +1,4 @@
-use artifactsmmo_openapi::apis::configuration::Configuration;
+use artifactsmmo_openapi::apis::{configuration::Configuration, Error};
 use std::sync::Arc;
 
 pub use account::AccountApi;
@@ -9,11 +9,17 @@ pub use items::ItemsApi;
 pub use maps::MapsApi;
 pub use monsters::MonstersApi;
 pub use my_characters::MyCharacterApi;
+pub use npcs::NpcsApi;
 pub use resources::ResourcesApi;
 pub use server::ServerApi;
 pub use tasks::TasksApi;
 
+use crate::{
+    active_events::ActiveEventsApi, npcs_items::NpcsItemsApi, tasks_reward::TasksRewardApi,
+};
+
 pub mod account;
+pub mod active_events;
 pub mod bank;
 pub mod characters;
 pub mod events;
@@ -21,13 +27,17 @@ pub mod items;
 pub mod maps;
 pub mod monsters;
 pub mod my_characters;
+pub mod npcs;
+pub mod npcs_items;
 pub mod resources;
 pub mod server;
 pub mod tasks;
+pub mod tasks_reward;
 
 #[derive(Default, Debug)]
 pub struct ArtifactApi {
     pub account: AccountApi,
+    pub active_events: ActiveEventsApi,
     pub bank: BankApi,
     pub character: CharactersApi,
     pub events: EventsApi,
@@ -35,9 +45,12 @@ pub struct ArtifactApi {
     pub maps: MapsApi,
     pub monsters: MonstersApi,
     pub my_character: MyCharacterApi,
+    pub npcs: NpcsApi,
+    pub npcs_items: NpcsItemsApi,
     pub resources: ResourcesApi,
-    pub tasks: TasksApi,
     pub server: ServerApi,
+    pub tasks: TasksApi,
+    pub tasks_reward: TasksRewardApi,
 }
 
 impl ArtifactApi {
@@ -57,13 +70,53 @@ impl ArtifactApi {
             bank: BankApi::new(auth_conf.clone()),
             character: CharactersApi::new(conf.clone()),
             events: EventsApi::new(conf.clone()),
+            active_events: ActiveEventsApi::new(conf.clone()),
             items: ItemsApi::new(conf.clone()),
             maps: MapsApi::new(conf.clone()),
             monsters: MonstersApi::new(conf.clone()),
             my_character: MyCharacterApi::new(auth_conf.clone()),
             resources: ResourcesApi::new(conf.clone()),
             tasks: TasksApi::new(conf.clone()),
+            tasks_reward: TasksRewardApi::new(conf.clone()),
             server: ServerApi::new(conf.clone()),
+            npcs: NpcsApi::new(conf.clone()),
+            npcs_items: NpcsItemsApi::new(conf.clone()),
         }
     }
+}
+
+pub trait PaginatedApi<T, P, E>
+where
+    P: DataPage<T>,
+{
+    fn all(&self) -> Result<Vec<T>, Error<E>> {
+        let mut npcs: Vec<T> = vec![];
+        let mut current_page = 1;
+        let mut finished = false;
+        while !finished {
+            let resp = self.api_call(current_page);
+            match resp {
+                Ok(resp) => {
+                    if let Some(Some(pages)) = resp.pages() {
+                        if current_page >= pages {
+                            finished = true
+                        }
+                        current_page += 1;
+                    } else {
+                        // No pagination information, assume single page
+                        finished = true
+                    }
+                    npcs.extend(resp.data());
+                }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(npcs)
+    }
+    fn api_call(&self, current_page: i32) -> Result<P, Error<E>>;
+}
+
+pub trait DataPage<T> {
+    fn data(self) -> Vec<T>;
+    fn pages(&self) -> Option<Option<i32>>;
 }
