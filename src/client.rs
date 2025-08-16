@@ -1,6 +1,6 @@
 use crate::{
-    error::ClientError, Account, Bank, Character, Events, Items, Maps, Monsters, Resources, Server,
-    Tasks, TasksRewards,
+    Account, Bank, Character, Events, Items, Maps, Monsters, Resources, Server, Tasks,
+    TasksRewards, error::ClientError, npcs::Npcs, npcs_items::NpcsItems,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use std::{
@@ -19,6 +19,7 @@ pub struct Client {
     pub tasks: Arc<Tasks>,
     pub tasks_rewards: Arc<TasksRewards>,
     pub maps: Arc<Maps>,
+    pub npcs: Arc<Npcs>,
 }
 
 impl Client {
@@ -85,11 +86,17 @@ impl Client {
             )
         });
 
+        let npcs = Arc::new(Npcs::new(
+            api.clone(),
+            Arc::new(NpcsItems::new(api.clone())),
+        ));
+
         let items = Arc::new(Items::new(
             api.clone(),
             resources.clone(),
             monsters.clone(),
             tasks_rewards.clone(),
+            npcs.clone(),
         ));
 
         let characters = thread::scope(|s| {
@@ -142,6 +149,7 @@ impl Client {
             tasks,
             tasks_rewards,
             maps,
+            npcs,
         })
     }
 }

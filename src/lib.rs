@@ -39,6 +39,8 @@ pub mod server;
 pub mod simulator;
 pub mod tasks;
 pub mod tasks_rewards;
+pub mod npcs;
+pub mod npcs_items;
 
 pub trait PersistedData<D: for<'a> Deserialize<'a> + Serialize> {
     const PATH: &'static str;

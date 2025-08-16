@@ -7,12 +7,14 @@ use crate::{
     },
     gear::Slot,
     monsters::{MonsterSchemaExt, Monsters},
+    npcs::Npcs,
     resources::{ResourceSchemaExt, Resources},
     tasks_rewards::TasksRewards,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{
-    CraftSchema, ItemSchema, MonsterSchema, ResourceSchema, SimpleEffectSchema, SimpleItemSchema,
+    CraftSchema, ItemSchema, MonsterSchema, NpcSchema, NpcType, ResourceSchema, SimpleEffectSchema,
+    SimpleItemSchema,
 };
 use itertools::Itertools;
 use log::debug;
@@ -33,6 +35,7 @@ pub struct Items {
     resources: Arc<Resources>,
     monsters: Arc<Monsters>,
     tasks_rewards: Arc<TasksRewards>,
+    npcs: Arc<Npcs>,
 }
 
 impl PersistedData<HashMap<String, Arc<ItemSchema>>> for Items {
@@ -59,6 +62,7 @@ impl Items {
         resources: Arc<Resources>,
         monsters: Arc<Monsters>,
         tasks_rewards: Arc<TasksRewards>,
+        npcs: Arc<Npcs>,
     ) -> Self {
         let items = Self {
             data: Default::default(),
@@ -66,6 +70,7 @@ impl Items {
             resources,
             monsters,
             tasks_rewards,
+            npcs,
         };
         *items.data.write().unwrap() = items.retrieve_data();
         items
@@ -299,6 +304,13 @@ impl Items {
                 .map(ItemSource::Monster)
                 .collect_vec(),
         );
+        sources.extend(
+            self.npcs
+                .selling(code)
+                .into_iter()
+                .map(ItemSource::Npc)
+                .collect_vec(),
+        );
         if self.get(code).is_some_and(|i| i.craft_schema().is_some()) {
             sources.push(ItemSource::Craft);
         }
@@ -340,7 +352,7 @@ impl Items {
                     .sum(),
                 ItemSource::TaskReward => 20000,
                 ItemSource::Task => 20000,
-                //ItemSource::Gift => 10000,
+                ItemSource::Npc(_) => 60, //ItemSource::Gift => 10000,
             })
             .min()
     }
@@ -350,6 +362,7 @@ impl Items {
             self.sources_of(&i.code).iter().any(|s| match s {
                 ItemSource::Resource(r) => self.resources.is_event(&r.code),
                 ItemSource::Monster(m) => self.monsters.is_event(&m.code),
+                ItemSource::Npc(n) => n.r#type == NpcType::Merchant,
                 ItemSource::Craft => false,
                 ItemSource::TaskReward => false,
                 ItemSource::Task => false,
@@ -685,6 +698,7 @@ pub enum DamageType {
 pub enum ItemSource {
     Resource(Arc<ResourceSchema>),
     Monster(Arc<MonsterSchema>),
+    Npc(Arc<NpcSchema>),
     Craft,
     TaskReward,
     Task,

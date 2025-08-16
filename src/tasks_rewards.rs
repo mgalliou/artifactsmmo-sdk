@@ -39,6 +39,6 @@ impl TasksRewards {
     }
 
     pub fn all(&self) -> Vec<Arc<DropRateSchema>> {
-        self.data.read().unwrap().iter().cloned().collect_vec()
+        self.data.read().unwrap().iter().cloned().collect()
     }
 }
