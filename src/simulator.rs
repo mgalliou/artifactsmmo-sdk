@@ -66,7 +66,7 @@ impl Simulator {
             } else {
                 FightResult::Win
             },
-            cd: Self::compute_cd(gear.haste(), turns),
+            cd: Self::fight_cd(gear.haste(), turns),
         }
     }
 
@@ -74,17 +74,15 @@ impl Simulator {
         health / 5 + if health % 5 > 0 { 1 } else { 0 }
     }
 
-    fn compute_cd(haste: i32, turns: i32) -> i32 {
+    fn fight_cd(haste: i32, turns: i32) -> i32 {
         max(
             5,
             ((turns * 2) as f32 - (haste as f32 * 0.01) * (turns * 2) as f32).round() as i32,
         )
     }
 
-    pub fn gather(skill_level: i32, resource_level: i32, cooldown_reduction: i32) -> i32 {
-        ((25.0 - ((skill_level - resource_level) as f32 / 10.0))
-            * (1.0 + cooldown_reduction as f32 / 100.0))
-            .round() as i32
+    pub fn gather_cd(resource_level: i32, cooldown_reduction: i32) -> i32 {
+        ((30.0 + (resource_level as f32 / 2.0)) * (1.0 + cooldown_reduction as f32 / 100.0)) as i32
     }
 }
 
@@ -100,6 +98,8 @@ pub struct Fight {
 
 #[cfg(test)]
 mod tests {
+    use crate::Simulator;
+
     //TODO: rewrite tests
     // use crate::{ITEMS, MONSTERS};
     //
@@ -161,4 +161,8 @@ mod tests {
     //     println!("{:?}", fight);
     //     assert_eq!(fight.result, FightResult::Win);
     // }
+    #[test]
+    fn check_gather_cd() {
+        assert_eq!(Simulator::gather_cd(1, -10), 27)
+    }
 }
