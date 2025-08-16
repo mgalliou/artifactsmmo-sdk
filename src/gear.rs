@@ -108,6 +108,7 @@ impl Gear {
                         Simulator::average_dmg(
                             w.attack_damage(t),
                             self.damage_increase(t),
+                            self.critical_strike(),
                             monster.resistance(t),
                         )
                     })
@@ -119,8 +120,13 @@ impl Gear {
     pub fn attack_damage_from(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(monster.attack_damage(t), 0, self.resistance(t)).round()
-                    as i32
+                Simulator::average_dmg(
+                    monster.attack_damage(t),
+                    0,
+                    self.critical_strike(),
+                    self.resistance(t),
+                )
+                .round() as i32
             })
             .sum()
     }
@@ -142,6 +148,10 @@ impl Gear {
         Slot::iter()
             .map(|s| self.slot(s).map_or(0, |i| i.resistance(t)))
             .sum()
+    }
+
+    fn critical_strike(&self) -> i32 {
+        self.effect_value("critical_strike")
     }
 
     pub fn haste(&self) -> i32 {

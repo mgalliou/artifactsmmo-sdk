@@ -1,4 +1,5 @@
 use crate::{
+    PersistedData, Simulator,
     char::Skill,
     consts::{
         ASTRALYTE_CRYSTAL, DIAMOND, ENCHANTED_FABRIC, FOOD_BLACK_LIST, JASPER_CRYSTAL,
@@ -8,7 +9,6 @@ use crate::{
     monsters::{MonsterSchemaExt, Monsters},
     resources::{ResourceSchemaExt, Resources},
     tasks_rewards::TasksRewards,
-    PersistedData, Simulator,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{
@@ -379,6 +379,7 @@ pub trait ItemSchemaExt {
     fn resistance(&self, r#type: DamageType) -> i32;
     fn health(&self) -> i32;
     fn haste(&self) -> i32;
+    fn critical_strike(&self) -> i32;
     fn is_tool(&self) -> bool;
     fn skill_cooldown_reduction(&self, skill: Skill) -> i32;
     fn wisdom(&self) -> i32;
@@ -455,6 +456,13 @@ impl ItemSchemaExt for ItemSchema {
         self.effects.iter().flatten().collect_vec()
     }
 
+    fn effect_value(&self, effect: &str) -> i32 {
+        self.effects()
+            .iter()
+            .find_map(|e| (e.code == effect).then_some(e.value))
+            .unwrap_or(0)
+    }
+
     fn attack_damage(&self, r#type: DamageType) -> i32 {
         self.effects()
             .iter()
@@ -465,7 +473,14 @@ impl ItemSchemaExt for ItemSchema {
 
     fn attack_damage_against(&self, monster: &MonsterSchema) -> f32 {
         DamageType::iter()
-            .map(|t| Simulator::average_dmg(self.attack_damage(t), 0, monster.resistance(t)))
+            .map(|t| {
+                Simulator::average_dmg(
+                    self.attack_damage(t),
+                    0,
+                    self.critical_strike(),
+                    monster.resistance(t),
+                )
+            })
             .sum()
     }
 
@@ -499,6 +514,14 @@ impl ItemSchemaExt for ItemSchema {
         self.effect_value("haste")
     }
 
+    fn critical_strike(&self) -> i32 {
+        self.effect_value("critical_strike")
+    }
+
+    fn is_tool(&self) -> bool {
+        Skill::iter().any(|s| self.skill_cooldown_reduction(s) < 0)
+    }
+
     fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
         self.effect_value(skill.as_ref())
     }
@@ -523,10 +546,6 @@ impl ItemSchemaExt for ItemSchema {
         self.effect_value("inventory_space")
     }
 
-    fn is_tool(&self) -> bool {
-        Skill::iter().any(|s| self.skill_cooldown_reduction(s) < 0)
-    }
-
     fn is_consumable(&self) -> bool {
         self.is_of_type(Type::Consumable)
     }
@@ -544,29 +563,39 @@ impl ItemSchemaExt for ItemSchema {
                 Simulator::average_dmg(
                     weapon.attack_damage(t),
                     self.damage_increase(t),
+                    self.critical_strike(),
                     monster.resistance(t),
                 )
             })
             .sum::<f32>()
             - DamageType::iter()
-                .map(|t| Simulator::average_dmg(weapon.attack_damage(t), 0, monster.resistance(t)))
+                .map(|t| {
+                    Simulator::average_dmg(
+                        weapon.attack_damage(t),
+                        0,
+                        self.critical_strike(),
+                        monster.resistance(t),
+                    )
+                })
                 .sum::<f32>()
     }
 
     fn damage_reduction_against(&self, monster: &MonsterSchema) -> f32 {
         DamageType::iter()
-            .map(|t| Simulator::average_dmg(monster.attack_damage(t), 0, 0))
+            .map(|t| {
+                Simulator::average_dmg(monster.attack_damage(t), 0, monster.critical_strike(), 0)
+            })
             .sum::<f32>()
             - DamageType::iter()
-                .map(|t| Simulator::average_dmg(monster.attack_damage(t), 0, self.resistance(t)))
+                .map(|t| {
+                    Simulator::average_dmg(
+                        monster.attack_damage(t),
+                        0,
+                        monster.critical_strike(),
+                        self.resistance(t),
+                    )
+                })
                 .sum::<f32>()
-    }
-
-    fn effect_value(&self, effect: &str) -> i32 {
-        self.effects()
-            .iter()
-            .find_map(|e| (e.code == effect).then_some(e.value))
-            .unwrap_or(0)
     }
 }
 
