@@ -374,7 +374,7 @@ impl Character {
         if self.quantity_in_slot(slot) < quantity {
             return Err(UnequipError::InsufficientQuantity);
         }
-        if self.inventory.free_space() < quantity {
+        if !self.inventory.has_space_for(&equiped.code, quantity) {
             return Err(UnequipError::InsufficientInventorySpace);
         }
         Ok(())
