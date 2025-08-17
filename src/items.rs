@@ -90,6 +90,14 @@ impl Items {
         self.get(code).iter().flat_map(|i| i.mats()).collect_vec()
     }
 
+    /// Takes an item `code` and return the mats required to craft it.
+    pub fn mats_for(&self, code: &str, quantity: i32) -> Vec<SimpleItemSchema> {
+        self.mats_of(code)
+            .into_iter()
+            .update(|m| m.quantity *= quantity)
+            .collect_vec()
+    }
+
     /// Takes an item `code` and returns the mats down to the raw materials
     /// required to craft it.
     pub fn base_mats_of(&self, code: &str) -> Vec<SimpleItemSchema> {
