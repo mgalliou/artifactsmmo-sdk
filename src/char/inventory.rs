@@ -49,18 +49,29 @@ impl Inventory {
         self.max_items() - self.total_items()
     }
 
+    pub fn free_slots(&self) -> usize {
+        self.data
+            .read()
+            .unwrap()
+            .inventory
+            .iter()
+            .flatten()
+            .filter(|i| i.code.is_empty())
+            .count()
+    }
+
+    pub fn has_space_for(&self, item: &str, quantity: i32) -> bool {
+        if self.total_of(item) > 0 {
+            self.free_space() >= quantity
+        } else {
+            self.free_slots() > 0
+        }
+    }
+
     /// Checks if the `Character` inventory is full (all slots are occupied or
     /// `inventory_max_items` is reached).
     pub fn is_full(&self) -> bool {
-        self.total_items() >= self.max_items()
-            || self
-                .data
-                .read()
-                .unwrap()
-                .inventory
-                .iter()
-                .flatten()
-                .all(|s| s.quantity > 0)
+        self.total_items() >= self.max_items() || self.free_slots() == 0
     }
 
     /// Returns the amount of the given item `code` in the `Character` inventory.
