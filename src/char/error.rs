@@ -332,6 +332,8 @@ pub enum BuyNpcError {
     ItemNotFound = ENTITY_NOT_FOUND,
     #[error("This item cannot be bought")]
     ItemNotBuyable = ITEM_NOT_BUYABLE,
+    #[error("Missing item of insufficient quantity")]
+    InsufficientQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
     #[error("Insufficient gold on character")]
     InsufficientGold = CHARACTER_GOLD_INSUFFICIENT,
     #[error("Insufficient inventory space")]

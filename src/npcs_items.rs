@@ -1,11 +1,11 @@
+use crate::PersistedData;
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_openapi::models::NpcItem;
+use itertools::Itertools;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
-use artifactsmmo_openapi::models::NpcItem;
-use itertools::Itertools;
-use crate::PersistedData;
 
 #[derive(Default, Debug)]
 pub struct NpcsItems {
@@ -43,5 +43,9 @@ impl NpcsItems {
 
     pub fn all(&self) -> Vec<Arc<NpcItem>> {
         self.data.read().unwrap().values().cloned().collect_vec()
+    }
+
+    pub fn get(&self, code: &str) -> Option<Arc<NpcItem>> {
+        self.data.read().unwrap().get(code).cloned()
     }
 }

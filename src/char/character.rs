@@ -14,6 +14,7 @@ use crate::{
     items::{ItemSchemaExt, Items},
     maps::{MapSchemaExt, Maps},
     monsters::{MonsterSchemaExt, Monsters},
+    npcs::Npcs,
     resources::{ResourceSchemaExt, Resources},
     server::Server,
 };
@@ -35,6 +36,7 @@ pub struct Character {
     resources: Arc<Resources>,
     monsters: Arc<Monsters>,
     maps: Arc<Maps>,
+    npcs: Arc<Npcs>,
     server: Arc<Server>,
 }
 
@@ -48,6 +50,7 @@ impl Character {
         resources: Arc<Resources>,
         monsters: Arc<Monsters>,
         maps: Arc<Maps>,
+        npcs: Arc<Npcs>,
         server: Arc<Server>,
         api: Arc<ArtifactApi>,
     ) -> Self {
@@ -60,6 +63,7 @@ impl Character {
             resources,
             monsters,
             maps,
+            npcs,
             server,
         }
     }
@@ -501,18 +505,56 @@ impl Character {
 
     pub fn npc_buy(
         &self,
-        item: &str,
+        item_code: &str,
         quantity: i32,
     ) -> Result<NpcItemTransactionSchema, BuyNpcError> {
-        Ok(self.inner.request_npc_buy(item, quantity)?)
+        self.can_npc_buy(item_code, quantity)?;
+        Ok(self.inner.request_npc_buy(item_code, quantity)?)
+    }
+
+    fn can_npc_buy(&self, item_code: &str, quantity: i32) -> Result<(), BuyNpcError> {
+        if self.items.get(item_code).is_none() {
+            return Err(BuyNpcError::ItemNotFound);
+        };
+        let Some(item) = self.npcs.items.get(item_code) else {
+            return Err(BuyNpcError::ItemNotBuyable);
+        };
+        let Some(buy_price) = item.buy_price else {
+            return Err(BuyNpcError::ItemNotBuyable);
+        };
+        if item.currency == "gold" {
+            if self.gold() < buy_price * quantity {
+                return Err(BuyNpcError::InsufficientGold);
+            }
+        } else if self.inventory.total_of(&item.currency) < buy_price * quantity {
+            return Err(BuyNpcError::InsufficientQuantity);
+        }
+        Ok(())
     }
 
     pub fn npc_sell(
         &self,
-        item: &str,
+        item_code: &str,
         quantity: i32,
     ) -> Result<NpcItemTransactionSchema, SellNpcError> {
-        Ok(self.inner.request_npc_sell(item, quantity)?)
+        self.can_npc_sell(item_code, quantity)?;
+        Ok(self.inner.request_npc_sell(item_code, quantity)?)
+    }
+
+    fn can_npc_sell(&self, item_code: &str, quantity: i32) -> Result<(), SellNpcError> {
+        if self.items.get(item_code).is_none() {
+            return Err(SellNpcError::ItemNotFound);
+        };
+        let Some(item) = self.npcs.items.get(item_code) else {
+            return Err(SellNpcError::ItemNotSellable);
+        };
+        if item.sell_price.is_some() {
+            return Err(SellNpcError::ItemNotSellable);
+        };
+        if self.inventory.total_of(item_code) < quantity {
+            return Err(SellNpcError::InsufficientQuantity);
+        }
+        Ok(())
     }
 
     //pub fn exchange_gift(&self) -> Result<RewardsSchema, GiftExchangeError> {
@@ -581,6 +623,7 @@ mod tests {
             Self::new(
                 1,
                 Arc::new(RwLock::new(Arc::new(value))),
+                Default::default(),
                 Default::default(),
                 Default::default(),
                 Default::default(),

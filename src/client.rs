@@ -106,6 +106,7 @@ impl Client {
             let resources_clone = resources.clone();
             let monsters_clone = monsters.clone();
             let maps_clone = maps.clone();
+            let npcs_clone = npcs.clone();
             let server_clone = server.clone();
             let account_name_clone = account_name.clone();
 
@@ -126,6 +127,7 @@ impl Client {
                             resources_clone.clone(),
                             monsters_clone.clone(),
                             maps_clone.clone(),
+                            npcs_clone.clone(),
                             server_clone.clone(),
                             api_clone.clone(),
                         )

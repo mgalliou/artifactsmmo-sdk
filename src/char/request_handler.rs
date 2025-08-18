@@ -329,7 +329,7 @@ impl CharacterRequestHandler {
         e: RequestError,
     ) -> Result<Box<dyn ResponseSchema>, RequestError> {
         error!(
-            "{}: request error during action {:?}: {:?}",
+            "{}: request error during action {}: {}",
             self.name(),
             action,
             e

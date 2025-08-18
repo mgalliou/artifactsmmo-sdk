@@ -13,7 +13,7 @@ use crate::{PersistedData, npcs_items::NpcsItems};
 pub struct Npcs {
     data: RwLock<HashMap<String, Arc<NpcSchema>>>,
     api: Arc<ArtifactApi>,
-    items: Arc<NpcsItems>,
+    pub items: Arc<NpcsItems>,
 }
 
 impl PersistedData<HashMap<String, Arc<NpcSchema>>> for Npcs {
