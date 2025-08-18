@@ -16,6 +16,7 @@ pub mod character;
 pub mod inventory;
 pub mod request_handler;
 pub mod skill;
+pub mod error;
 
 pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 
