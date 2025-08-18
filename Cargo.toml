@@ -18,7 +18,7 @@ log = "0.4"
 nutype = "0.6"
 ordered-float = "5.0"
 reqwest = { version = "^0.12", features = ["json", "blocking", "multipart"] }
-sdk_derive = { version = "0.1", path = "derive" }
+#sdk_derive = { version = "0.1", path = "derive" }
 serde = { version = "^1.0", features = ["rc"] }
 serde_json = "^1.0"
 strum = "0.27"

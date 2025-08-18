@@ -1,8 +1,6 @@
-use derive_more::TryFrom;
-use sdk_derive::FromRequestError;
-use thiserror::Error;
-
 use crate::char::request_handler::RequestError;
+use derive_more::TryFrom;
+use thiserror::Error;
 
 const ENTITY_NOT_FOUND: isize = 404;
 const ITEM_NOT_BUYABLE: isize = 441;
@@ -32,7 +30,7 @@ const INVENTORY_FULL: isize = 497;
 //const CHARACTER_ON_COOLDOWN: isize = 499;
 const ENTITY_NOT_FOUND_ON_MAP: isize = 598;
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum FightError {
@@ -41,10 +39,10 @@ pub enum FightError {
     #[error("No monster on map")]
     NoMonsterOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum GatherError {
@@ -55,10 +53,10 @@ pub enum GatherError {
     #[error("Insufficient skill level")]
     SkillLevelInsufficient = SKILL_LEVEL_INSUFFICIENT,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum MoveError {
@@ -67,18 +65,18 @@ pub enum MoveError {
     #[error("Already on map")]
     AlreadyOnMap = ALREADY_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum RestError {
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum UseError {
@@ -91,10 +89,10 @@ pub enum UseError {
     #[error("Insufficient character level")]
     InsufficientCharacterLevel = CHARACTER_LEVEL_INSUFFICIENT,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum CraftError {
@@ -111,10 +109,10 @@ pub enum CraftError {
     #[error("Required workshop not on map")]
     NoWorkshopOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum RecycleError {
@@ -131,10 +129,10 @@ pub enum RecycleError {
     #[error("Required workshop not on map")]
     NoWorkshopOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum DeleteError {
@@ -143,10 +141,10 @@ pub enum DeleteError {
     #[error("Insufficient quantity")]
     InsufficientQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum WithdrawError {
@@ -159,10 +157,10 @@ pub enum WithdrawError {
     #[error("No bank on map")]
     NoBankOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum DepositError {
@@ -175,10 +173,10 @@ pub enum DepositError {
     #[error("No bank on map")]
     NoBankOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum GoldWithdrawError {
@@ -187,10 +185,10 @@ pub enum GoldWithdrawError {
     #[error("No bank on map")]
     NoBankOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum GoldDepositError {
@@ -199,10 +197,10 @@ pub enum GoldDepositError {
     #[error("No bank on map")]
     NoBankOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum BankExpansionError {
@@ -211,10 +209,10 @@ pub enum BankExpansionError {
     #[error("No bank on map")]
     NoBankOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum EquipError {
@@ -233,10 +231,10 @@ pub enum EquipError {
     #[error("Insufficient inventory space")]
     InsufficientInventorySpace = INVENTORY_FULL,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum UnequipError {
@@ -249,10 +247,10 @@ pub enum UnequipError {
     #[error("Insufficient inventory space")]
     InsufficientInventorySpace = INVENTORY_FULL,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum TaskAcceptationError {
@@ -261,10 +259,10 @@ pub enum TaskAcceptationError {
     #[error("No tasks master on map")]
     NoTasksMasterOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum TaskTradeError {
@@ -279,10 +277,10 @@ pub enum TaskTradeError {
     #[error("Wrong or no tasks master on map")]
     WrongOrNoTasksMasterOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum TaskCompletionError {
@@ -295,10 +293,10 @@ pub enum TaskCompletionError {
     #[error("Wrong or no tasks master on map")]
     WrongOrNoTasksMasterOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum TaskCancellationError {
@@ -309,10 +307,10 @@ pub enum TaskCancellationError {
     #[error("Wrong or no tasks master on map")]
     WrongOrNoTasksMasterOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum TasksCoinExchangeError {
@@ -323,10 +321,10 @@ pub enum TasksCoinExchangeError {
     #[error("No tasks master on map")]
     NoTasksMasterOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum BuyNpcError {
@@ -341,10 +339,10 @@ pub enum BuyNpcError {
     #[error("Npc not found on map")]
     NpcNotFound = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum SellNpcError {
@@ -359,10 +357,10 @@ pub enum SellNpcError {
     #[error("Npc not found on map")]
     NpcNotFound = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }
 
-#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
 pub enum GiftExchangeError {
@@ -373,5 +371,5 @@ pub enum GiftExchangeError {
     #[error("No Santa Claus on map")]
     NoSantaClausOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
-    UnhandledError(RequestError),
+    UnhandledError(#[from] RequestError),
 }

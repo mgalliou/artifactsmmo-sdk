@@ -1,12 +1,15 @@
 use super::{
-    CharacterData, HasCharacterData,
-    inventory::Inventory,
-    request_handler::{CharacterRequestHandler, RequestError},
+    CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
 };
 use crate::{
     Gear,
     bank::Bank,
-    error,
+    char::error::{
+        BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
+        FightError, GatherError, GoldDepositError, GoldWithdrawError, MoveError, RecycleError,
+        RestError, SellNpcError, TaskAcceptationError, TaskCancellationError, TaskCompletionError,
+        TaskTradeError, TasksCoinExchangeError, UnequipError, UseError, WithdrawError,
+    },
     gear::Slot,
     items::{ItemSchemaExt, Items},
     maps::{MapSchemaExt, Maps},
@@ -20,10 +23,7 @@ use artifactsmmo_openapi::models::{
     RecyclingItemsSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
     TaskSchema, TaskTradeSchema,
 };
-use derive_more::TryFrom;
-use sdk_derive::FromRequestError;
 use std::sync::Arc;
-use thiserror::Error;
 
 #[derive(Default, Debug)]
 pub struct Character {
@@ -81,6 +81,7 @@ impl Character {
         let Some(monster) = self.monsters.get(&monster_code) else {
             return Err(FightError::NoMonsterOnMap);
         };
+        //TODO: take inventory free slot into account
         if self.inventory.free_space() < monster.max_drop_quantity() {
             return Err(FightError::InsufficientInventorySpace);
         }
@@ -102,6 +103,7 @@ impl Character {
         if self.skill_level(resource.skill.into()) < resource.level {
             return Err(GatherError::SkillLevelInsufficient);
         }
+        //TODO: take inventory free slot into account
         if self.inventory.free_space() < resource.max_drop_quantity() {
             return Err(GatherError::InsufficientInventorySpace);
         }
