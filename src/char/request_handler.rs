@@ -429,12 +429,12 @@ impl ResponseSchema for CharacterFightResponseSchema {
     fn to_string(&self) -> String {
         match self.data.fight.result {
             FightResult::Win => format!(
-                "{} won a fight after {} turns ({}xp, {}g, [{}]). {}s",
+                "{} won a fight after {} turns ([{}], {}xp, {}g). {}s",
                 self.data.character.name,
                 self.data.fight.turns,
+                DropSchemas(&self.data.fight.drops),
                 self.data.fight.xp,
                 self.data.fight.gold,
-                DropSchemas(&self.data.fight.drops),
                 self.data.cooldown.remaining_seconds
             ),
             FightResult::Loss => format!(
@@ -467,7 +467,7 @@ impl ResponseSchema for CharacterRestResponseSchema {
 impl ResponseSchema for UseItemResponseSchema {
     fn to_string(&self) -> String {
         format!(
-            "{}: used item '{}'. {}s",
+            "{}: used '{}'. {}s",
             self.data.character.name, self.data.item.code, self.data.cooldown.remaining_seconds
         )
     }
@@ -515,13 +515,17 @@ impl ResponseSchema for BankItemTransactionResponseSchema {
     fn to_string(&self) -> String {
         if self.data.cooldown.reason == ActionType::WithdrawItem {
             format!(
-                "{}: withdrawed '{:?}' from the bank. {}s",
-                self.data.character.name, self.data.items, self.data.cooldown.remaining_seconds
+                "{}: withdrawed [{}] from the bank. {}s",
+                self.data.character.name,
+                SimpleItemSchemas(&self.data.items),
+                self.data.cooldown.remaining_seconds
             )
         } else {
             format!(
-                "{}: deposited '{:?}' to the bank. {}s",
-                self.data.character.name, self.data.items, self.data.cooldown.remaining_seconds
+                "{}: deposited [{}] to the bank. {}s",
+                self.data.character.name,
+                SimpleItemSchemas(&self.data.items),
+                self.data.cooldown.remaining_seconds
             )
         }
     }
@@ -571,7 +575,7 @@ impl ResponseSchema for RecyclingResponseSchema {
         format!(
             "{}: recycled and received {}. {}s",
             self.data.character.name,
-            DropSchemas(&self.data.details.items,),
+            DropSchemas(&self.data.details.items),
             self.data.cooldown.remaining_seconds
         )
     }
@@ -585,7 +589,7 @@ impl ResponseSchema for EquipmentResponseSchema {
     fn to_string(&self) -> String {
         if self.data.cooldown.reason == ActionType::Equip {
             format!(
-                "{}: equiped '{}' in the '{:?}' slot. {}s",
+                "{}: equiped '{}' in the '{}' slot. {}s",
                 &self.data.character.name,
                 &self.data.item.code,
                 &self.data.slot,
@@ -593,7 +597,7 @@ impl ResponseSchema for EquipmentResponseSchema {
             )
         } else {
             format!(
-                "{}: unequiped '{}' from the '{:?}' slot. {}s",
+                "{}: unequiped '{}' from the '{}' slot. {}s",
                 &self.data.character.name,
                 &self.data.item.code,
                 &self.data.slot,
@@ -627,9 +631,9 @@ impl ResponseSchema for TaskResponseSchema {
 impl ResponseSchema for RewardDataResponseSchema {
     fn to_string(&self) -> String {
         format!(
-            "{}: completed task and was rewarded with [{:?}] and {}g. {}s",
+            "{}: completed task and was rewarded with [{}] and {}g. {}s",
             self.data.character.name,
-            self.data.rewards.items,
+            SimpleItemSchemas(&self.data.rewards.items),
             self.data.rewards.gold,
             self.data.cooldown.remaining_seconds
         )
@@ -697,6 +701,21 @@ impl<T: ResponseSchema + 'static> From<T> for Box<dyn ResponseSchema> {
 struct DropSchemas<'a>(&'a Vec<DropSchema>);
 
 impl Display for DropSchemas<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut items: String = "".to_string();
+        for item in self.0 {
+            if !items.is_empty() {
+                items.push_str(", ");
+            }
+            items.push_str(&format!("'{}'x{}", item.code, item.quantity));
+        }
+        write!(f, "{}", items)
+    }
+}
+
+struct SimpleItemSchemas<'a>(&'a Vec<SimpleItemSchema>);
+
+impl Display for SimpleItemSchemas<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut items: String = "".to_string();
         for item in self.0 {
