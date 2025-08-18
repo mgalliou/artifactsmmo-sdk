@@ -16,8 +16,9 @@ use crate::{
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CharacterSchema, FightSchema, MapContentType, MapSchema, RecyclingItemsSchema, RewardsSchema,
-    SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema,
+    CharacterSchema, FightSchema, MapContentType, MapSchema, NpcItemTransactionSchema,
+    RecyclingItemsSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
+    TaskSchema, TaskTradeSchema,
 };
 use derive_more::TryFrom;
 use sdk_derive::FromRequestError;
@@ -496,6 +497,22 @@ impl Character {
         Ok(())
     }
 
+    pub fn npc_buy(
+        &self,
+        item: &str,
+        quantity: i32,
+    ) -> Result<NpcItemTransactionSchema, BuyNpcError> {
+        Ok(self.inner.request_npc_buy(item, quantity)?)
+    }
+
+    pub fn npc_sell(
+        &self,
+        item: &str,
+        quantity: i32,
+    ) -> Result<NpcItemTransactionSchema, SellNpcError> {
+        Ok(self.inner.request_npc_sell(item, quantity)?)
+    }
+
     //pub fn exchange_gift(&self) -> Result<RewardsSchema, GiftExchangeError> {
     //    self.can_exchange_gift()?;
     //    Ok(self.inner.request_gift_exchange()?)
@@ -552,6 +569,8 @@ impl HasCharacterData for Character {
 }
 
 const ENTITY_NOT_FOUND: isize = 404;
+const ITEM_NOT_BUYABLE: isize = 441;
+const ITEM_NOT_SELLABLE: isize = 442;
 const BANK_GOLD_INSUFFICIENT: isize = 460;
 //const TRANSACTION_ALREADY_IN_PROGRESS: isize = 461;
 const BANK_FULL: isize = 462;
@@ -867,6 +886,42 @@ pub enum TasksCoinExchangeError {
     InsufficientInventorySpace = INVENTORY_FULL,
     #[error("No tasks master on map")]
     NoTasksMasterOnMap = ENTITY_NOT_FOUND_ON_MAP,
+    #[error(transparent)]
+    UnhandledError(RequestError),
+}
+
+#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[try_from(repr)]
+#[repr(isize)]
+pub enum BuyNpcError {
+    #[error("Item not found")]
+    ItemNotFound = ENTITY_NOT_FOUND,
+    #[error("This item cannot be bought")]
+    ItemNotBuyable = ITEM_NOT_BUYABLE,
+    #[error("Insufficient gold on character")]
+    InsufficientGold = CHARACTER_GOLD_INSUFFICIENT,
+    #[error("Insufficient inventory space")]
+    InsufficientInventorySpace = INVENTORY_FULL,
+    #[error("Npc not found on map")]
+    NpcNotFound = ENTITY_NOT_FOUND_ON_MAP,
+    #[error(transparent)]
+    UnhandledError(RequestError),
+}
+
+#[derive(Debug, Error, TryFrom, FromRequestError)]
+#[try_from(repr)]
+#[repr(isize)]
+pub enum SellNpcError {
+    #[error("Item not found")]
+    ItemNotFound = ENTITY_NOT_FOUND,
+    #[error("This item cannot be sold")]
+    ItemNotSellable = ITEM_NOT_SELLABLE,
+    #[error("Missing item or insufficient quantity")]
+    InsufficientQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
+    #[error("Insufficient inventory space")]
+    InsufficientInventorySpace = INVENTORY_FULL,
+    #[error("Npc not found on map")]
+    NpcNotFound = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
     UnhandledError(RequestError),
 }

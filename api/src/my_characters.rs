@@ -11,6 +11,8 @@ use artifactsmmo_openapi::{
             action_deposit_bank_item_my_name_action_bank_deposit_item_post,
             action_equip_item_my_name_action_equip_post, action_fight_my_name_action_fight_post,
             action_gathering_my_name_action_gathering_post, action_move_my_name_action_move_post,
+            action_npc_buy_item_my_name_action_npc_buy_post,
+            action_npc_sell_item_my_name_action_npc_sell_post,
             action_recycling_my_name_action_recycling_post, action_rest_my_name_action_rest_post,
             action_task_cancel_my_name_action_task_cancel_post,
             action_task_exchange_my_name_action_task_exchange_post,
@@ -28,6 +30,8 @@ use artifactsmmo_openapi::{
             ActionDepositBankItemMyNameActionBankDepositItemPostError,
             ActionEquipItemMyNameActionEquipPostError, ActionFightMyNameActionFightPostError,
             ActionGatheringMyNameActionGatheringPostError, ActionMoveMyNameActionMovePostError,
+            ActionNpcBuyItemMyNameActionNpcBuyPostError,
+            ActionNpcSellItemMyNameActionNpcSellPostError,
             ActionRecyclingMyNameActionRecyclingPostError, ActionRestMyNameActionRestPostError,
             ActionTaskCancelMyNameActionTaskCancelPostError,
             ActionTaskExchangeMyNameActionTaskExchangePostError,
@@ -43,7 +47,8 @@ use artifactsmmo_openapi::{
         BankItemTransactionResponseSchema, CharacterFightResponseSchema,
         CharacterMovementResponseSchema, CharacterRestResponseSchema, CraftingSchema,
         DeleteItemResponseSchema, DepositWithdrawGoldSchema, DestinationSchema, EquipSchema,
-        EquipmentResponseSchema, ItemSlot, RecyclingResponseSchema, RecyclingSchema,
+        EquipmentResponseSchema, ItemSlot, NpcMerchantBuySchema,
+        NpcMerchantTransactionResponseSchema, RecyclingResponseSchema, RecyclingSchema,
         RewardDataResponseSchema, SimpleItemSchema, SkillResponseSchema,
         TaskCancelledResponseSchema, TaskResponseSchema, TaskTradeResponseSchema, UnequipSchema,
         UseItemResponseSchema,
@@ -277,6 +282,32 @@ impl MyCharacterApi {
     ) -> Result<RewardDataResponseSchema, Error<ActionTaskExchangeMyNameActionTaskExchangePostError>>
     {
         action_task_exchange_my_name_action_task_exchange_post(&self.configuration, name)
+    }
+
+    pub fn npc_buy(
+        &self,
+        name: &str,
+        code: String,
+        quantity: i32,
+    ) -> Result<
+        NpcMerchantTransactionResponseSchema,
+        Error<ActionNpcBuyItemMyNameActionNpcBuyPostError>,
+    > {
+        let schema = NpcMerchantBuySchema::new(code, quantity);
+        action_npc_buy_item_my_name_action_npc_buy_post(&self.configuration, name, schema)
+    }
+
+    pub fn npc_sell(
+        &self,
+        name: &str,
+        code: String,
+        quantity: i32,
+    ) -> Result<
+        NpcMerchantTransactionResponseSchema,
+        Error<ActionNpcSellItemMyNameActionNpcSellPostError>,
+    > {
+        let schema = NpcMerchantBuySchema::new(code, quantity);
+        action_npc_sell_item_my_name_action_npc_sell_post(&self.configuration, name, schema)
     }
 
     //pub fn christmas_exchange(

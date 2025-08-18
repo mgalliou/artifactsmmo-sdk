@@ -15,8 +15,9 @@ use artifactsmmo_openapi::{
         BankItemTransactionResponseSchema, BankSchema, CharacterFightResponseSchema,
         CharacterMovementResponseSchema, CharacterRestResponseSchema, CharacterSchema,
         DeleteItemResponseSchema, DropSchema, EquipmentResponseSchema, FightResult, FightSchema,
-        MapSchema, RecyclingItemsSchema, RecyclingResponseSchema, RewardDataResponseSchema,
-        RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema, SkillResponseSchema,
+        MapSchema, NpcItemTransactionSchema, NpcMerchantTransactionResponseSchema,
+        RecyclingItemsSchema, RecyclingResponseSchema, RewardDataResponseSchema, RewardsSchema,
+        SimpleItemSchema, SkillDataSchema, SkillInfoSchema, SkillResponseSchema,
         TaskCancelledResponseSchema, TaskResponseSchema, TaskSchema, TaskTradeResponseSchema,
         TaskTradeSchema, UseItemResponseSchema,
     },
@@ -285,6 +286,32 @@ impl CharacterRequestHandler {
                     .map_err(|_| RequestError::DowncastError)
             })
             .map(|s| *s.data.rewards)
+    }
+
+    pub fn request_npc_buy(
+        &self,
+        item: &str,
+        quantity: i32,
+    ) -> Result<NpcItemTransactionSchema, RequestError> {
+        self.request_action(Action::NpcBuy { item, quantity })
+            .and_then(|r| {
+                r.downcast::<NpcMerchantTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.transaction)
+    }
+
+    pub fn request_npc_sell(
+        &self,
+        item: &str,
+        quantity: i32,
+    ) -> Result<NpcItemTransactionSchema, RequestError> {
+        self.request_action(Action::NpcSell { item, quantity })
+            .and_then(|r| {
+                r.downcast::<NpcMerchantTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.transaction)
     }
 
     //pub fn request_gift_exchange(&self) -> Result<RewardsSchema, RequestError> {
@@ -633,6 +660,25 @@ impl ResponseSchema for TaskTradeResponseSchema {
             self.data.character.name,
             self.data.trade.code,
             self.data.trade.quantity,
+            self.data.cooldown.remaining_seconds
+        )
+    }
+
+    fn character(&self) -> &CharacterSchema {
+        &self.data.character
+    }
+}
+
+impl ResponseSchema for NpcMerchantTransactionResponseSchema {
+    fn to_string(&self) -> String {
+        format!(
+            "{}: traded {} {} for {} {}(s) at {} each. {}s",
+            self.data.character.name,
+            self.data.transaction.quantity,
+            self.data.transaction.code,
+            self.data.transaction.total_price,
+            self.data.transaction.currency,
+            self.data.transaction.price,
             self.data.cooldown.remaining_seconds
         )
     }

@@ -59,6 +59,14 @@ pub enum Action<'a> {
     CompleteTask,
     CancelTask,
     TaskExchange,
+    NpcBuy {
+        item: &'a str,
+        quantity: i32,
+    },
+    NpcSell {
+        item: &'a str,
+        quantity: i32,
+    },
     //ChristmasExchange,
 }
 
@@ -174,11 +182,16 @@ impl Action<'_> {
                 .task_exchange(name)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            //Action::ChristmasExchange => api
-            //    .my_character
-            //    .christmas_exchange(name)
-            //    .map(|r| r.into())
-            //    .map_err(|e| e.into()),
+            Action::NpcBuy { item, quantity } => api
+                .my_character
+                .npc_buy(name, item.to_string(), *quantity)
+                .map(|r| r.into())
+                .map_err(|e| e.into()),
+            Action::NpcSell { item, quantity } => api
+                .my_character
+                .npc_sell(name, item.to_string(), *quantity)
+                .map(|r| r.into())
+                .map_err(|e| e.into()),
         }
     }
 }
