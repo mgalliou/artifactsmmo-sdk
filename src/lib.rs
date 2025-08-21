@@ -1,4 +1,6 @@
-use artifactsmmo_openapi::models::{FightSchema, RewardsSchema, SkillDataSchema, SkillInfoSchema};
+use artifactsmmo_openapi::models::{
+    DropSchema, FightSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
+};
 use fs_extra::file::{read_to_string, write_all};
 use log::error;
 use serde::{Deserialize, Serialize};
@@ -34,13 +36,13 @@ pub mod item_code;
 pub mod items;
 pub mod maps;
 pub mod monsters;
+pub mod npcs;
+pub mod npcs_items;
 pub mod resources;
 pub mod server;
 pub mod simulator;
 pub mod tasks;
 pub mod tasks_rewards;
-pub mod npcs;
-pub mod npcs_items;
 
 pub trait PersistedData<D: for<'a> Deserialize<'a> + Serialize> {
     const PATH: &'static str;
@@ -107,6 +109,22 @@ impl HasDrops for RewardsSchema {
     fn amount_of(&self, item: &str) -> i32 {
         self.items
             .iter()
+            .find(|i| i.code == item)
+            .map_or(0, |i| i.quantity)
+    }
+}
+
+impl HasDrops for Vec<SimpleItemSchema> {
+    fn amount_of(&self, item: &str) -> i32 {
+        self.iter()
+            .find(|i| i.code == item)
+            .map_or(0, |i| i.quantity)
+    }
+}
+
+impl HasDrops for Vec<DropSchema> {
+    fn amount_of(&self, item: &str) -> i32 {
+        self.iter()
             .find(|i| i.code == item)
             .map_or(0, |i| i.quantity)
     }

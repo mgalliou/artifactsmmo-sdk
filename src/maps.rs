@@ -165,6 +165,7 @@ pub trait MapSchemaExt {
     fn monster(&self) -> Option<String>;
     fn resource(&self) -> Option<String>;
     fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>>;
+    fn is_tasksmaster(&self, task_type: Option<TaskType>) -> bool;
 }
 
 impl MapSchemaExt for MapSchema {
@@ -198,6 +199,11 @@ impl MapSchemaExt for MapSchema {
 
     fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>> {
         Maps::closest_from_amoung(self.x, self.y, others)
+    }
+
+    fn is_tasksmaster(&self, task_type: Option<TaskType>) -> bool {
+        self.content_type_is(MapContentType::TasksMaster)
+            && task_type.is_none_or(|tt| self.content_code_is(&tt.to_string()))
     }
 }
 #[cfg(test)]

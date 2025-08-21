@@ -58,7 +58,7 @@ impl Npcs {
             .all()
             .iter()
             .filter(|i| i.code == code && i.buy_price.is_some())
-            .flat_map(|c| self.get(&c.npc))
+            .flat_map(|i| self.get(&i.npc))
             .collect_vec()
     }
 }
