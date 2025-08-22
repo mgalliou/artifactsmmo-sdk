@@ -14,7 +14,7 @@ pub struct NpcsItems {
 }
 
 impl PersistedData<HashMap<String, Arc<NpcItem>>> for NpcsItems {
-    const PATH: &'static str = ".cache/items.json";
+    const PATH: &'static str = ".cache/npcs_items.json";
 
     fn data_from_api(&self) -> HashMap<String, Arc<NpcItem>> {
         self.api
