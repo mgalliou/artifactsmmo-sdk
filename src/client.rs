@@ -26,7 +26,7 @@ impl Client {
     pub fn new(url: String, account_name: String, token: String) -> Result<Self, ClientError> {
         let api = Arc::new(ArtifactApi::new(url, token));
 
-        let (bank_res, events, tasks_rewards, server, tasks) = thread::scope(|s| {
+        let (bank_res, events, tasks_rewards, server, tasks, npcs) = thread::scope(|s| {
             let api_clone = api.clone();
             let bank_handle = s.spawn(move || {
                 let bank_details = api_clone
@@ -53,12 +53,21 @@ impl Client {
             let api_clone = api.clone();
             let tasks_handle = s.spawn(move || Arc::new(Tasks::new(api_clone.clone())));
 
+            let api_clone = api.clone();
+            let npcs_handle = s.spawn(move || {
+                Arc::new(Npcs::new(
+                    api_clone.clone(),
+                    Arc::new(NpcsItems::new(api_clone.clone())),
+                ))
+            });
+
             (
                 bank_handle.join().unwrap(),
                 events_handle.join().unwrap(),
                 tasks_rewards_handle.join().unwrap(),
                 server_handle.join().unwrap(),
                 tasks_handle.join().unwrap(),
+                npcs_handle.join().unwrap(),
             )
         });
 
@@ -86,11 +95,6 @@ impl Client {
             )
         });
 
-        let npcs = Arc::new(Npcs::new(
-            api.clone(),
-            Arc::new(NpcsItems::new(api.clone())),
-        ));
-
         let items = Arc::new(Items::new(
             api.clone(),
             resources.clone(),
@@ -99,45 +103,29 @@ impl Client {
             npcs.clone(),
         ));
 
-        let characters = thread::scope(|s| {
-            let api_clone = api.clone();
-            let bank_clone = bank.clone();
-            let items_clone = items.clone();
-            let resources_clone = resources.clone();
-            let monsters_clone = monsters.clone();
-            let maps_clone = maps.clone();
-            let npcs_clone = npcs.clone();
-            let server_clone = server.clone();
-            let account_name_clone = account_name.clone();
-
-            s.spawn(move || {
-                Ok(api_clone
-                    .account
-                    .characters(&account_name_clone)
-                    .map_err(|e| ClientError::Api(Box::new(e)))?
-                    .data
-                    .into_iter()
-                    .enumerate()
-                    .map(|(id, data)| {
-                        Character::new(
-                            id,
-                            Arc::new(RwLock::new(Arc::new(data))),
-                            bank_clone.clone(),
-                            items_clone.clone(),
-                            resources_clone.clone(),
-                            monsters_clone.clone(),
-                            maps_clone.clone(),
-                            npcs_clone.clone(),
-                            server_clone.clone(),
-                            api_clone.clone(),
-                        )
-                    })
-                    .map(Arc::new)
-                    .collect::<Vec<_>>())
+        let characters = api
+            .account
+            .characters(&account_name)
+            .map_err(|e| ClientError::Api(Box::new(e)))?
+            .data
+            .into_iter()
+            .enumerate()
+            .map(|(id, data)| {
+                Character::new(
+                    id,
+                    Arc::new(RwLock::new(Arc::new(data))),
+                    bank.clone(),
+                    items.clone(),
+                    resources.clone(),
+                    monsters.clone(),
+                    maps.clone(),
+                    npcs.clone(),
+                    server.clone(),
+                    api.clone(),
+                )
             })
-            .join()
-            .unwrap()
-        })?;
+            .map(Arc::new)
+            .collect::<Vec<_>>();
 
         let account = Arc::new(Account::new(account_name, bank, characters));
 
