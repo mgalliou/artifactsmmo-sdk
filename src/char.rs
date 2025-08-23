@@ -1,4 +1,4 @@
-use crate::{gear::Slot, Server};
+use crate::{Server, gear::Slot};
 use artifactsmmo_openapi::models::{CharacterSchema, ConditionOperator, ItemSchema, TaskType};
 use chrono::{DateTime, Utc};
 use std::{
@@ -6,6 +6,7 @@ use std::{
     sync::{Arc, RwLock},
     time::Duration,
 };
+use strum::IntoEnumIterator;
 
 pub use character::Character;
 pub use inventory::Inventory;
@@ -13,10 +14,10 @@ pub use skill::Skill;
 
 pub mod action;
 pub mod character;
+pub mod error;
 pub mod inventory;
 pub mod request_handler;
 pub mod skill;
-pub mod error;
 
 pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 
@@ -175,7 +176,6 @@ pub trait HasCharacterData {
         Duration::from_secs(0)
     }
 
-    /// Returns the item equiped in the `given` slot.
     fn equiped_in(&self, slot: Slot) -> String {
         let d = self.data();
         match slot {
@@ -197,6 +197,18 @@ pub trait HasCharacterData {
             Slot::Rune => &d.rune_slot,
         }
         .clone()
+    }
+
+    fn has_equiped(&self, item: &str) -> i32 {
+        Slot::iter()
+            .filter_map(|s| {
+                if self.equiped_in(s) == item {
+                    Some(self.quantity_in_slot(s))
+                } else {
+                    None
+                }
+            })
+            .sum()
     }
 
     fn meets_conditions_for(&self, item: &ItemSchema) -> bool {
