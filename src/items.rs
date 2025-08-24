@@ -279,6 +279,9 @@ impl Items {
         if code == "gift" {
             return self.monsters.get("gingerbread").map(ItemSource::Monster);
         }
+        if ["emerald", "topaz", "ruby", "sapphire", "diamond"].contains(&code) {
+            return Some(ItemSource::Craft);
+        }
         let sources = self.sources_of(code);
         if sources.iter().all(|s| s.is_resource() || s.is_monster()) {
             let bests = sources.into_iter().min_set_by_key(|s| {
