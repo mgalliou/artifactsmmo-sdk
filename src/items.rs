@@ -277,13 +277,11 @@ impl Items {
     /// or the character level/skill_level/gear.
     pub fn best_source_of(&self, code: &str) -> Option<ItemSource> {
         if code == "gift" {
-            return Some(ItemSource::Monster(
-                self.monsters.get("gingerbread").unwrap(),
-            ));
+            return self.monsters.get("gingerbread").map(ItemSource::Monster);
         }
         let sources = self.sources_of(code);
         if sources.iter().all(|s| s.is_resource() || s.is_monster()) {
-            let bests = self.sources_of(code).into_iter().min_set_by_key(|s| {
+            let bests = sources.into_iter().min_set_by_key(|s| {
                 if let ItemSource::Resource(r) = s {
                     r.drop_rate(code)
                 } else if let ItemSource::Monster(m) = s {
@@ -293,6 +291,8 @@ impl Items {
                 }
             });
             bests.first().cloned()
+        } else if sources.iter().all(|s| s.is_task_reward() || s.is_npc()) {
+            Some(ItemSource::TaskReward)
         } else {
             sources.first().cloned()
         }
@@ -319,7 +319,7 @@ impl Items {
                 .map(ItemSource::Npc)
                 .collect_vec(),
         );
-        if self.get(code).is_some_and(|i| i.craft_schema().is_some()) {
+        if self.get(code).is_some_and(|i| i.is_craftable()) {
             sources.push(ItemSource::Craft);
         }
         if self.tasks_rewards.all().iter().any(|r| r.code == code) {
