@@ -154,6 +154,10 @@ impl Gear {
         self.effect_value("critical_strike")
     }
 
+    pub fn poison(&self) -> i32 {
+        self.effect_value("poison")
+    }
+
     pub fn haste(&self) -> i32 {
         self.effect_value("haste")
     }

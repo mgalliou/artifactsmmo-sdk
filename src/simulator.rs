@@ -1,4 +1,4 @@
-use crate::{gear::Gear, items::ItemSchemaExt};
+use crate::{gear::Gear, items::ItemSchemaExt, monsters::MonsterSchemaExt};
 use artifactsmmo_openapi::models::{FightResult, MonsterSchema};
 use std::cmp::max;
 
@@ -47,12 +47,18 @@ impl Simulator {
                 if monster_hp <= 0 {
                     break;
                 }
+                if turns > 1 {
+                    monster_hp -= gear.poison()
+                }
             } else {
                 if hp < (base_hp + gear.health_increase()) / 2 {
                     hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
                     hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
                 }
                 hp -= gear.attack_damage_from(monster);
+                if turns > 2 {
+                    hp -= monster.poison()
+                }
                 if hp <= 0 && !ignore_death {
                     break;
                 }

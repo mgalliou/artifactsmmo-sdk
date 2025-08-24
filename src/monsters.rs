@@ -1,6 +1,6 @@
-use crate::{events::Events, items::DamageType, PersistedData};
+use crate::{PersistedData, events::Events, items::DamageType};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
-use artifactsmmo_openapi::models::MonsterSchema;
+use artifactsmmo_openapi::models::{MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -79,14 +79,32 @@ impl Monsters {
 }
 
 pub trait MonsterSchemaExt {
-    fn resistance(&self, r#type: DamageType) -> i32;
+    fn effects(&self) -> Vec<&SimpleEffectSchema>;
+    fn effect_value(&self, effect: &str) -> i32;
+    fn poison(&self) -> i32;
     fn attack_damage(&self, r#type: DamageType) -> i32;
     fn critical_strike(&self) -> i32;
+    fn resistance(&self, r#type: DamageType) -> i32;
     fn drop_rate(&self, item: &str) -> Option<i32>;
     fn max_drop_quantity(&self) -> i32;
 }
 
 impl MonsterSchemaExt for MonsterSchema {
+    fn effects(&self) -> Vec<&SimpleEffectSchema> {
+        self.effects.iter().flatten().collect_vec()
+    }
+
+    fn effect_value(&self, effect: &str) -> i32 {
+        self.effects()
+            .iter()
+            .find_map(|e| (e.code == effect).then_some(e.value))
+            .unwrap_or(0)
+    }
+
+    fn poison(&self) -> i32 {
+        self.effect_value("poison")
+    }
+
     fn attack_damage(&self, r#type: DamageType) -> i32 {
         match r#type {
             DamageType::Air => self.attack_air,

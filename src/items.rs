@@ -401,6 +401,7 @@ pub trait ItemSchemaExt {
     fn health(&self) -> i32;
     fn haste(&self) -> i32;
     fn critical_strike(&self) -> i32;
+    fn poison(&self) -> i32;
     fn is_tool(&self) -> bool;
     fn skill_cooldown_reduction(&self, skill: Skill) -> i32;
     fn wisdom(&self) -> i32;
@@ -617,6 +618,10 @@ impl ItemSchemaExt for ItemSchema {
                     )
                 })
                 .sum::<f32>()
+    }
+
+    fn poison(&self) -> i32 {
+        self.effect_value("poison")
     }
 }
 
