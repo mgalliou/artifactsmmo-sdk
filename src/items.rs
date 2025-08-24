@@ -2,8 +2,8 @@ use crate::{
     PersistedData, Simulator,
     char::Skill,
     consts::{
-        ASTRALYTE_CRYSTAL, DIAMOND, ENCHANTED_FABRIC, FOOD_BLACK_LIST, JASPER_CRYSTAL,
-        MAGICAL_CURE, TASKS_COIN,
+        ASTRALYTE_CRYSTAL, DIAMOND, EMERALD, ENCHANTED_FABRIC, FOOD_BLACK_LIST, GIFT, GINGERBREAD,
+        JASPER_CRYSTAL, MAGICAL_CURE, RUBY, SAPPHIRE, TASKS_COIN, TOPAZ,
     },
     gear::Slot,
     monsters::{MonsterSchemaExt, Monsters},
@@ -276,10 +276,10 @@ impl Items {
     /// All this logic should probably be done elsewhere since it can be related to the orderboard
     /// or the character level/skill_level/gear.
     pub fn best_source_of(&self, code: &str) -> Option<ItemSource> {
-        if code == "gift" {
-            return self.monsters.get("gingerbread").map(ItemSource::Monster);
+        if code == GIFT {
+            return self.monsters.get(GINGERBREAD).map(ItemSource::Monster);
         }
-        if ["emerald", "topaz", "ruby", "sapphire", "diamond"].contains(&code) {
+        if [DIAMOND, EMERALD, RUBY, SAPPHIRE, TOPAZ].contains(&code) {
             return Some(ItemSource::Craft);
         }
         let sources = self.sources_of(code);

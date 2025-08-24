@@ -5,13 +5,21 @@ pub const MIN_FOOD_THRESHOLD: i32 = 3000;
 pub const TASK_CANCEL_PRICE: i32 = 1;
 pub const TASK_EXCHANGE_PRICE: i32 = 6;
 
-pub const ASTRALYTE_CRYSTAL: &str = "astralyte_crystal";
 pub const DIAMOND: &str = "diamond";
-pub const ENCHANTED_FABRIC: &str = "enchanted_fabric";
-pub const GIFT: &str = "gift";
+pub const EMERALD: &str = "emerald";
+pub const RUBY: &str = "ruby";
+pub const SAPPHIRE: &str = "sapphire";
+pub const TOPAZ: &str = "topaz";
+
 pub const JASPER_CRYSTAL: &str = "jasper_crystal";
 pub const MAGICAL_CURE: &str = "magical_cure";
+pub const ASTRALYTE_CRYSTAL: &str = "astralyte_crystal";
+pub const ENCHANTED_FABRIC: &str = "enchanted_fabric";
+
 pub const TASKS_COIN: &str = "tasks_coin";
+
+pub const GIFT: &str = "gift";
+pub const GINGERBREAD: &str = "gingerbread";
 
 pub const FOOD_BLACK_LIST: &[&str] = &[
     "apple",
