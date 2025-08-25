@@ -1,7 +1,5 @@
 pub const CRAFT_TIME: i32 = 5;
-pub const MAX_LEVEL: i32 = 40;
-pub const MIN_COIN_THRESHOLD: i32 = 4;
-pub const MIN_FOOD_THRESHOLD: i32 = 3000;
+pub const MAX_LEVEL: i32 = 45;
 pub const TASK_CANCEL_PRICE: i32 = 1;
 pub const TASK_EXCHANGE_PRICE: i32 = 6;
 
