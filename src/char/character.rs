@@ -548,7 +548,7 @@ impl Character {
         let Some(item) = self.npcs.items.get(item_code) else {
             return Err(SellNpcError::ItemNotSellable);
         };
-        if item.sell_price.is_some() {
+        if item.sell_price.is_none() {
             return Err(SellNpcError::ItemNotSellable);
         };
         if self.inventory.total_of(item_code) < quantity {
