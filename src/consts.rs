@@ -32,16 +32,14 @@ pub const GOLD: &str = "gold";
 pub const GIFT: &str = "gift";
 pub const GINGERBREAD: &str = "gingerbread";
 
-pub const FOOD_BLACK_LIST: &[&str] = &[
-    "apple",
-    "apple_pie",
-    "egg",
-    "carrot",
-    "mushroom_soup",
-    "fish_soup",
-    "cooked_hellhound_meat",
-    "maple_syrup",
-];
+pub const APPLE: &str = "apple";
+pub const APPLE_PIE: &str = "apple_pie";
+pub const EGG: &str = "egg";
+pub const CARROT: &str = "carrot";
+pub const MUSHROOM_SOUP: &str = "mushroom_soup";
+pub const FISH_SOUP: &str = "fish_soup";
+pub const COOKED_HELLHOUND_MEAT: &str = "cooked_hellhound_meat";
+pub const MAPLE_SYRUP: &str = "maple_syrup";
 
 pub const BANK_MIN_FREE_SLOT: i32 = 3;
 pub const BANK_EXTENSION_SIZE: i32 = 20;
