@@ -21,6 +21,7 @@ use log::debug;
 use std::{
     collections::HashMap,
     fmt,
+    ops::Deref,
     str::FromStr,
     sync::{Arc, RwLock},
     vec::Vec,
@@ -384,7 +385,7 @@ pub trait ItemSchemaExt {
     fn skill_to_craft(&self) -> Option<Skill>;
     fn is_crafted_from_task(&self) -> bool;
     fn is_craftable(&self) -> bool;
-    fn craft_schema(&self) -> Option<CraftSchema>;
+    fn craft_schema(&self) -> Option<&CraftSchema>;
 
     fn attack_damage_against(&self, monster: &MonsterSchema) -> f32;
     fn damage_increase_against_with(&self, monster: &MonsterSchema, weapon: &ItemSchema) -> f32;
@@ -432,8 +433,8 @@ impl ItemSchemaExt for ItemSchema {
 
     fn mats(&self) -> Vec<SimpleItemSchema> {
         self.craft_schema()
-            .into_iter()
-            .filter_map(|i| i.items)
+            .iter()
+            .filter_map(|i| i.items.clone())
             .flatten()
             .collect_vec()
     }
@@ -460,9 +461,8 @@ impl ItemSchemaExt for ItemSchema {
         self.craft_schema().is_some()
     }
 
-    fn craft_schema(&self) -> Option<CraftSchema> {
-        //TODO: prevent cloning if possible
-        self.craft.clone()?.map(|c| (*c))
+    fn craft_schema(&self) -> Option<&CraftSchema> {
+        self.craft.iter().flatten().map(|c| c.deref()).next_back()
     }
 
     fn attack_damage_against(&self, monster: &MonsterSchema) -> f32 {
