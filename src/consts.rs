@@ -27,6 +27,8 @@ pub const TASKS_REWARDS_SPECIFICS: [&str; 4] = [
 
 pub const TASKS_COIN: &str = "tasks_coin";
 
+pub const GOLD: &str = "gold";
+
 pub const GIFT: &str = "gift";
 pub const GINGERBREAD: &str = "gingerbread";
 
