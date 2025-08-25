@@ -1,9 +1,8 @@
-use crate::items::{ItemSchemaExt, Items};
-use artifactsmmo_openapi::models::{InventorySlot, ItemSchema};
+use super::CharacterData;
+use crate::items::Items;
+use artifactsmmo_openapi::models::InventorySlot;
 use itertools::Itertools;
 use std::sync::Arc;
-
-use super::CharacterData;
 
 #[derive(Default, Debug)]
 pub struct Inventory {
@@ -91,20 +90,5 @@ impl Inventory {
             .mats_of(item)
             .iter()
             .all(|m| self.total_of(&m.code) >= m.quantity * quantity)
-    }
-
-    pub fn consumable_food(&self) -> Vec<Arc<ItemSchema>> {
-        self.data
-            .read()
-            .unwrap()
-            .inventory
-            .iter()
-            .flatten()
-            .filter_map(|i| {
-                self.items
-                    .get(&i.code)
-                    .filter(|i| i.is_consumable_at(self.data.read().unwrap().level))
-            })
-            .collect_vec()
     }
 }
