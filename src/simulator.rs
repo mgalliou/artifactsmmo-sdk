@@ -9,9 +9,7 @@ const HP_PER_LEVEL: i32 = 5;
 pub struct Simulator {}
 
 impl Simulator {
-    /// Compute the average damage an attack will do against the given `target_resistance`. Block
-    /// chance is considered as a global damage reduction (30 resistence reduce the computed damage by
-    /// 3%).
+    /// Compute the average damage an attack will do against the given `target_resistance`.
     pub fn average_dmg(
         attack_damage: i32,
         damage_increase: i32,
@@ -19,7 +17,10 @@ impl Simulator {
         target_resistance: i32,
     ) -> f32 {
         let mut dmg = attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
-        dmg += dmg * (critical_strike as f32 / 100.0);
+        dmg += dmg * (critical_strike as f32 / 100.0) / 2.0;
+        dmg -= dmg * target_resistance as f32 * 0.01;
+        dmg
+    }
         dmg -= dmg * target_resistance as f32 * 0.01;
         // TODO: include this in a different function and rename this one
         //if target_resistance > 0 {
