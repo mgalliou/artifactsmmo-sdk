@@ -407,6 +407,7 @@ pub trait ItemSchemaExt {
     fn effects(&self) -> Vec<&SimpleEffectSchema>;
 
     fn is_food(&self) -> bool;
+    fn is_consumable(&self) -> bool;
     fn is_tool(&self) -> bool;
 
     fn is_of_type(&self, r#type: Type) -> bool;
@@ -600,7 +601,11 @@ impl ItemSchemaExt for ItemSchema {
     }
 
     fn is_food(&self) -> bool {
-        self.is_of_type(Type::Consumable) && self.heal() > 0
+        self.is_consumable() && self.heal() > 0
+    }
+
+    fn is_consumable(&self) -> bool {
+        self.is_of_type(Type::Consumable)
     }
 
     fn is_tool(&self) -> bool {
