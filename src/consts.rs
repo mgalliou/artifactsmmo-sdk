@@ -27,6 +27,9 @@ pub const TASKS_COIN: &str = "tasks_coin";
 
 pub const GOLD: &str = "gold";
 
+pub const GOLDEN_EGG: &str = "golden_egg";
+pub const GOLDEN_SHRIMP: &str = "golden_shrimp";
+
 pub const GIFT: &str = "gift";
 pub const GINGERBREAD: &str = "gingerbread";
 
