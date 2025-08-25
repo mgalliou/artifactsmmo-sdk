@@ -5,6 +5,7 @@ use fs_extra::file::{read_to_string, write_all};
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
 pub use artifactsmmo_openapi::models;
 
@@ -12,8 +13,7 @@ pub use account::Account;
 pub use bank::Bank;
 pub use char::Character;
 pub use client::Client;
-pub use simulator::Simulator;
-//pub use consts::{};
+pub use consts::*;
 pub use events::Events;
 pub use gear::Gear;
 pub use items::Items;
@@ -21,6 +21,7 @@ pub use maps::Maps;
 pub use monsters::Monsters;
 pub use resources::Resources;
 pub use server::Server;
+pub use simulator::Simulator;
 pub use tasks::Tasks;
 pub use tasks_rewards::TasksRewards;
 
@@ -128,4 +129,51 @@ impl HasDrops for Vec<DropSchema> {
             .find(|i| i.code == item)
             .map_or(0, |i| i.quantity)
     }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
+#[strum(serialize_all = "snake_case")]
+pub enum EffectType {
+    CriticalStrike,
+    Burn,
+    Poison,
+    Haste,
+    Prospecting,
+    Wisdom,
+    Restore,
+    Hp,
+    BoostHp,
+    Heal,
+    Healing,
+    Lifesteal,
+    InventorySpace,
+
+    AttackFire,
+    AttackEarth,
+    AttackWater,
+    AttackAir,
+
+    Dmg,
+    DmgFire,
+    DmgEarth,
+    DmgWater,
+    DmgAir,
+
+    BoostDmgFire,
+    BoostDmgEarth,
+    BoostDmgWater,
+    BoostDmgAir,
+    ResDmgFire,
+    ResDmgEarth,
+    ResDmgWater,
+    ResDmgAir,
+
+    Mining,
+    Woodcutting,
+    Fishing,
+    Alchemy,
+
+    //Monster specific
+    Reconstitution,
+    Corrupted,
 }
