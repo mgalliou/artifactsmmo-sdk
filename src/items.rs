@@ -2,8 +2,9 @@ use crate::{
     PersistedData, Simulator,
     char::Skill,
     consts::{
-        ASTRALYTE_CRYSTAL, DIAMOND, EMERALD, ENCHANTED_FABRIC, FOOD_BLACK_LIST, GIFT, GINGERBREAD,
-        JASPER_CRYSTAL, MAGICAL_CURE, RUBY, SAPPHIRE, TASKS_COIN, TOPAZ,
+        ASTRALYTE_CRYSTAL, DIAMOND, EMERALD, ENCHANTED_FABRIC, FOOD_BLACK_LIST, GEMS, GIFT,
+        GINGERBREAD, JASPER_CRYSTAL, MAGICAL_CURE, RUBY, SAPPHIRE, TASKS_COIN,
+        TASKS_REWARDS_SPECIFICS, TOPAZ,
     },
     gear::Slot,
     monsters::{MonsterSchemaExt, Monsters},
@@ -279,8 +280,11 @@ impl Items {
         if code == GIFT {
             return self.monsters.get(GINGERBREAD).map(ItemSource::Monster);
         }
-        if [DIAMOND, EMERALD, RUBY, SAPPHIRE, TOPAZ].contains(&code) {
+        if GEMS.contains(&code) {
             return Some(ItemSource::Craft);
+        }
+        if TASKS_REWARDS_SPECIFICS.contains(&code) {
+            return Some(ItemSource::TaskReward);
         }
         let sources = self.sources_of(code);
         if sources.iter().all(|s| s.is_resource() || s.is_monster()) {
@@ -294,8 +298,6 @@ impl Items {
                 }
             });
             bests.first().cloned()
-        } else if sources.iter().all(|s| s.is_task_reward() || s.is_npc()) {
-            Some(ItemSource::TaskReward)
         } else {
             sources.first().cloned()
         }

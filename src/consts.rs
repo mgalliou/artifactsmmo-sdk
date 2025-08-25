@@ -11,10 +11,19 @@ pub const RUBY: &str = "ruby";
 pub const SAPPHIRE: &str = "sapphire";
 pub const TOPAZ: &str = "topaz";
 
+pub const GEMS: [&str; 5] = [DIAMOND, EMERALD, RUBY, SAPPHIRE, TOPAZ];
+
 pub const JASPER_CRYSTAL: &str = "jasper_crystal";
 pub const MAGICAL_CURE: &str = "magical_cure";
 pub const ASTRALYTE_CRYSTAL: &str = "astralyte_crystal";
 pub const ENCHANTED_FABRIC: &str = "enchanted_fabric";
+
+pub const TASKS_REWARDS_SPECIFICS: [&str; 4] = [
+    JASPER_CRYSTAL,
+    MAGICAL_CURE,
+    ASTRALYTE_CRYSTAL,
+    ENCHANTED_FABRIC,
+];
 
 pub const TASKS_COIN: &str = "tasks_coin";
 
