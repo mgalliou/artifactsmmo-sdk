@@ -2,9 +2,8 @@ use crate::{
     PersistedData, Simulator,
     char::Skill,
     consts::{
-        ASTRALYTE_CRYSTAL, DIAMOND, EMERALD, ENCHANTED_FABRIC, FOOD_BLACK_LIST, GEMS, GIFT,
-        GINGERBREAD, JASPER_CRYSTAL, MAGICAL_CURE, RUBY, SAPPHIRE, TASKS_COIN,
-        TASKS_REWARDS_SPECIFICS, TOPAZ,
+        ASTRALYTE_CRYSTAL, DIAMOND, ENCHANTED_FABRIC, GEMS, GIFT, GINGERBREAD, JASPER_CRYSTAL,
+        MAGICAL_CURE, TASKS_COIN, TASKS_REWARDS_SPECIFICS,
     },
     gear::Slot,
     monsters::{MonsterSchemaExt, Monsters},
@@ -252,14 +251,6 @@ impl Items {
         average
     }
 
-    pub fn best_consumable_foods(&self, level: i32) -> Vec<Arc<ItemSchema>> {
-        self.all()
-            .iter()
-            .filter(|i| i.is_consumable_at(level))
-            .cloned()
-            .collect_vec()
-    }
-
     pub fn restoring_utilities(&self, level: i32) -> Vec<Arc<ItemSchema>> {
         self.all()
             .iter()
@@ -386,78 +377,47 @@ impl Items {
 }
 
 pub trait ItemSchemaExt {
-    fn name(&self) -> String;
-    fn r#type(&self) -> Type;
-    fn is_of_type(&self, r#type: Type) -> bool;
-    fn is_craftable(&self) -> bool;
     fn is_crafted_with(&self, item: &str) -> bool;
-    fn is_crafted_from_task(&self) -> bool;
-    fn mats(&self) -> Vec<SimpleItemSchema>;
     fn mats_quantity(&self) -> i32;
+    fn mats(&self) -> Vec<SimpleItemSchema>;
     fn recycled_quantity(&self) -> i32;
-    fn craft_schema(&self) -> Option<CraftSchema>;
     fn skill_to_craft(&self) -> Option<Skill>;
-    fn effects(&self) -> Vec<&SimpleEffectSchema>;
-    fn effect_value(&self, effect: &str) -> i32;
-    fn attack_damage(&self, r#type: DamageType) -> i32;
+    fn is_crafted_from_task(&self) -> bool;
+    fn is_craftable(&self) -> bool;
+    fn craft_schema(&self) -> Option<CraftSchema>;
+
     fn attack_damage_against(&self, monster: &MonsterSchema) -> f32;
-    fn damage_increase(&self, r#type: DamageType) -> i32;
-    fn resistance(&self, r#type: DamageType) -> i32;
-    fn health(&self) -> i32;
-    fn haste(&self) -> i32;
-    fn critical_strike(&self) -> i32;
-    fn poison(&self) -> i32;
-    fn is_tool(&self) -> bool;
-    fn skill_cooldown_reduction(&self, skill: Skill) -> i32;
-    fn wisdom(&self) -> i32;
-    fn prospecting(&self) -> i32;
-    fn heal(&self) -> i32;
-    fn restore(&self) -> i32;
-    fn inventory_space(&self) -> i32;
-    fn is_consumable(&self) -> bool;
-    fn is_consumable_at(&self, level: i32) -> bool;
     fn damage_increase_against_with(&self, monster: &MonsterSchema, weapon: &ItemSchema) -> f32;
     fn damage_reduction_against(&self, monster: &MonsterSchema) -> f32;
+
+    fn health(&self) -> i32;
+    fn heal(&self) -> i32;
+    fn restore(&self) -> i32;
+    fn haste(&self) -> i32;
+    fn attack_damage(&self, r#type: DamageType) -> i32;
+    fn damage_increase(&self, r#type: DamageType) -> i32;
+    fn critical_strike(&self) -> i32;
+    fn poison(&self) -> i32;
+    fn resistance(&self, r#type: DamageType) -> i32;
+    fn wisdom(&self) -> i32;
+    fn prospecting(&self) -> i32;
+    fn skill_cooldown_reduction(&self, skill: Skill) -> i32;
+    fn inventory_space(&self) -> i32;
+    fn effect_value(&self, effect: &str) -> i32;
+    fn effects(&self) -> Vec<&SimpleEffectSchema>;
+
+    fn is_food(&self) -> bool;
+    fn is_tool(&self) -> bool;
+
+    fn is_of_type(&self, r#type: Type) -> bool;
+    fn r#type(&self) -> Type;
+
+    fn name(&self) -> String;
 }
 
 impl ItemSchemaExt for ItemSchema {
-    fn name(&self) -> String {
-        self.name.to_owned()
-    }
-
-    fn r#type(&self) -> Type {
-        Type::from_str(&self.r#type).expect("type to be valid")
-    }
-
-    fn is_of_type(&self, r#type: Type) -> bool {
-        self.r#type == r#type
-    }
-
-    fn is_craftable(&self) -> bool {
-        self.craft_schema().is_some()
-    }
-
     fn is_crafted_with(&self, item: &str) -> bool {
         self.mats().iter().any(|m| m.code == item)
-    }
-
-    fn is_crafted_from_task(&self) -> bool {
-        self.is_crafted_with(JASPER_CRYSTAL)
-            || self.is_crafted_with(MAGICAL_CURE)
-            || self.is_crafted_with(ENCHANTED_FABRIC)
-            || self.is_crafted_with(ASTRALYTE_CRYSTAL)
-            || self.is_crafted_with(DIAMOND)
-            || self.is_crafted_with("rosenblood_elixir")
-            || self.is_crafted_with("hellhound_hair")
-            || self.is_crafted_with("efreet_cloth")
-    }
-
-    fn mats(&self) -> Vec<SimpleItemSchema> {
-        self.craft_schema()
-            .into_iter()
-            .filter_map(|i| i.items)
-            .flatten()
-            .collect_vec()
     }
 
     fn mats_quantity(&self) -> i32 {
@@ -469,8 +429,12 @@ impl ItemSchemaExt for ItemSchema {
         q / 5 + if q % 5 > 0 { 1 } else { 0 }
     }
 
-    fn craft_schema(&self) -> Option<CraftSchema> {
-        self.craft.clone()?.map(|c| (*c))
+    fn mats(&self) -> Vec<SimpleItemSchema> {
+        self.craft_schema()
+            .into_iter()
+            .filter_map(|i| i.items)
+            .flatten()
+            .collect_vec()
     }
 
     fn skill_to_craft(&self) -> Option<Skill> {
@@ -479,23 +443,25 @@ impl ItemSchemaExt for ItemSchema {
             .map(Skill::from)
     }
 
-    fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        self.effects.iter().flatten().collect_vec()
+    fn is_crafted_from_task(&self) -> bool {
+        self.is_crafted_with(JASPER_CRYSTAL)
+            || self.is_crafted_with(MAGICAL_CURE)
+            || self.is_crafted_with(ENCHANTED_FABRIC)
+            || self.is_crafted_with(ASTRALYTE_CRYSTAL)
+            || self.is_crafted_with(DIAMOND)
+            //TODO: this should not be in the sdk
+            || self.is_crafted_with("rosenblood_elixir")
+            || self.is_crafted_with("hellhound_hair")
+            || self.is_crafted_with("efreet_cloth")
     }
 
-    fn effect_value(&self, effect: &str) -> i32 {
-        self.effects()
-            .iter()
-            .find_map(|e| (e.code == effect).then_some(e.value))
-            .unwrap_or(0)
+    fn is_craftable(&self) -> bool {
+        self.craft_schema().is_some()
     }
 
-    fn attack_damage(&self, r#type: DamageType) -> i32 {
-        self.effects()
-            .iter()
-            .find(|e| e.code == "attack_".to_string() + r#type.as_ref())
-            .map(|e| e.value)
-            .unwrap_or(0)
+    fn craft_schema(&self) -> Option<CraftSchema> {
+        //TODO: prevent cloning if possible
+        self.craft.clone()?.map(|c| (*c))
     }
 
     fn attack_damage_against(&self, monster: &MonsterSchema) -> f32 {
@@ -509,79 +475,6 @@ impl ItemSchemaExt for ItemSchema {
                 )
             })
             .sum()
-    }
-
-    fn damage_increase(&self, r#type: DamageType) -> i32 {
-        self.effects()
-            .iter()
-            .find(|e| {
-                e.code == "dmg_".to_string() + r#type.as_ref()
-                    || e.code == "boost_dmg_".to_string() + r#type.as_ref()
-                    || e.code == "dmg"
-            })
-            .map(|e| e.value)
-            .unwrap_or(0)
-    }
-
-    fn resistance(&self, r#type: DamageType) -> i32 {
-        self.effect_value(&("res_".to_string() + r#type.as_ref()))
-    }
-
-    /// TODO: maybe compute both effects
-    fn health(&self) -> i32 {
-        let hp = self.effect_value("hp");
-        if hp < 1 {
-            self.effect_value("boost_hp")
-        } else {
-            hp
-        }
-    }
-
-    fn haste(&self) -> i32 {
-        self.effect_value("haste")
-    }
-
-    fn critical_strike(&self) -> i32 {
-        self.effect_value("critical_strike")
-    }
-
-    fn is_tool(&self) -> bool {
-        Skill::iter().any(|s| self.skill_cooldown_reduction(s) < 0)
-    }
-
-    fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
-        self.effect_value(skill.as_ref())
-    }
-
-    fn wisdom(&self) -> i32 {
-        self.effect_value("wisdom")
-    }
-
-    fn prospecting(&self) -> i32 {
-        self.effect_value("prospecting")
-    }
-
-    fn heal(&self) -> i32 {
-        self.effect_value("heal")
-    }
-
-    fn restore(&self) -> i32 {
-        self.effect_value("restore")
-    }
-
-    fn inventory_space(&self) -> i32 {
-        self.effect_value("inventory_space")
-    }
-
-    fn is_consumable(&self) -> bool {
-        self.is_of_type(Type::Consumable)
-    }
-
-    fn is_consumable_at(&self, level: i32) -> bool {
-        self.is_of_type(Type::Consumable)
-            && self.heal() > 0
-            && self.level <= level
-            && !FOOD_BLACK_LIST.contains(&self.code.as_str())
     }
 
     fn damage_increase_against_with(&self, monster: &MonsterSchema, weapon: &ItemSchema) -> f32 {
@@ -625,8 +518,105 @@ impl ItemSchemaExt for ItemSchema {
                 .sum::<f32>()
     }
 
+    /// TODO: maybe compute both effects
+    fn health(&self) -> i32 {
+        let hp = self.effect_value("hp");
+        if hp < 1 {
+            self.effect_value("boost_hp")
+        } else {
+            hp
+        }
+    }
+
+    fn heal(&self) -> i32 {
+        self.effect_value("heal")
+    }
+
+    fn restore(&self) -> i32 {
+        self.effect_value("restore")
+    }
+
+    fn haste(&self) -> i32 {
+        self.effect_value("haste")
+    }
+
+    fn attack_damage(&self, r#type: DamageType) -> i32 {
+        self.effects()
+            .iter()
+            .find(|e| e.code == "attack_".to_string() + r#type.as_ref())
+            .map(|e| e.value)
+            .unwrap_or(0)
+    }
+
+    fn damage_increase(&self, r#type: DamageType) -> i32 {
+        self.effects()
+            .iter()
+            .find(|e| {
+                e.code == "dmg_".to_string() + r#type.as_ref()
+                    || e.code == "boost_dmg_".to_string() + r#type.as_ref()
+                    || e.code == "dmg"
+            })
+            .map(|e| e.value)
+            .unwrap_or(0)
+    }
+
+    fn critical_strike(&self) -> i32 {
+        self.effect_value("critical_strike")
+    }
+
     fn poison(&self) -> i32 {
         self.effect_value("poison")
+    }
+
+    fn resistance(&self, r#type: DamageType) -> i32 {
+        self.effect_value(&("res_".to_string() + r#type.as_ref()))
+    }
+
+    fn wisdom(&self) -> i32 {
+        self.effect_value("wisdom")
+    }
+
+    fn prospecting(&self) -> i32 {
+        self.effect_value("prospecting")
+    }
+
+    fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
+        self.effect_value(skill.as_ref())
+    }
+
+    fn inventory_space(&self) -> i32 {
+        self.effect_value("inventory_space")
+    }
+
+    fn effect_value(&self, effect: &str) -> i32 {
+        self.effects()
+            .iter()
+            .find_map(|e| (e.code == effect).then_some(e.value))
+            .unwrap_or(0)
+    }
+
+    fn effects(&self) -> Vec<&SimpleEffectSchema> {
+        self.effects.iter().flatten().collect_vec()
+    }
+
+    fn is_food(&self) -> bool {
+        self.is_of_type(Type::Consumable) && self.heal() > 0
+    }
+
+    fn is_tool(&self) -> bool {
+        Skill::iter().any(|s| self.skill_cooldown_reduction(s) < 0)
+    }
+
+    fn is_of_type(&self, r#type: Type) -> bool {
+        self.r#type == r#type
+    }
+
+    fn r#type(&self) -> Type {
+        Type::from_str(&self.r#type).expect("type to be valid")
+    }
+
+    fn name(&self) -> String {
+        self.name.to_owned()
     }
 }
 
