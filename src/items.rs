@@ -1,10 +1,7 @@
 use crate::{
     PersistedData, Simulator,
     char::Skill,
-    consts::{
-        ASTRALYTE_CRYSTAL, ENCHANTED_FABRIC, GEMS, GIFT, GINGERBREAD, JASPER_CRYSTAL, MAGICAL_CURE,
-        TASKS_COIN, TASKS_REWARDS_SPECIFICS,
-    },
+    consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
     monsters::{MonsterSchemaExt, Monsters},
     npcs::Npcs,
@@ -23,7 +20,7 @@ use std::{
     ops::Deref,
     str::FromStr,
     sync::{Arc, RwLock},
-    vec::Vec,
+    vec::{IntoIter, Vec},
 };
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
@@ -53,6 +50,22 @@ impl PersistedData<HashMap<String, Arc<ItemSchema>>> for Items {
 
     fn refresh_data(&self) {
         *self.data.write().unwrap() = self.data_from_api();
+    }
+}
+
+impl IntoIterator for Items {
+    type Item = Arc<ItemSchema>;
+
+    type IntoIter = IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data
+            .read()
+            .unwrap()
+            .values()
+            .cloned()
+            .collect_vec()
+            .into_iter()
     }
 }
 
