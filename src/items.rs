@@ -2,8 +2,8 @@ use crate::{
     PersistedData, Simulator,
     char::Skill,
     consts::{
-        ASTRALYTE_CRYSTAL, ENCHANTED_FABRIC, GEMS, GIFT, GINGERBREAD, JASPER_CRYSTAL,
-        MAGICAL_CURE, TASKS_COIN, TASKS_REWARDS_SPECIFICS,
+        ASTRALYTE_CRYSTAL, ENCHANTED_FABRIC, GEMS, GIFT, GINGERBREAD, JASPER_CRYSTAL, MAGICAL_CURE,
+        TASKS_COIN, TASKS_REWARDS_SPECIFICS,
     },
     gear::Slot,
     monsters::{MonsterSchemaExt, Monsters},
@@ -17,7 +17,6 @@ use artifactsmmo_openapi::models::{
     SimpleItemSchema,
 };
 use itertools::Itertools;
-use log::debug;
 use std::{
     collections::HashMap,
     fmt,
@@ -149,15 +148,9 @@ impl Items {
     }
 
     pub fn require_task_reward(&self, code: &str) -> bool {
-        self.base_mats_of(code).iter().any(|m| {
-            [
-                JASPER_CRYSTAL,
-                MAGICAL_CURE,
-                ENCHANTED_FABRIC,
-                ASTRALYTE_CRYSTAL,
-            ]
-            .contains(&m.code.as_str())
-        })
+        self.base_mats_of(code)
+            .iter()
+            .any(|m| TASKS_REWARDS_SPECIFICS.contains(&m.code.as_str()))
     }
 
     /// Takes an item `code` and returns the only item it can be crafted in, or
@@ -241,14 +234,11 @@ impl Items {
             return 0.0;
         }
         let base_mats_quantity: i32 = base_mats.iter().map(|m| m.quantity).sum();
-        debug!("total mats for {}: {}", code, base_mats_quantity);
         let drop_rate_sum: i32 = base_mats
             .iter()
             .map(|m| self.drop_rate(&m.code) * m.quantity)
             .sum();
-        debug!("sum for {}: {}", code, drop_rate_sum);
         let average: f32 = drop_rate_sum as f32 / base_mats_quantity as f32;
-        debug!("average drop rate for {}: {}", code, average);
         average
     }
 
@@ -325,22 +315,6 @@ impl Items {
         if code == TASKS_COIN {
             sources.push(ItemSource::Task);
         }
-        //if [
-        //    "blue_candy",
-        //    "green_candy",
-        //    "red_candy",
-        //    "yellow_candy",
-        //    "christmas_cane",
-        //    "christmas_star",
-        //    "frozen_gloves",
-        //    "frozen_axe",
-        //    "frozen_fishing_rod",
-        //    "frozen_pickaxe",
-        //]
-        //.contains(&code)
-        //{
-        //    sources.push(ItemSource::Gift);
-        //}
         sources
     }
 
@@ -357,7 +331,7 @@ impl Items {
                     .sum(),
                 ItemSource::TaskReward => 20000,
                 ItemSource::Task => 20000,
-                ItemSource::Npc(_) => 60, //ItemSource::Gift => 10000,
+                ItemSource::Npc(_) => 60,
             })
             .min()
     }
@@ -371,7 +345,6 @@ impl Items {
                 ItemSource::Craft => false,
                 ItemSource::TaskReward => false,
                 ItemSource::Task => false,
-                //ItemSource::Gift => false,
             })
         })
     }
@@ -446,10 +419,9 @@ impl ItemSchemaExt for ItemSchema {
     }
 
     fn is_crafted_from_task(&self) -> bool {
-        self.is_crafted_with(JASPER_CRYSTAL)
-            || self.is_crafted_with(MAGICAL_CURE)
-            || self.is_crafted_with(ENCHANTED_FABRIC)
-            || self.is_crafted_with(ASTRALYTE_CRYSTAL)
+        TASKS_REWARDS_SPECIFICS
+            .iter()
+            .any(|i| self.is_crafted_with(i))
     }
 
     fn is_craftable(&self) -> bool {
@@ -709,7 +681,6 @@ pub enum ItemSource {
     Craft,
     TaskReward,
     Task,
-    //Gift,
 }
 
 #[cfg(test)]

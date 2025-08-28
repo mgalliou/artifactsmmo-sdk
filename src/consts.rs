@@ -44,3 +44,14 @@ pub const MAPLE_SYRUP: &str = "maple_syrup";
 
 pub const BANK_MIN_FREE_SLOT: i32 = 3;
 pub const BANK_EXTENSION_SIZE: i32 = 20;
+
+pub const BLUE_CANDY: &str = "blue_candy";
+pub const GREEN_CANDY: &str = "green_candy";
+pub const RED_CANDY: &str = "red_candy";
+pub const YELLOW_CANDY: &str = "yellow_candy";
+pub const CHRISTMAS_CANE: &str = "christmas_cane";
+pub const CHRISTMAS_STAR: &str = "christmas_star";
+pub const FROZEN_GLOVES: &str = "frozen_gloves";
+pub const FROZEN_AXE: &str = "frozen_axe";
+pub const FROZEN_FISHING_ROD: &str = "frozen_fishing_rod";
+pub const FROZEN_PICKAXE: &str = "frozen_pickaxe";
