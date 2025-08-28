@@ -2,7 +2,7 @@ use crate::{
     PersistedData, Simulator,
     char::Skill,
     consts::{
-        ASTRALYTE_CRYSTAL, DIAMOND, ENCHANTED_FABRIC, GEMS, GIFT, GINGERBREAD, JASPER_CRYSTAL,
+        ASTRALYTE_CRYSTAL, ENCHANTED_FABRIC, GEMS, GIFT, GINGERBREAD, JASPER_CRYSTAL,
         MAGICAL_CURE, TASKS_COIN, TASKS_REWARDS_SPECIFICS,
     },
     gear::Slot,
@@ -450,11 +450,6 @@ impl ItemSchemaExt for ItemSchema {
             || self.is_crafted_with(MAGICAL_CURE)
             || self.is_crafted_with(ENCHANTED_FABRIC)
             || self.is_crafted_with(ASTRALYTE_CRYSTAL)
-            || self.is_crafted_with(DIAMOND)
-            //TODO: this should not be in the sdk
-            || self.is_crafted_with("rosenblood_elixir")
-            || self.is_crafted_with("hellhound_hair")
-            || self.is_crafted_with("efreet_cloth")
     }
 
     fn is_craftable(&self) -> bool {
@@ -519,7 +514,6 @@ impl ItemSchemaExt for ItemSchema {
                 .sum::<f32>()
     }
 
-    /// TODO: maybe compute both effects
     fn health(&self) -> i32 {
         let hp = self.effect_value("hp");
         if hp < 1 {

@@ -50,14 +50,14 @@ impl Simulator {
         ignore_death: bool,
     ) -> Fight {
         let base_hp = BASE_HP + HP_PER_LEVEL * level;
-        let starting_hp = base_hp + gear.health_increase() - missing_hp;
+        let starting_hp = base_hp + gear.health() - missing_hp;
         let mut hp = starting_hp;
         let mut monster_hp = monster.hp;
         let mut turns = 1;
 
         loop {
             if turns % 2 == 1 {
-                monster_hp -= gear.attack_damage_against(monster);
+                monster_hp -= gear.critless_damage_against(monster);
                 if monster_hp <= 0 {
                     break;
                 }
@@ -65,11 +65,11 @@ impl Simulator {
                     monster_hp -= gear.poison()
                 }
             } else {
-                if hp < (base_hp + gear.health_increase()) / 2 {
+                if hp < (base_hp + gear.health()) / 2 {
                     hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
                     hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
                 }
-                hp -= gear.attack_damage_from(monster);
+                hp -= gear.avarage_damage_from(monster);
                 if turns > 2 {
                     hp -= monster.poison()
                 }

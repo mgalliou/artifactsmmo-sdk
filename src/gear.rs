@@ -99,7 +99,7 @@ impl Gear {
         }
     }
 
-    pub fn attack_damage_against(&self, monster: &MonsterSchema) -> i32 {
+    pub fn average_damage_against(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
                 self.weapon
@@ -117,13 +117,71 @@ impl Gear {
             .sum()
     }
 
-    pub fn attack_damage_from(&self, monster: &MonsterSchema) -> i32 {
+    pub fn avarage_damage_from(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
                     monster.attack_damage(t),
                     0,
                     self.critical_strike(),
+                    self.resistance(t),
+                )
+                .round() as i32
+            })
+            .sum()
+    }
+
+    pub fn critless_damage_against(&self, monster: &MonsterSchema) -> i32 {
+        DamageType::iter()
+            .map(|t| {
+                self.weapon
+                    .as_ref()
+                    .map_or(0.0, |w| {
+                        Simulator::critless_dmg(
+                            w.attack_damage(t),
+                            self.damage_increase(t),
+                            monster.resistance(t),
+                        )
+                    })
+                    .round() as i32
+            })
+            .sum()
+    }
+
+    pub fn critless_damage_from(&self, monster: &MonsterSchema) -> i32 {
+        DamageType::iter()
+            .map(|t| {
+                Simulator::critless_dmg(monster.attack_damage(t), 0, self.resistance(t)).round()
+                    as i32
+            })
+            .sum()
+    }
+
+    pub fn simulate_damage_against(&self, monster: &MonsterSchema) -> i32 {
+        DamageType::iter()
+            .map(|t| {
+                self.weapon
+                    .as_ref()
+                    .map_or(0.0, |w| {
+                        Simulator::simulate_dmg(
+                            w.attack_damage(t),
+                            self.damage_increase(t),
+                            self.critical_strike(),
+                            monster.resistance(t),
+                        )
+                    })
+                    .round() as i32
+            })
+            .sum()
+    }
+
+    pub fn simulate_damage_from(&self, monster: &MonsterSchema) -> i32 {
+        DamageType::iter()
+            .map(|t| {
+                Simulator::simulate_dmg(
+                    monster.attack_damage(t),
+                    0,
+                    monster.critical_strike(),
                     self.resistance(t),
                 )
                 .round() as i32
@@ -138,7 +196,7 @@ impl Gear {
             .sum()
     }
 
-    pub fn health_increase(&self) -> i32 {
+    pub fn health(&self) -> i32 {
         Slot::iter()
             .map(|s| self.slot(s).map_or(0, |i| i.health()))
             .sum()
@@ -352,7 +410,7 @@ impl From<Gear> for Vec<SimpleItemSchema> {
 }
 
 #[derive(
-    Debug, Default, Copy, Clone, PartialEq, Display, AsRefStr, EnumString, EnumIter, EnumIs,
+    Debug, Default, Copy, Clone, PartialEq, Eq, Display, AsRefStr, EnumString, EnumIter, EnumIs,
 )]
 #[strum(serialize_all = "snake_case")]
 pub enum Slot {
