@@ -1,4 +1,4 @@
-use crate::{gear::Gear, items::ItemSchemaExt, monsters::MonsterSchemaExt};
+use crate::{gear::Gear, items::{DamageType, ItemSchemaExt}, monsters::MonsterSchemaExt};
 use artifactsmmo_openapi::models::{FightResult, MonsterSchema};
 use std::cmp::max;
 
@@ -77,7 +77,7 @@ impl Simulator {
                     break;
                 }
             }
-            if turns >= 100 {
+            if turns >= MAX_TURN {
                 break;
             }
             turns += 1;
@@ -120,6 +120,12 @@ pub struct Fight {
     pub hp_lost: i32,
     pub result: FightResult,
     pub cd: i32,
+}
+
+pub struct Hit {
+    r#type: DamageType,
+    damage: i32,
+    is_crit: bool,
 }
 
 #[cfg(test)]
