@@ -22,6 +22,7 @@ use artifactsmmo_openapi::{
         TaskTradeSchema, UseItemResponseSchema,
     },
 };
+use chrono::Utc;
 use downcast_rs::{Downcast, impl_downcast};
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
@@ -369,6 +370,12 @@ impl CharacterRequestHandler {
     }
 
     fn wait_for_cooldown(&self) {
+        if let Some(expiration) = self.cooldown_expiration() {
+            let late = Utc::now() - expiration;
+            if late.num_seconds() > 1 {
+                warn!("{}: is late by {}s", self.name(), late.num_seconds())
+            }
+        }
         let s = self.remaining_cooldown();
         if s.is_zero() {
             return;
