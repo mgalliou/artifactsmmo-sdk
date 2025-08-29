@@ -42,6 +42,7 @@ dependencies = [
 [[package]]
 name = "artifactsmmo-openapi"
 version = "5.0.0"
+source = "git+https://github.com/mgalliou/artifactsmmo-openapi#131c64966d16c65f4658ed326956bbb8873bddb2"
 dependencies = [
  "reqwest",
  "serde",
