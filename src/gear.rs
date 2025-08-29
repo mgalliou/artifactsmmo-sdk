@@ -1,7 +1,7 @@
 use crate::{
     items::{DamageType, ItemSchemaExt},
     monsters::MonsterSchemaExt,
-    simulator::Simulator,
+    simulator::{Hit, Simulator},
 };
 use artifactsmmo_openapi::models::{ItemSchema, ItemSlot, MonsterSchema, SimpleItemSchema};
 use itertools::Itertools;
@@ -29,6 +29,7 @@ pub struct Gear {
 
 impl Gear {
     #[allow(clippy::too_many_arguments)]
+    //TODO: return result with invalid gear errors
     pub fn new(
         weapon: Option<Arc<ItemSchema>>,
         helmet: Option<Arc<ItemSchema>>,
@@ -134,16 +135,12 @@ impl Gear {
     pub fn critless_damage_against(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
-                self.weapon
-                    .as_ref()
-                    .map_or(0.0, |w| {
-                        Simulator::critless_dmg(
-                            w.attack_damage(t),
-                            self.damage_increase(t),
-                            monster.resistance(t),
-                        )
-                    })
-                    .round() as i32
+                Simulator::critless_dmg(
+                    self.attack_damage(t),
+                    self.damage_increase(t),
+                    monster.resistance(t),
+                )
+                .round() as i32
             })
             .sum()
     }
@@ -157,39 +154,40 @@ impl Gear {
             .sum()
     }
 
-    pub fn simulate_damage_against(&self, monster: &MonsterSchema) -> i32 {
+    pub fn simulate_hits_against(&self, monster: &MonsterSchema) -> Vec<Hit> {
         DamageType::iter()
             .map(|t| {
-                self.weapon
-                    .as_ref()
-                    .map_or(0.0, |w| {
-                        Simulator::simulate_dmg(
-                            w.attack_damage(t),
-                            self.damage_increase(t),
-                            self.critical_strike(),
-                            monster.resistance(t),
-                        )
-                    })
-                    .round() as i32
+                Simulator::simulate_hit(
+                    self.attack_damage(t),
+                    self.damage_increase(t),
+                    self.critical_strike(),
+                    t,
+                    monster.resistance(t),
+                )
             })
-            .sum()
+            .collect_vec()
     }
 
-    pub fn simulate_damage_from(&self, monster: &MonsterSchema) -> i32 {
+    pub fn simulate_hits_from(&self, monster: &MonsterSchema) -> Vec<Hit> {
         DamageType::iter()
             .map(|t| {
-                Simulator::simulate_dmg(
+                Simulator::simulate_hit(
                     monster.attack_damage(t),
                     0,
                     monster.critical_strike(),
+                    t,
                     self.resistance(t),
                 )
-                .round() as i32
             })
-            .sum()
+            .filter(|h| h.damage > 0)
+            .collect_vec()
     }
 
-    // TODO: handle consumables
+    //TODO: maybe handle all slots, in the future other slots might provide attack damage
+    fn attack_damage(&self, t: DamageType) -> i32 {
+        self.weapon.as_ref().map_or(0, |w| w.attack_damage(t))
+    }
+
     fn damage_increase(&self, t: DamageType) -> i32 {
         Slot::iter()
             .map(|s| self.slot(s).map_or(0, |i| i.damage_increase(t)))
@@ -214,6 +212,10 @@ impl Gear {
 
     pub fn poison(&self) -> i32 {
         self.effect_value("poison")
+    }
+
+    pub fn lifesteal(&self) -> i32 {
+        self.effect_value("lifesteal")
     }
 
     pub fn haste(&self) -> i32 {

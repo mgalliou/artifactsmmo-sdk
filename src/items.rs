@@ -385,6 +385,7 @@ pub trait ItemSchemaExt {
     fn damage_increase(&self, r#type: DamageType) -> i32;
     fn critical_strike(&self) -> i32;
     fn poison(&self) -> i32;
+    fn lifesteal(&self) -> i32;
     fn resistance(&self, r#type: DamageType) -> i32;
     fn wisdom(&self) -> i32;
     fn prospecting(&self) -> i32;
@@ -546,6 +547,10 @@ impl ItemSchemaExt for ItemSchema {
 
     fn poison(&self) -> i32 {
         self.effect_value("poison")
+    }
+
+    fn lifesteal(&self) -> i32 {
+        self.effect_value("lifesteal")
     }
 
     fn resistance(&self, r#type: DamageType) -> i32 {

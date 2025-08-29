@@ -82,6 +82,7 @@ pub trait MonsterSchemaExt {
     fn effects(&self) -> Vec<&SimpleEffectSchema>;
     fn effect_value(&self, effect: &str) -> i32;
     fn poison(&self) -> i32;
+    fn lifesteal(&self) -> i32;
     fn attack_damage(&self, r#type: DamageType) -> i32;
     fn critical_strike(&self) -> i32;
     fn resistance(&self, r#type: DamageType) -> i32;
@@ -133,5 +134,9 @@ impl MonsterSchemaExt for MonsterSchema {
 
     fn critical_strike(&self) -> i32 {
         self.critical_strike
+    }
+
+    fn lifesteal(&self) -> i32 {
+        self.effect_value("lifesteal")
     }
 }

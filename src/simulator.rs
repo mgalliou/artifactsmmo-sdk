@@ -1,14 +1,150 @@
-use crate::{gear::Gear, items::{DamageType, ItemSchemaExt}, monsters::MonsterSchemaExt};
+use crate::{
+    gear::Gear,
+    items::{DamageType, ItemSchemaExt},
+    monsters::MonsterSchemaExt,
+};
 use artifactsmmo_openapi::models::{FightResult, MonsterSchema};
 use std::cmp::max;
 
 const BASE_HP: i32 = 115;
 const MAX_TURN: i32 = 100;
 const HP_PER_LEVEL: i32 = 5;
+const CRIT_MULTIPLIER: f32 = 1.5;
 
 pub struct Simulator {}
 
 impl Simulator {
+
+    pub fn average_fight(
+        level: i32,
+        missing_hp: i32,
+        gear: &Gear,
+        monster: &MonsterSchema,
+        ignore_death: bool,
+    ) -> Fight {
+        let base_hp = BASE_HP + HP_PER_LEVEL * level;
+        let starting_hp = base_hp + gear.health() - missing_hp;
+        let mut hp = starting_hp;
+        let mut monster_hp = monster.hp;
+        let mut turns = 1;
+
+        loop {
+            if turns % 2 == 1 {
+                let damage = gear.average_damage_against(monster);
+                monster_hp -= damage;
+                hp += damage * gear.lifesteal() / 100;
+                if monster_hp <= 0 {
+                    break;
+                }
+                if turns > 1 {
+                    monster_hp -= gear.poison()
+                }
+            } else {
+                if hp < (base_hp + gear.health()) / 2 {
+                    hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
+                    hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
+                }
+                let damage = gear.avarage_damage_from(monster);
+                hp -= damage;
+                monster_hp += damage * gear.lifesteal() / 100;
+                if turns > 2 {
+                    hp -= monster.poison()
+                }
+                if hp <= 0 && !ignore_death {
+                    break;
+                }
+            }
+            if turns >= MAX_TURN {
+                break;
+            }
+            turns += 1;
+        }
+        Fight {
+            turns,
+            hp,
+            monster_hp,
+            hp_lost: starting_hp - hp,
+            result: if hp <= 0 || turns > MAX_TURN {
+                FightResult::Loss
+            } else {
+                FightResult::Win
+            },
+            cd: Self::fight_cd(gear.haste(), turns),
+        }
+    }
+
+    pub fn random_fight(
+        level: i32,
+        missing_hp: i32,
+        gear: &Gear,
+        monster: &MonsterSchema,
+        ignore_death: bool,
+    ) -> Fight {
+        let base_hp = BASE_HP + HP_PER_LEVEL * level;
+        let starting_hp = base_hp + gear.health() - missing_hp;
+        let mut hp = starting_hp;
+        let mut monster_hp = monster.hp;
+        let mut turns = 1;
+
+        loop {
+            if turns % 2 == 1 {
+                let hits = gear.simulate_hits_against(monster);
+                for h in hits.iter() {
+                    monster_hp -= h.damage;
+                    if monster_hp <= 0 {
+                        break;
+                    }
+                    if h.is_crit {
+                        hp += h.damage * gear.lifesteal() / 100;
+                    }
+                }
+                if turns > 1 {
+                    monster_hp -= gear.poison()
+                }
+                if monster_hp <= 0 {
+                    break;
+                }
+            } else {
+                if hp < (base_hp + gear.health()) / 2 {
+                    hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
+                    hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
+                }
+                let hits = gear.simulate_hits_from(monster);
+                for h in hits.iter() {
+                    hp -= h.damage;
+                    if hp <= 0 {
+                        break;
+                    }
+                    if h.is_crit {
+                        monster_hp += h.damage * monster.lifesteal() / 100;
+                    }
+                }
+                if turns > 2 {
+                    hp -= monster.poison()
+                }
+                if hp <= 0 && !ignore_death {
+                    break;
+                }
+            }
+            if turns >= MAX_TURN {
+                break;
+            }
+            turns += 1;
+        }
+        Fight {
+            turns,
+            hp,
+            monster_hp,
+            hp_lost: starting_hp - hp,
+            result: if hp <= 0 || turns > MAX_TURN {
+                FightResult::Loss
+            } else {
+                FightResult::Win
+            },
+            cd: Self::fight_cd(gear.haste(), turns),
+        }
+    }
+
     /// Compute the average damage an attack will do against the given `target_resistance`.
     pub fn average_dmg(
         attack_damage: i32,
@@ -36,63 +172,31 @@ impl Simulator {
     ) -> f32 {
         let mut dmg = attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
         if rand::random_range(0..=100) <= critical_strike {
-            dmg *= 1.5
+            dmg *= CRIT_MULTIPLIER
         }
         dmg -= dmg * target_resistance as f32 * 0.01;
         dmg
     }
 
-    pub fn fight(
-        level: i32,
-        missing_hp: i32,
-        gear: &Gear,
-        monster: &MonsterSchema,
-        ignore_death: bool,
-    ) -> Fight {
-        let base_hp = BASE_HP + HP_PER_LEVEL * level;
-        let starting_hp = base_hp + gear.health() - missing_hp;
-        let mut hp = starting_hp;
-        let mut monster_hp = monster.hp;
-        let mut turns = 1;
-
-        loop {
-            if turns % 2 == 1 {
-                monster_hp -= gear.critless_damage_against(monster);
-                if monster_hp <= 0 {
-                    break;
-                }
-                if turns > 1 {
-                    monster_hp -= gear.poison()
-                }
-            } else {
-                if hp < (base_hp + gear.health()) / 2 {
-                    hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
-                    hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
-                }
-                hp -= gear.avarage_damage_from(monster);
-                if turns > 2 {
-                    hp -= monster.poison()
-                }
-                if hp <= 0 && !ignore_death {
-                    break;
-                }
-            }
-            if turns >= MAX_TURN {
-                break;
-            }
-            turns += 1;
+    pub fn simulate_hit(
+        attack_damage: i32,
+        damage_increase: i32,
+        critical_strike: i32,
+        r#type: DamageType,
+        target_resistance: i32,
+    ) -> Hit {
+        let mut is_crit = false;
+        let mut damage =
+            attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
+        if rand::random_range(0..=100) <= critical_strike {
+            damage *= 1.5;
+            is_crit = true
         }
-        Fight {
-            turns,
-            hp,
-            monster_hp,
-            hp_lost: starting_hp - hp,
-            result: if hp <= 0 || turns > MAX_TURN {
-                FightResult::Loss
-            } else {
-                FightResult::Win
-            },
-            cd: Self::fight_cd(gear.haste(), turns),
+        damage -= damage * target_resistance as f32 * 0.01;
+        Hit {
+            r#type,
+            damage: damage.round() as i32,
+            is_crit,
         }
     }
 
@@ -123,9 +227,9 @@ pub struct Fight {
 }
 
 pub struct Hit {
-    r#type: DamageType,
-    damage: i32,
-    is_crit: bool,
+    pub r#type: DamageType,
+    pub damage: i32,
+    pub is_crit: bool,
 }
 
 #[cfg(test)]
