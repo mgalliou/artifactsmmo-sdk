@@ -153,26 +153,6 @@ impl Simulator {
         dmg
     }
 
-    pub fn critless_dmg(attack_damage: i32, damage_increase: i32, target_resistance: i32) -> f32 {
-        let mut dmg = attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
-        dmg -= dmg * target_resistance as f32 * 0.01;
-        dmg
-    }
-
-    pub fn simulate_dmg(
-        attack_damage: i32,
-        damage_increase: i32,
-        critical_strike: i32,
-        target_resistance: i32,
-    ) -> f32 {
-        let mut dmg = attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
-        if rand::random_range(0..=100) <= critical_strike {
-            dmg *= CRIT_MULTIPLIER
-        }
-        dmg -= dmg * target_resistance as f32 * 0.01;
-        dmg
-    }
-
     pub fn simulate_hit(
         attack_damage: i32,
         damage_increase: i32,
@@ -184,7 +164,7 @@ impl Simulator {
         let mut damage =
             attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
         if rand::random_range(0..=100) <= critical_strike {
-            damage *= 1.5;
+            damage *= CRIT_MULTIPLIER;
             is_crit = true
         }
         damage -= damage * target_resistance as f32 * 0.01;

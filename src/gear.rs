@@ -129,28 +129,6 @@ impl Gear {
             .sum()
     }
 
-    pub fn critless_damage_against(&self, monster: &MonsterSchema) -> i32 {
-        DamageType::iter()
-            .map(|t| {
-                Simulator::critless_dmg(
-                    self.attack_damage(t),
-                    self.damage_increase(t),
-                    monster.resistance(t),
-                )
-                .round() as i32
-            })
-            .sum()
-    }
-
-    pub fn critless_damage_from(&self, monster: &MonsterSchema) -> i32 {
-        DamageType::iter()
-            .map(|t| {
-                Simulator::critless_dmg(monster.attack_damage(t), 0, self.resistance(t)).round()
-                    as i32
-            })
-            .sum()
-    }
-
     pub fn simulate_hits_against(&self, monster: &MonsterSchema) -> Vec<Hit> {
         DamageType::iter()
             .map(|t| {
