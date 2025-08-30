@@ -1,9 +1,5 @@
-use crate::{
-    gear::Gear,
-    items::{DamageType, ItemSchemaExt},
-    monsters::MonsterSchemaExt,
-};
-use artifactsmmo_openapi::models::{FightResult, MonsterSchema};
+use crate::{char::Skill, gear::Gear, items::DamageType};
+use artifactsmmo_openapi::models::{FightResult, MonsterSchema, SimpleEffectSchema};
 use std::cmp::max;
 
 const BASE_HP: i32 = 115;
@@ -14,7 +10,6 @@ const CRIT_MULTIPLIER: f32 = 1.5;
 pub struct Simulator {}
 
 impl Simulator {
-
     pub fn average_fight(
         level: i32,
         missing_hp: i32,
@@ -230,6 +225,80 @@ pub struct Hit {
     pub r#type: DamageType,
     pub damage: i32,
     pub is_crit: bool,
+}
+
+pub trait HasEffects {
+    fn health(&self) -> i32 {
+        let hp = self.effect_value("hp");
+        if hp < 1 {
+            self.effect_value("boost_hp")
+        } else {
+            hp
+        }
+    }
+
+    fn heal(&self) -> i32 {
+        self.effect_value("heal")
+    }
+
+    fn restore(&self) -> i32 {
+        self.effect_value("restore")
+    }
+
+    fn haste(&self) -> i32 {
+        self.effect_value("haste")
+    }
+
+    fn attack_damage(&self, r#type: DamageType) -> i32 {
+        self.effect_value(&("attack_".to_string() + r#type.as_ref()))
+    }
+
+    fn damage_increase(&self, r#type: DamageType) -> i32 {
+        self.effect_value(&("dmg_".to_string() + r#type.as_ref()))
+            + self.effect_value(&("boost_dmg_".to_string() + r#type.as_ref()))
+            + self.effect_value("dmg")
+    }
+
+    fn critical_strike(&self) -> i32 {
+        self.effect_value("critical_strike")
+    }
+
+    fn poison(&self) -> i32 {
+        self.effect_value("poison")
+    }
+
+    fn lifesteal(&self) -> i32 {
+        self.effect_value("lifesteal")
+    }
+
+    fn resistance(&self, r#type: DamageType) -> i32 {
+        self.effect_value(&("res_".to_string() + r#type.as_ref()))
+    }
+
+    fn wisdom(&self) -> i32 {
+        self.effect_value("wisdom")
+    }
+
+    fn prospecting(&self) -> i32 {
+        self.effect_value("prospecting")
+    }
+
+    fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
+        self.effect_value(skill.as_ref())
+    }
+
+    fn inventory_space(&self) -> i32 {
+        self.effect_value("inventory_space")
+    }
+
+    fn effect_value(&self, effect: &str) -> i32 {
+        self.effects()
+            .iter()
+            .find_map(|e| (e.code == effect).then_some(e.value))
+            .unwrap_or(0)
+    }
+
+    fn effects(&self) -> Vec<&SimpleEffectSchema>;
 }
 
 #[cfg(test)]

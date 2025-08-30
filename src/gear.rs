@@ -1,9 +1,10 @@
 use crate::{
-    items::{DamageType, ItemSchemaExt},
-    monsters::MonsterSchemaExt,
-    simulator::{Hit, Simulator},
+    items::DamageType,
+    simulator::{HasEffects, Hit, Simulator},
 };
-use artifactsmmo_openapi::models::{ItemSchema, ItemSlot, MonsterSchema, SimpleItemSchema};
+use artifactsmmo_openapi::models::{
+    ItemSchema, ItemSlot, MonsterSchema, SimpleEffectSchema, SimpleItemSchema,
+};
 use itertools::Itertools;
 use std::{fmt::Display, sync::Arc};
 use strum::IntoEnumIterator;
@@ -103,17 +104,13 @@ impl Gear {
     pub fn average_damage_against(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
-                self.weapon
-                    .as_ref()
-                    .map_or(0.0, |w| {
-                        Simulator::average_dmg(
-                            w.attack_damage(t),
-                            self.damage_increase(t),
-                            self.critical_strike(),
-                            monster.resistance(t),
-                        )
-                    })
-                    .round() as i32
+                Simulator::average_dmg(
+                    self.attack_damage(t),
+                    self.damage_increase(t),
+                    self.critical_strike(),
+                    monster.resistance(t),
+                )
+                .round() as i32
             })
             .sum()
     }
@@ -183,59 +180,6 @@ impl Gear {
             .collect_vec()
     }
 
-    //TODO: maybe handle all slots, in the future other slots might provide attack damage
-    fn attack_damage(&self, t: DamageType) -> i32 {
-        self.weapon.as_ref().map_or(0, |w| w.attack_damage(t))
-    }
-
-    fn damage_increase(&self, t: DamageType) -> i32 {
-        Slot::iter()
-            .map(|s| self.slot(s).map_or(0, |i| i.damage_increase(t)))
-            .sum()
-    }
-
-    pub fn health(&self) -> i32 {
-        Slot::iter()
-            .map(|s| self.slot(s).map_or(0, |i| i.health()))
-            .sum()
-    }
-
-    fn resistance(&self, t: DamageType) -> i32 {
-        Slot::iter()
-            .map(|s| self.slot(s).map_or(0, |i| i.resistance(t)))
-            .sum()
-    }
-
-    fn critical_strike(&self) -> i32 {
-        self.effect_value("critical_strike")
-    }
-
-    pub fn poison(&self) -> i32 {
-        self.effect_value("poison")
-    }
-
-    pub fn lifesteal(&self) -> i32 {
-        self.effect_value("lifesteal")
-    }
-
-    pub fn haste(&self) -> i32 {
-        self.effect_value("haste")
-    }
-
-    pub fn wisdom(&self) -> i32 {
-        self.effect_value("wisdom")
-    }
-
-    pub fn prospecting(&self) -> i32 {
-        self.effect_value("prospecting")
-    }
-
-    pub fn effect_value(&self, effect: &str) -> i32 {
-        Slot::iter()
-            .map(|s| self.slot(s).map_or(0, |i| i.effect_value(effect)))
-            .sum()
-    }
-
     pub fn align_to(&mut self, other: &Gear) {
         if self
             .slot(Slot::Ring1)
@@ -282,6 +226,23 @@ impl Gear {
         {
             std::mem::swap(&mut self.artifact2, &mut self.artifact3);
         }
+    }
+}
+
+impl HasEffects for Gear {
+    //TODO: maybe handle all slots, in the future other slots might provide attack damage
+    fn attack_damage(&self, t: DamageType) -> i32 {
+        self.weapon.as_ref().map_or(0, |w| w.attack_damage(t))
+    }
+
+    fn effect_value(&self, effect: &str) -> i32 {
+        Slot::iter()
+            .map(|s| self.slot(s).map_or(0, |i| i.effect_value(effect)))
+            .sum()
+    }
+
+    fn effects(&self) -> Vec<&SimpleEffectSchema> {
+        vec![]
     }
 }
 

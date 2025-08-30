@@ -6,6 +6,7 @@ use crate::{
     monsters::{MonsterSchemaExt, Monsters},
     npcs::Npcs,
     resources::{ResourceSchemaExt, Resources},
+    simulator::HasEffects,
     tasks_rewards::TasksRewards,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
@@ -377,23 +378,6 @@ pub trait ItemSchemaExt {
     fn damage_increase_against_with(&self, monster: &MonsterSchema, weapon: &ItemSchema) -> f32;
     fn damage_reduction_against(&self, monster: &MonsterSchema) -> f32;
 
-    fn health(&self) -> i32;
-    fn heal(&self) -> i32;
-    fn restore(&self) -> i32;
-    fn haste(&self) -> i32;
-    fn attack_damage(&self, r#type: DamageType) -> i32;
-    fn damage_increase(&self, r#type: DamageType) -> i32;
-    fn critical_strike(&self) -> i32;
-    fn poison(&self) -> i32;
-    fn lifesteal(&self) -> i32;
-    fn resistance(&self, r#type: DamageType) -> i32;
-    fn wisdom(&self) -> i32;
-    fn prospecting(&self) -> i32;
-    fn skill_cooldown_reduction(&self, skill: Skill) -> i32;
-    fn inventory_space(&self) -> i32;
-    fn effect_value(&self, effect: &str) -> i32;
-    fn effects(&self) -> Vec<&SimpleEffectSchema>;
-
     fn is_food(&self) -> bool;
     fn is_consumable(&self) -> bool;
     fn is_tool(&self) -> bool;
@@ -500,90 +484,6 @@ impl ItemSchemaExt for ItemSchema {
                 .sum::<f32>()
     }
 
-    fn health(&self) -> i32 {
-        let hp = self.effect_value("hp");
-        if hp < 1 {
-            self.effect_value("boost_hp")
-        } else {
-            hp
-        }
-    }
-
-    fn heal(&self) -> i32 {
-        self.effect_value("heal")
-    }
-
-    fn restore(&self) -> i32 {
-        self.effect_value("restore")
-    }
-
-    fn haste(&self) -> i32 {
-        self.effect_value("haste")
-    }
-
-    fn attack_damage(&self, r#type: DamageType) -> i32 {
-        self.effects()
-            .iter()
-            .find(|e| e.code == "attack_".to_string() + r#type.as_ref())
-            .map(|e| e.value)
-            .unwrap_or(0)
-    }
-
-    fn damage_increase(&self, r#type: DamageType) -> i32 {
-        self.effects()
-            .iter()
-            .find(|e| {
-                e.code == "dmg_".to_string() + r#type.as_ref()
-                    || e.code == "boost_dmg_".to_string() + r#type.as_ref()
-                    || e.code == "dmg"
-            })
-            .map(|e| e.value)
-            .unwrap_or(0)
-    }
-
-    fn critical_strike(&self) -> i32 {
-        self.effect_value("critical_strike")
-    }
-
-    fn poison(&self) -> i32 {
-        self.effect_value("poison")
-    }
-
-    fn lifesteal(&self) -> i32 {
-        self.effect_value("lifesteal")
-    }
-
-    fn resistance(&self, r#type: DamageType) -> i32 {
-        self.effect_value(&("res_".to_string() + r#type.as_ref()))
-    }
-
-    fn wisdom(&self) -> i32 {
-        self.effect_value("wisdom")
-    }
-
-    fn prospecting(&self) -> i32 {
-        self.effect_value("prospecting")
-    }
-
-    fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
-        self.effect_value(skill.as_ref())
-    }
-
-    fn inventory_space(&self) -> i32 {
-        self.effect_value("inventory_space")
-    }
-
-    fn effect_value(&self, effect: &str) -> i32 {
-        self.effects()
-            .iter()
-            .find_map(|e| (e.code == effect).then_some(e.value))
-            .unwrap_or(0)
-    }
-
-    fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        self.effects.iter().flatten().collect_vec()
-    }
-
     fn is_food(&self) -> bool {
         self.is_consumable() && self.heal() > 0
     }
@@ -606,6 +506,12 @@ impl ItemSchemaExt for ItemSchema {
 
     fn name(&self) -> String {
         self.name.to_owned()
+    }
+}
+
+impl HasEffects for ItemSchema {
+    fn effects(&self) -> Vec<&SimpleEffectSchema> {
+        self.effects.iter().flatten().collect_vec()
     }
 }
 

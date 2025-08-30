@@ -1,4 +1,4 @@
-use crate::{PersistedData, events::Events, items::DamageType};
+use crate::{events::Events, items::DamageType, simulator::HasEffects, PersistedData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
@@ -79,33 +79,21 @@ impl Monsters {
 }
 
 pub trait MonsterSchemaExt {
-    fn effects(&self) -> Vec<&SimpleEffectSchema>;
-    fn effect_value(&self, effect: &str) -> i32;
-    fn poison(&self) -> i32;
-    fn lifesteal(&self) -> i32;
-    fn attack_damage(&self, r#type: DamageType) -> i32;
-    fn critical_strike(&self) -> i32;
-    fn resistance(&self, r#type: DamageType) -> i32;
     fn drop_rate(&self, item: &str) -> Option<i32>;
     fn max_drop_quantity(&self) -> i32;
 }
 
 impl MonsterSchemaExt for MonsterSchema {
-    fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        self.effects.iter().flatten().collect_vec()
+    fn drop_rate(&self, item: &str) -> Option<i32> {
+        self.drops.iter().find(|i| i.code == item).map(|i| i.rate)
     }
 
-    fn effect_value(&self, effect: &str) -> i32 {
-        self.effects()
-            .iter()
-            .find_map(|e| (e.code == effect).then_some(e.value))
-            .unwrap_or(0)
+    fn max_drop_quantity(&self) -> i32 {
+        self.drops.iter().map(|i| i.max_quantity).sum()
     }
+}
 
-    fn poison(&self) -> i32 {
-        self.effect_value("poison")
-    }
-
+impl HasEffects for MonsterSchema {
     fn attack_damage(&self, r#type: DamageType) -> i32 {
         match r#type {
             DamageType::Air => self.attack_air,
@@ -124,19 +112,7 @@ impl MonsterSchemaExt for MonsterSchema {
         }
     }
 
-    fn drop_rate(&self, item: &str) -> Option<i32> {
-        self.drops.iter().find(|i| i.code == item).map(|i| i.rate)
-    }
-
-    fn max_drop_quantity(&self) -> i32 {
-        self.drops.iter().map(|i| i.max_quantity).sum()
-    }
-
-    fn critical_strike(&self) -> i32 {
-        self.critical_strike
-    }
-
-    fn lifesteal(&self) -> i32 {
-        self.effect_value("lifesteal")
+    fn effects(&self) -> Vec<&SimpleEffectSchema> {
+        self.effects.iter().flatten().collect_vec()
     }
 }
