@@ -1,6 +1,6 @@
 use super::CharacterData;
 use crate::items::Items;
-use artifactsmmo_openapi::models::InventorySlot;
+use artifactsmmo_openapi::models::{InventorySlot, SimpleItemSchema};
 use itertools::Itertools;
 use std::sync::Arc;
 
@@ -59,12 +59,26 @@ impl Inventory {
             .count()
     }
 
-    pub fn has_space_for(&self, item: &str, quantity: i32) -> bool {
-        if self.total_of(item) > 0 {
-            self.free_space() >= quantity
-        } else {
-            self.free_slots() > 0
+    pub fn has_space_for_multiple(&self, items: &[SimpleItemSchema]) -> bool {
+        let mut free_slot = self.free_slots();
+        let mut free_space = self.free_space();
+        for item in items.iter() {
+            if free_slot < 1 || free_space < item.quantity {
+                return false;
+            }
+            if self.total_of(&item.code) < 1 {
+                free_slot -= 1
+            }
+            free_space -= item.quantity
         }
+        true
+    }
+
+    pub fn has_space_for(&self, item: &str, quantity: i32) -> bool {
+        self.has_space_for_multiple(&[SimpleItemSchema {
+            code: item.to_owned(),
+            quantity,
+        }])
     }
 
     /// Checks if the `Character` inventory is full (all slots are occupied or

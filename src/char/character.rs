@@ -2,12 +2,22 @@ use super::{
     CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
 };
 use crate::{
-    bank::Bank, char::error::{
+    Gear,
+    bank::Bank,
+    char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
         FightError, GatherError, GoldDepositError, GoldWithdrawError, MoveError, RecycleError,
         RestError, SellNpcError, TaskAcceptationError, TaskCancellationError, TaskCompletionError,
         TaskTradeError, TasksCoinExchangeError, UnequipError, UseError, WithdrawError,
-    }, gear::Slot, items::{ItemSchemaExt, Items}, maps::{MapSchemaExt, Maps}, monsters::{MonsterSchemaExt, Monsters}, npcs::Npcs, resources::{ResourceSchemaExt, Resources}, server::Server, simulator::HasEffects, Gear
+    },
+    gear::Slot,
+    items::{ItemSchemaExt, Items},
+    maps::{MapSchemaExt, Maps},
+    monsters::{MonsterSchemaExt, Monsters},
+    npcs::Npcs,
+    resources::{ResourceSchemaExt, Resources},
+    server::Server,
+    simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
@@ -234,15 +244,7 @@ impl Character {
         {
             return Err(WithdrawError::InsufficientQuantity);
         };
-        let total_quantity = items.iter().map(|i| i.quantity).sum();
-        let items_already_in_inventory = items
-            .iter()
-            .filter(|i| self.inventory.total_of(&i.code) > 0)
-            .count();
-        let new_slot_taken = items.len() - items_already_in_inventory;
-        if self.inventory.free_space() < total_quantity
-            || self.inventory.free_slots() < new_slot_taken
-        {
+        if !self.inventory.has_space_for_multiple(items) {
             return Err(WithdrawError::InsufficientInventorySpace);
         }
         if !self.current_map().content_type_is(MapContentType::Bank) {
