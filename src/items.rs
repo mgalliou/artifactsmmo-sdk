@@ -449,7 +449,7 @@ impl ItemSchemaExt for ItemSchema {
                 Simulator::average_dmg(
                     weapon.attack_damage(t),
                     self.damage_increase(t),
-                    self.critical_strike(),
+                    weapon.critical_strike() + self.critical_strike(),
                     monster.resistance(t),
                 )
             })
@@ -459,7 +459,7 @@ impl ItemSchemaExt for ItemSchema {
                     Simulator::average_dmg(
                         weapon.attack_damage(t),
                         0,
-                        self.critical_strike(),
+                        weapon.critical_strike(),
                         monster.resistance(t),
                     )
                 })
