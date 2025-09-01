@@ -34,6 +34,9 @@ impl Simulator {
                 if turns > 1 {
                     monster_hp -= gear.poison()
                 }
+                if monster_hp <= 0 {
+                    break;
+                }
             } else {
                 if hp < (base_hp + gear.health()) / 2 {
                     hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
@@ -42,6 +45,9 @@ impl Simulator {
                 let damage = gear.avarage_damage_from(monster);
                 hp -= damage;
                 monster_hp += damage * gear.lifesteal() / 100;
+                if hp <= 0 && !ignore_death {
+                    break;
+                }
                 if turns > 2 {
                     hp -= monster.poison()
                 }
@@ -83,14 +89,13 @@ impl Simulator {
 
         loop {
             if turns % 2 == 1 {
-                let hits = gear.simulate_hits_against(monster);
-                for h in hits.iter() {
+                for h in gear.simulate_hits_against(monster).iter() {
                     monster_hp -= h.damage;
-                    if monster_hp <= 0 {
-                        break;
-                    }
                     if h.is_crit {
                         hp += h.damage * gear.lifesteal() / 100;
+                    }
+                    if monster_hp <= 0 {
+                        break;
                     }
                 }
                 if turns > 1 {
@@ -104,14 +109,13 @@ impl Simulator {
                     hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
                     hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
                 }
-                let hits = gear.simulate_hits_from(monster);
-                for h in hits.iter() {
+                for h in gear.simulate_hits_from(monster).iter() {
                     hp -= h.damage;
-                    if hp <= 0 {
-                        break;
-                    }
                     if h.is_crit {
                         monster_hp += h.damage * monster.lifesteal() / 100;
+                    }
+                    if hp <= 0 && !ignore_death {
+                        break;
                     }
                 }
                 if turns > 2 {
