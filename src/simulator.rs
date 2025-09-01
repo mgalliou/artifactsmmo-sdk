@@ -226,12 +226,7 @@ pub trait HasEffects {
     const INVENTORY_SPACE: &str = "inventory_space";
 
     fn health(&self) -> i32 {
-        let hp = self.effect_value(Self::HP);
-        if hp < 1 {
-            self.effect_value(Self::BOOST_HP)
-        } else {
-            hp
-        }
+        self.effect_value(Self::HP) + self.effect_value(Self::BOOST_HP)
     }
 
     fn heal(&self) -> i32 {
