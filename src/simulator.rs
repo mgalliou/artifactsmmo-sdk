@@ -152,6 +152,7 @@ impl Simulator {
         target_resistance: i32,
     ) -> f32 {
         let mut dmg = attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
+
         dmg += dmg * (critical_strike as f32 / 100.0) / 2.0;
         dmg -= dmg * target_resistance as f32 * 0.01;
         dmg
@@ -167,6 +168,7 @@ impl Simulator {
         let mut is_crit = false;
         let mut damage =
             attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
+
         if rand::random_range(0..=100) <= critical_strike {
             damage *= CRIT_MULTIPLIER;
             is_crit = true
@@ -203,6 +205,16 @@ pub struct Fight {
     pub hp_lost: i32,
     pub result: FightResult,
     pub cd: i32,
+}
+
+impl Fight {
+    pub fn is_winning(&self) -> bool {
+        matches!(self.result, FightResult::Win)
+    }
+
+    pub fn is_losing(&self) -> bool {
+        matches!(self.result, FightResult::Loss)
+    }
 }
 
 pub struct Hit {
@@ -246,9 +258,13 @@ pub trait HasEffects {
     }
 
     fn damage_increase(&self, r#type: DamageType) -> i32 {
-        self.effect_value(r#type.into_damage())
+        self.effect_value(Self::DMG)
+            + self.effect_value(r#type.into_damage())
             + self.effect_value(r#type.into_boost_damage())
-            + self.effect_value(Self::DMG)
+    }
+
+    fn resistance(&self, r#type: DamageType) -> i32 {
+        self.effect_value(r#type.into_resistance())
     }
 
     fn critical_strike(&self) -> i32 {
@@ -261,10 +277,6 @@ pub trait HasEffects {
 
     fn lifesteal(&self) -> i32 {
         self.effect_value(Self::LIFESTEAL)
-    }
-
-    fn resistance(&self, r#type: DamageType) -> i32 {
-        self.effect_value(&("res_".to_string() + r#type.as_ref()))
     }
 
     fn wisdom(&self) -> i32 {

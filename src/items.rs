@@ -625,7 +625,7 @@ impl DamageType {
         }
     }
 
-    pub fn into_res(&self) -> &'static str {
+    pub fn into_resistance(&self) -> &'static str {
         match self {
             DamageType::Fire => "res_fire",
             DamageType::Earth => "res_earth",
