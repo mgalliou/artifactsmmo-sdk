@@ -58,8 +58,8 @@ impl From<CraftSkill> for Skill {
 impl From<GatheringSkill> for Skill {
     fn from(value: GatheringSkill) -> Self {
         match value {
-            GatheringSkill::Woodcutting => Self::Woodcutting,
             GatheringSkill::Mining => Self::Mining,
+            GatheringSkill::Woodcutting => Self::Woodcutting,
             GatheringSkill::Fishing => Self::Fishing,
             GatheringSkill::Alchemy => Self::Alchemy,
         }

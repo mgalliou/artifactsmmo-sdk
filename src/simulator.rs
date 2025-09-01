@@ -212,47 +212,60 @@ pub struct Hit {
 }
 
 pub trait HasEffects {
+    const HP: &str = "hp";
+    const BOOST_HP: &str = "boost_hp";
+    const HEAL: &str = "heal";
+    const RESTORE: &str = "restore";
+    const HASTE: &str = "haste";
+    const DMG: &str = "dmg";
+    const CRITICAL_STRIKE: &str = "critical_strike";
+    const POISON: &str = "poison";
+    const LIFESTEAL: &str = "lifesteal";
+    const WISDOM: &str = "wisdom";
+    const PROSPECTING: &str = "prospecting";
+    const INVENTORY_SPACE: &str = "inventory_space";
+
     fn health(&self) -> i32 {
-        let hp = self.effect_value("hp");
+        let hp = self.effect_value(Self::HP);
         if hp < 1 {
-            self.effect_value("boost_hp")
+            self.effect_value(Self::BOOST_HP)
         } else {
             hp
         }
     }
 
     fn heal(&self) -> i32 {
-        self.effect_value("heal")
+        self.effect_value(Self::HEAL)
     }
 
     fn restore(&self) -> i32 {
-        self.effect_value("restore")
+        self.effect_value(Self::RESTORE)
     }
 
     fn haste(&self) -> i32 {
-        self.effect_value("haste")
+        self.effect_value(Self::HASTE)
     }
 
     fn attack_damage(&self, r#type: DamageType) -> i32 {
-        self.effect_value(&("attack_".to_string() + r#type.as_ref()))
+        self.effect_value(r#type.into_attack())
     }
 
     fn damage_increase(&self, r#type: DamageType) -> i32 {
-        self.effect_value(&("dmg_".to_string() + r#type.as_ref()))
-            + self.effect_value(&("boost_dmg_".to_string() + r#type.as_ref()))
-            + self.effect_value("dmg")
+        self.effect_value(r#type.into_damage())
+            + self.effect_value(r#type.into_boost_damage())
+            + self.effect_value(Self::DMG)
     }
 
     fn critical_strike(&self) -> i32 {
-        self.effect_value("critical_strike")
+        self.effect_value(Self::CRITICAL_STRIKE)
     }
 
     fn poison(&self) -> i32 {
-        self.effect_value("poison")
+        self.effect_value(Self::POISON)
     }
 
     fn lifesteal(&self) -> i32 {
-        self.effect_value("lifesteal")
+        self.effect_value(Self::LIFESTEAL)
     }
 
     fn resistance(&self, r#type: DamageType) -> i32 {
@@ -260,11 +273,11 @@ pub trait HasEffects {
     }
 
     fn wisdom(&self) -> i32 {
-        self.effect_value("wisdom")
+        self.effect_value(Self::WISDOM)
     }
 
     fn prospecting(&self) -> i32 {
-        self.effect_value("prospecting")
+        self.effect_value(Self::PROSPECTING)
     }
 
     fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
@@ -272,7 +285,7 @@ pub trait HasEffects {
     }
 
     fn inventory_space(&self) -> i32 {
-        self.effect_value("inventory_space")
+        self.effect_value(Self::INVENTORY_SPACE)
     }
 
     fn effect_value(&self, effect: &str) -> i32 {
