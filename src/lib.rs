@@ -145,6 +145,14 @@ pub trait HasDropTable {
             .ceil() as i32
     }
 
+    fn average_drop_slots(&self) -> i32 {
+        self.drops()
+            .iter()
+            .map(|i| 1.0 / i.rate as f32)
+            .sum::<f32>()
+            .ceil() as i32
+    }
+
     fn max_drop_quantity(&self) -> i32 {
         self.drops().iter().map(|i| i.max_quantity).sum()
     }

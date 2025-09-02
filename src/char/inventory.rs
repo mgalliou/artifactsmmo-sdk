@@ -1,5 +1,5 @@
 use super::CharacterData;
-use crate::items::Items;
+use crate::{HasDropTable, items::Items};
 use artifactsmmo_openapi::models::{InventorySlot, SimpleItemSchema};
 use itertools::Itertools;
 use std::sync::Arc;
@@ -72,6 +72,11 @@ impl Inventory {
             free_space -= item.quantity
         }
         true
+    }
+
+    pub fn has_space_for_drops_from<H: HasDropTable>(&self, entity: &H) -> bool {
+        self.free_slots() >= entity.average_drop_slots() as usize
+            && self.free_space() >= entity.average_drop_quantity()
     }
 
     pub fn has_space_for(&self, item: &str, quantity: i32) -> bool {

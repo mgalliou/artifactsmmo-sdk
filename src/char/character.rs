@@ -2,12 +2,22 @@ use super::{
     CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
 };
 use crate::{
-    bank::Bank, char::error::{
+    Gear, HasDropTable,
+    bank::Bank,
+    char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
         FightError, GatherError, GoldDepositError, GoldWithdrawError, MoveError, RecycleError,
         RestError, SellNpcError, TaskAcceptationError, TaskCancellationError, TaskCompletionError,
         TaskTradeError, TasksCoinExchangeError, UnequipError, UseError, WithdrawError,
-    }, gear::Slot, items::{ItemSchemaExt, Items}, maps::{MapSchemaExt, Maps}, monsters::Monsters, npcs::Npcs, resources::Resources, server::Server, simulator::HasEffects, Gear, HasDropTable
+    },
+    gear::Slot,
+    items::{ItemSchemaExt, Items},
+    maps::{MapSchemaExt, Maps},
+    monsters::Monsters,
+    npcs::Npcs,
+    resources::Resources,
+    server::Server,
+    simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
@@ -76,8 +86,7 @@ impl Character {
         let Some(monster) = self.monsters.get(&monster_code) else {
             return Err(FightError::NoMonsterOnMap);
         };
-        //TODO: take inventory free slot into account
-        if self.inventory.free_space() < monster.max_drop_quantity() {
+        if !self.inventory.has_space_for_drops_from(monster.as_ref()) {
             return Err(FightError::InsufficientInventorySpace);
         }
         Ok(())
@@ -98,8 +107,7 @@ impl Character {
         if self.skill_level(resource.skill.into()) < resource.level {
             return Err(GatherError::SkillLevelInsufficient);
         }
-        //TODO: take inventory free slot into account
-        if self.inventory.free_space() < resource.max_drop_quantity() {
+        if !self.inventory.has_space_for_drops_from(resource.as_ref()) {
             return Err(GatherError::InsufficientInventorySpace);
         }
         Ok(())
