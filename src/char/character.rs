@@ -2,22 +2,12 @@ use super::{
     CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
 };
 use crate::{
-    Gear,
-    bank::Bank,
-    char::error::{
+    bank::Bank, char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
         FightError, GatherError, GoldDepositError, GoldWithdrawError, MoveError, RecycleError,
         RestError, SellNpcError, TaskAcceptationError, TaskCancellationError, TaskCompletionError,
         TaskTradeError, TasksCoinExchangeError, UnequipError, UseError, WithdrawError,
-    },
-    gear::Slot,
-    items::{ItemSchemaExt, Items},
-    maps::{MapSchemaExt, Maps},
-    monsters::{MonsterSchemaExt, Monsters},
-    npcs::Npcs,
-    resources::{ResourceSchemaExt, Resources},
-    server::Server,
-    simulator::HasEffects,
+    }, gear::Slot, items::{ItemSchemaExt, Items}, maps::{MapSchemaExt, Maps}, monsters::Monsters, npcs::Npcs, resources::Resources, server::Server, simulator::HasEffects, Gear, HasDropTable
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{

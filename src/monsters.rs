@@ -1,6 +1,8 @@
-use crate::{events::Events, items::DamageType, simulator::HasEffects, PersistedData};
+use crate::{
+    HasDropTable, PersistedData, events::Events, items::DamageType, simulator::HasEffects,
+};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
-use artifactsmmo_openapi::models::{MonsterSchema, SimpleEffectSchema};
+use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -78,18 +80,9 @@ impl Monsters {
     }
 }
 
-pub trait MonsterSchemaExt {
-    fn drop_rate(&self, item: &str) -> Option<i32>;
-    fn max_drop_quantity(&self) -> i32;
-}
-
-impl MonsterSchemaExt for MonsterSchema {
-    fn drop_rate(&self, item: &str) -> Option<i32> {
-        self.drops.iter().find(|i| i.code == item).map(|i| i.rate)
-    }
-
-    fn max_drop_quantity(&self) -> i32 {
-        self.drops.iter().map(|i| i.max_quantity).sum()
+impl HasDropTable for MonsterSchema {
+    fn drops(&self) -> &Vec<DropRateSchema> {
+        &self.drops
     }
 }
 

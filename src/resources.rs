@@ -1,6 +1,6 @@
-use crate::{events::Events, PersistedData};
+use crate::{HasDropTable, PersistedData, events::Events};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
-use artifactsmmo_openapi::models::ResourceSchema;
+use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -63,17 +63,8 @@ impl Resources {
     }
 }
 
-pub trait ResourceSchemaExt {
-    fn drop_rate(&self, item: &str) -> Option<i32>;
-    fn max_drop_quantity(&self) -> i32;
-}
-
-impl ResourceSchemaExt for ResourceSchema {
-    fn drop_rate(&self, item: &str) -> Option<i32> {
-        self.drops.iter().find(|i| i.code == item).map(|i| i.rate)
-    }
-
-    fn max_drop_quantity(&self) -> i32 {
-        self.drops.iter().map(|i| i.max_quantity).sum()
+impl HasDropTable for ResourceSchema {
+    fn drops(&self) -> &Vec<DropRateSchema> {
+        &self.drops
     }
 }

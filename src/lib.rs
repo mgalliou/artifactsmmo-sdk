@@ -1,5 +1,6 @@
 use artifactsmmo_openapi::models::{
-    DropSchema, FightSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
+    DropRateSchema, DropSchema, FightSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema,
+    SkillInfoSchema,
 };
 use fs_extra::file::{read_to_string, write_all};
 use log::error;
@@ -129,6 +130,26 @@ impl HasDrops for Vec<DropSchema> {
             .find(|i| i.code == item)
             .map_or(0, |i| i.quantity)
     }
+}
+
+pub trait HasDropTable {
+    fn drop_rate(&self, item: &str) -> Option<i32> {
+        self.drops().iter().find(|i| i.code == item).map(|i| i.rate)
+    }
+
+    fn average_drop_quantity(&self) -> i32 {
+        self.drops()
+            .iter()
+            .map(|i| 1.0 / i.rate as f32 * (i.max_quantity + i.min_quantity) as f32 / 2.0)
+            .sum::<f32>()
+            .ceil() as i32
+    }
+
+    fn max_drop_quantity(&self) -> i32 {
+        self.drops().iter().map(|i| i.max_quantity).sum()
+    }
+
+    fn drops(&self) -> &Vec<DropRateSchema>;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]

@@ -1,13 +1,5 @@
 use crate::{
-    PersistedData, Simulator,
-    char::Skill,
-    consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
-    gear::Slot,
-    monsters::{MonsterSchemaExt, Monsters},
-    npcs::Npcs,
-    resources::{ResourceSchemaExt, Resources},
-    simulator::HasEffects,
-    tasks_rewards::TasksRewards,
+    char::Skill, consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS}, gear::Slot, monsters::{Monsters}, npcs::Npcs, resources::Resources, simulator::HasEffects, tasks_rewards::TasksRewards, HasDropTable, PersistedData, Simulator
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{
