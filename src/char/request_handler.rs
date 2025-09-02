@@ -1,5 +1,6 @@
 use super::CharacterData;
 use crate::{
+    DropSchemas, SimpleItemSchemas,
     bank::Bank,
     char::{HasCharacterData, action::Action},
     consts::BANK_EXTENSION_SIZE,
@@ -14,12 +15,12 @@ use artifactsmmo_openapi::{
         ActionType, BankExtensionTransactionResponseSchema, BankGoldTransactionResponseSchema,
         BankItemTransactionResponseSchema, BankSchema, CharacterFightResponseSchema,
         CharacterMovementResponseSchema, CharacterRestResponseSchema, CharacterSchema,
-        DeleteItemResponseSchema, DropSchema, EquipmentResponseSchema, FightResult, FightSchema,
-        MapSchema, NpcItemTransactionSchema, NpcMerchantTransactionResponseSchema,
-        RecyclingItemsSchema, RecyclingResponseSchema, RewardDataResponseSchema, RewardsSchema,
-        SimpleItemSchema, SkillDataSchema, SkillInfoSchema, SkillResponseSchema,
-        TaskCancelledResponseSchema, TaskResponseSchema, TaskSchema, TaskTradeResponseSchema,
-        TaskTradeSchema, UseItemResponseSchema,
+        DeleteItemResponseSchema, EquipmentResponseSchema, FightResult, FightSchema, MapSchema,
+        NpcItemTransactionSchema, NpcMerchantTransactionResponseSchema, RecyclingItemsSchema,
+        RecyclingResponseSchema, RewardDataResponseSchema, RewardsSchema, SimpleItemSchema,
+        SkillDataSchema, SkillInfoSchema, SkillResponseSchema, TaskCancelledResponseSchema,
+        TaskResponseSchema, TaskSchema, TaskTradeResponseSchema, TaskTradeSchema,
+        UseItemResponseSchema,
     },
 };
 use chrono::Utc;
@@ -702,36 +703,6 @@ impl ResponseSchema for NpcMerchantTransactionResponseSchema {
 impl<T: ResponseSchema + 'static> From<T> for Box<dyn ResponseSchema> {
     fn from(value: T) -> Self {
         Box::new(value)
-    }
-}
-
-struct DropSchemas<'a>(&'a Vec<DropSchema>);
-
-impl Display for DropSchemas<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut items: String = "".to_string();
-        for item in self.0 {
-            if !items.is_empty() {
-                items.push_str(", ");
-            }
-            items.push_str(&format!("'{}'x{}", item.code, item.quantity));
-        }
-        write!(f, "{}", items)
-    }
-}
-
-struct SimpleItemSchemas<'a>(&'a Vec<SimpleItemSchema>);
-
-impl Display for SimpleItemSchemas<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut items: String = "".to_string();
-        for item in self.0 {
-            if !items.is_empty() {
-                items.push_str(", ");
-            }
-            items.push_str(&format!("'{}'x{}", item.code, item.quantity));
-        }
-        write!(f, "{}", items)
     }
 }
 

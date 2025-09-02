@@ -2,7 +2,7 @@ use super::{
     CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
 };
 use crate::{
-    Gear, HasDropTable,
+    Gear,
     bank::Bank,
     char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,

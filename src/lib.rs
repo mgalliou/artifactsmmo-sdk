@@ -206,3 +206,33 @@ pub enum EffectType {
     Reconstitution,
     Corrupted,
 }
+
+pub struct DropSchemas<'a>(&'a Vec<DropSchema>);
+
+impl std::fmt::Display for DropSchemas<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut items: String = "".to_string();
+        for item in self.0 {
+            if !items.is_empty() {
+                items.push_str(", ");
+            }
+            items.push_str(&format!("'{}'x{}", item.code, item.quantity));
+        }
+        write!(f, "{}", items)
+    }
+}
+
+pub struct SimpleItemSchemas<'a>(&'a Vec<SimpleItemSchema>);
+
+impl std::fmt::Display for SimpleItemSchemas<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut items: String = "".to_string();
+        for item in self.0 {
+            if !items.is_empty() {
+                items.push_str(", ");
+            }
+            items.push_str(&format!("'{}'x{}", item.code, item.quantity));
+        }
+        write!(f, "{}", items)
+    }
+}
