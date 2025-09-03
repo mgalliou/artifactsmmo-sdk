@@ -362,6 +362,20 @@ impl Items {
             })
         })
     }
+
+    pub fn is_buyable(&self, item: &str) -> bool {
+        self.npcs
+            .items
+            .get(item)
+            .is_some_and(|i| i.buy_price.is_some())
+    }
+
+    pub fn is_salable(&self, item: &str) -> bool {
+        self.npcs
+            .items
+            .get(item)
+            .is_some_and(|i| i.sell_price.is_some())
+    }
 }
 
 pub trait ItemSchemaExt {

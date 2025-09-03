@@ -4,7 +4,7 @@ use thiserror::Error;
 
 const ENTITY_NOT_FOUND: isize = 404;
 const ITEM_NOT_BUYABLE: isize = 441;
-const ITEM_NOT_SELLABLE: isize = 442;
+const ITEM_NOT_SALABLE: isize = 442;
 const BANK_GOLD_INSUFFICIENT: isize = 460;
 //const TRANSACTION_ALREADY_IN_PROGRESS: isize = 461;
 const BANK_FULL: isize = 462;
@@ -351,7 +351,7 @@ pub enum SellNpcError {
     #[error("Item not found")]
     ItemNotFound = ENTITY_NOT_FOUND,
     #[error("This item cannot be sold")]
-    ItemNotSellable = ITEM_NOT_SELLABLE,
+    ItemNotSalable = ITEM_NOT_SALABLE,
     #[error("Missing item or insufficient quantity")]
     InsufficientQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
     #[error("Insufficient inventory space")]

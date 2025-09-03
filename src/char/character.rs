@@ -2,7 +2,7 @@ use super::{
     CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
 };
 use crate::{
-    Gear,
+    GOLD, Gear,
     bank::Bank,
     char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
@@ -513,7 +513,7 @@ impl Character {
         let Some(buy_price) = item.buy_price else {
             return Err(BuyNpcError::ItemNotBuyable);
         };
-        if item.currency == "gold" {
+        if item.currency == GOLD {
             if self.gold() < buy_price * quantity {
                 return Err(BuyNpcError::InsufficientGold);
             }
@@ -536,12 +536,9 @@ impl Character {
         if self.items.get(item_code).is_none() {
             return Err(SellNpcError::ItemNotFound);
         };
-        let Some(item) = self.npcs.items.get(item_code) else {
-            return Err(SellNpcError::ItemNotSellable);
-        };
-        if item.sell_price.is_none() {
-            return Err(SellNpcError::ItemNotSellable);
-        };
+        if !self.items.is_salable(item_code) {
+            return Err(SellNpcError::ItemNotSalable);
+        }
         if self.inventory.total_of(item_code) < quantity {
             return Err(SellNpcError::InsufficientQuantity);
         }
