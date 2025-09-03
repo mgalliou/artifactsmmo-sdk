@@ -38,12 +38,21 @@ impl Tasks {
         tasks
     }
 
+    pub fn get(&self, code: &str) -> Option<Arc<TaskFullSchema>> {
+        self.data
+            .read()
+            .unwrap()
+            .iter()
+            .find(|t| t.code == code)
+            .cloned()
+    }
+
     pub fn all(&self) -> Vec<Arc<TaskFullSchema>> {
         self.data.read().unwrap().iter().cloned().collect_vec()
     }
 }
 
-trait TaskFullSchemaExt {
+pub trait TaskFullSchemaExt {
     fn rewards_quantity(&self) -> i32 {
         self.rewards().items.iter().map(|i| i.quantity).sum()
     }
