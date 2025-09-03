@@ -1,6 +1,6 @@
 use crate::PersistedData;
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
-use artifactsmmo_openapi::models::TaskFullSchema;
+use artifactsmmo_openapi::models::{RewardsSchema, TaskFullSchema};
 use itertools::Itertools;
 use std::sync::{Arc, RwLock};
 
@@ -40,5 +40,23 @@ impl Tasks {
 
     pub fn all(&self) -> Vec<Arc<TaskFullSchema>> {
         self.data.read().unwrap().iter().cloned().collect_vec()
+    }
+}
+
+trait TaskFullSchemaExt {
+    fn rewards_quantity(&self) -> i32 {
+        self.rewards().items.iter().map(|i| i.quantity).sum()
+    }
+
+    fn rewards_slots(&self) -> usize {
+        self.rewards().items.len()
+    }
+
+    fn rewards(&self) -> &RewardsSchema;
+}
+
+impl TaskFullSchemaExt for TaskFullSchema {
+    fn rewards(&self) -> &RewardsSchema {
+        self.rewards.as_ref()
     }
 }
