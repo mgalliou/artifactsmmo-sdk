@@ -433,6 +433,45 @@ impl From<Slot> for ItemSlot {
     }
 }
 
+#[derive(
+    Debug, Default, Copy, Clone, PartialEq, Eq, Display, AsRefStr, EnumString, EnumIter, EnumIs,
+)]
+#[strum(serialize_all = "snake_case")]
+pub enum SlotType {
+    #[default]
+    Weapon,
+    Shield,
+    Helmet,
+    BodyArmor,
+    LegArmor,
+    Boots,
+    Ring,
+    Amulet,
+    Artifact,
+    Utility,
+    Bag,
+    Rune,
+}
+
+impl From<Slot> for SlotType {
+    fn from(value: Slot) -> Self {
+        match value {
+            Slot::Weapon => Self::Weapon,
+            Slot::Shield => Self::Shield,
+            Slot::Helmet => Self::Helmet,
+            Slot::BodyArmor => Self::BodyArmor,
+            Slot::LegArmor => Self::LegArmor,
+            Slot::Boots => Self::Boots,
+            Slot::Ring1 | Slot::Ring2 => Self::Ring,
+            Slot::Amulet => Self::Amulet,
+            Slot::Artifact1 | Slot::Artifact2 | Slot::Artifact3 => Self::Artifact,
+            Slot::Utility1 | Slot::Utility2 => Self::Utility,
+            Slot::Bag => Self::Bag,
+            Slot::Rune => Self::Rune,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     //TODO: rewrite tests
