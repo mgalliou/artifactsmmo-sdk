@@ -6,7 +6,7 @@ use artifactsmmo_openapi::models::{
     ItemSchema, ItemSlot, MonsterSchema, SimpleEffectSchema, SimpleItemSchema,
 };
 use itertools::Itertools;
-use std::{fmt::Display, sync::Arc};
+use std::{fmt::Display, mem::swap, sync::Arc};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
@@ -47,18 +47,10 @@ impl Gear {
         artifact2: Option<Arc<ItemSchema>>,
         artifact3: Option<Arc<ItemSchema>>,
     ) -> Option<Gear> {
-        if utility1
-            .as_ref()
-            .is_some_and(|u1| utility2.as_ref().is_some_and(|u2| u1.code == u2.code))
-            || artifact1
-                .as_ref()
-                .is_some_and(|a1| artifact2.as_ref().is_some_and(|a2| a1.code == a2.code))
-            || artifact2
-                .as_ref()
-                .is_some_and(|a2| artifact3.as_ref().is_some_and(|a3| a2.code == a3.code))
-            || artifact1
-                .as_ref()
-                .is_some_and(|a1| artifact3.as_ref().is_some_and(|a3| a1.code == a3.code))
+        if utility1.is_some() && utility1 == utility2
+            || artifact1.is_some() && artifact1 == artifact2
+            || artifact2.is_some() && artifact2 == artifact3
+            || artifact1.is_some() && artifact1 == artifact3
         {
             None
         } else {
@@ -81,7 +73,7 @@ impl Gear {
         }
     }
 
-    pub fn slot(&self, slot: Slot) -> Option<Arc<ItemSchema>> {
+    pub fn item_in(&self, slot: Slot) -> Option<Arc<ItemSchema>> {
         match slot {
             Slot::Weapon => self.weapon.clone(),
             Slot::Shield => self.shield.clone(),
@@ -159,50 +151,30 @@ impl Gear {
     }
 
     pub fn align_to(&mut self, other: &Gear) {
-        if self
-            .slot(Slot::Ring1)
-            .is_some_and(|r1| other.ring2.as_ref().is_some_and(|r2| r1 == *r2))
-            || self
-                .slot(Slot::Ring2)
-                .is_some_and(|r2| other.ring1.as_ref().is_some_and(|r1| r2 == *r1))
+        if self.item_in(Slot::Ring1) == other.item_in(Slot::Ring2)
+            || self.item_in(Slot::Ring2) == other.item_in(Slot::Ring1)
         {
-            std::mem::swap(&mut self.ring1, &mut self.ring2);
+            swap(&mut self.ring1, &mut self.ring2);
         }
-        if self
-            .slot(Slot::Utility1)
-            .is_some_and(|u1| other.utility2.as_ref().is_some_and(|u2| u1 == *u2))
-            || self
-                .slot(Slot::Utility2)
-                .is_some_and(|u2| other.utility1.as_ref().is_some_and(|u1| u2 == *u1))
+        if self.item_in(Slot::Utility1) == other.item_in(Slot::Utility2)
+            || self.item_in(Slot::Utility2) == other.item_in(Slot::Utility1)
         {
-            std::mem::swap(&mut self.utility1, &mut self.utility2);
+            swap(&mut self.utility1, &mut self.utility2);
         }
-        if self
-            .slot(Slot::Artifact1)
-            .is_some_and(|a1| other.artifact2.as_ref().is_some_and(|a2| a1 == *a2))
-            || self
-                .slot(Slot::Artifact2)
-                .is_some_and(|a2| other.artifact1.as_ref().is_some_and(|a1| a2 == *a1))
+        if self.item_in(Slot::Artifact1) == other.item_in(Slot::Artifact2)
+            || self.item_in(Slot::Artifact2) == other.item_in(Slot::Artifact1)
         {
-            std::mem::swap(&mut self.artifact1, &mut self.artifact2);
+            swap(&mut self.artifact1, &mut self.artifact2);
         }
-        if self
-            .slot(Slot::Artifact1)
-            .is_some_and(|a1| other.artifact3.as_ref().is_some_and(|a3| a1 == *a3))
-            || self
-                .slot(Slot::Artifact3)
-                .is_some_and(|a3| other.artifact1.as_ref().is_some_and(|a1| a3 == *a1))
+        if self.item_in(Slot::Artifact1) == other.item_in(Slot::Artifact3)
+            || self.item_in(Slot::Artifact3) == other.item_in(Slot::Artifact1)
         {
-            std::mem::swap(&mut self.artifact1, &mut self.artifact3);
+            swap(&mut self.artifact1, &mut self.artifact3);
         }
-        if self
-            .slot(Slot::Artifact2)
-            .is_some_and(|a2| other.artifact3.as_ref().is_some_and(|a3| a2 == *a3))
-            || self
-                .slot(Slot::Artifact3)
-                .is_some_and(|a3| other.artifact2.as_ref().is_some_and(|a2| a3 == *a2))
+        if self.item_in(Slot::Artifact2) == other.item_in(Slot::Artifact3)
+            || self.item_in(Slot::Artifact3) == other.item_in(Slot::Artifact2)
         {
-            std::mem::swap(&mut self.artifact2, &mut self.artifact3);
+            swap(&mut self.artifact2, &mut self.artifact3);
         }
     }
 }
@@ -215,7 +187,7 @@ impl HasEffects for Gear {
 
     fn effect_value(&self, effect: &str) -> i32 {
         Slot::iter()
-            .map(|s| self.slot(s).map_or(0, |i| i.effect_value(effect)))
+            .map(|s| self.item_in(s).map_or(0, |i| i.effect_value(effect)))
             .sum()
     }
 
@@ -301,52 +273,49 @@ impl Display for Gear {
 
 impl From<Gear> for Vec<SimpleItemSchema> {
     fn from(val: Gear) -> Self {
-        let mut i = Slot::iter()
-            .filter_map(|s| {
-                if (s.is_ring_1() || s.is_ring_2())
-                    && let Some(item) = val.slot(s)
+        let mut items = Slot::iter()
+            .filter_map(|slot| {
+                if let Some(item) = val.item_in(slot)
+                    && !slot.is_ring()
                 {
-                    return Some(SimpleItemSchema {
+                    Some(SimpleItemSchema {
                         code: item.code.to_owned(),
-                        quantity: if s.is_utility_1() || s.is_utility_2() {
-                            100
-                        } else {
-                            1
-                        },
-                    });
+                        quantity: slot.max_quantity(),
+                    })
+                } else {
+                    None
                 }
-                None
             })
             .collect_vec();
         match (val.ring1, val.ring2) {
             (Some(r1), Some(r2)) => {
                 if r1 == r2 {
-                    i.push(SimpleItemSchema {
+                    items.push(SimpleItemSchema {
                         code: r1.code.to_owned(),
                         quantity: 2,
                     })
                 } else {
-                    i.push(SimpleItemSchema {
+                    items.push(SimpleItemSchema {
                         code: r1.code.to_owned(),
                         quantity: 1,
                     });
-                    i.push(SimpleItemSchema {
+                    items.push(SimpleItemSchema {
                         code: r2.code.to_owned(),
                         quantity: 1,
                     });
                 }
             }
-            (Some(r), None) => i.push(SimpleItemSchema {
+            (Some(r), None) => items.push(SimpleItemSchema {
                 code: r.code.to_owned(),
                 quantity: 1,
             }),
-            (None, Some(r)) => i.push(SimpleItemSchema {
+            (None, Some(r)) => items.push(SimpleItemSchema {
                 code: r.code.to_owned(),
                 quantity: 1,
             }),
             (None, None) => (),
         }
-        i
+        items
     }
 }
 
@@ -382,7 +351,15 @@ impl Slot {
         }
     }
 
-    fn is_utility(&self) -> bool {
+    pub fn is_ring(&self) -> bool {
+        self.is_ring_1() || self.is_ring_2()
+    }
+
+    pub fn is_artifact(&self) -> bool {
+        self.is_artifact_1() || self.is_artifact_2() || self.is_artifact_3()
+    }
+
+    pub fn is_utility(&self) -> bool {
         self.is_utility_1() || self.is_utility_2()
     }
 }
