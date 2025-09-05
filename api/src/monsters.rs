@@ -35,7 +35,7 @@ impl PaginatedApi<MonsterSchema, DataPageMonsterSchema, GetAllMonstersMonstersGe
 {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageMonsterSchema, Error<GetAllMonstersMonstersGetError>> {
         get_all_monsters_monsters_get(
             &self.configuration,
@@ -54,7 +54,7 @@ impl DataPage<MonsterSchema> for DataPageMonsterSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

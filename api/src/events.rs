@@ -23,7 +23,7 @@ impl EventsApi {
 impl PaginatedApi<EventSchema, DataPageEventSchema, GetAllEventsEventsGetError> for EventsApi {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageEventSchema, Error<GetAllEventsEventsGetError>> {
         get_all_events_events_get(&self.configuration, None, Some(current_page), Some(100))
     }
@@ -34,7 +34,7 @@ impl DataPage<EventSchema> for DataPageEventSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

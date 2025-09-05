@@ -30,7 +30,7 @@ impl ItemsApi {
 impl PaginatedApi<ItemSchema, DataPageItemSchema, GetAllItemsItemsGetError> for ItemsApi {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageItemSchema, Error<GetAllItemsItemsGetError>> {
         get_all_items_items_get(
             &self.configuration,
@@ -51,7 +51,7 @@ impl DataPage<ItemSchema> for DataPageItemSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

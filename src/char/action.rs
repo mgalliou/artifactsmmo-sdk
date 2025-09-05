@@ -14,20 +14,20 @@ pub enum Action<'a> {
     Rest,
     UseItem {
         item: &'a str,
-        quantity: i32,
+        quantity: u32,
     },
     Gather,
     Craft {
         item: &'a str,
-        quantity: i32,
+        quantity: u32,
     },
     Recycle {
         item: &'a str,
-        quantity: i32,
+        quantity: u32,
     },
     Delete {
         item: &'a str,
-        quantity: i32,
+        quantity: u32,
     },
     DepositItem {
         items: &'a [SimpleItemSchema],
@@ -36,36 +36,36 @@ pub enum Action<'a> {
         items: &'a [SimpleItemSchema],
     },
     DepositGold {
-        quantity: i32,
+        quantity: u32,
     },
     WithdrawGold {
-        quantity: i32,
+        quantity: u32,
     },
     ExpandBank,
     Equip {
         item: &'a str,
         slot: Slot,
-        quantity: i32,
+        quantity: u32,
     },
     Unequip {
         slot: Slot,
-        quantity: i32,
+        quantity: u32,
     },
     AcceptTask,
     TaskTrade {
         item: &'a str,
-        quantity: i32,
+        quantity: u32,
     },
     CompleteTask,
     CancelTask,
     TaskExchange,
     NpcBuy {
         item: &'a str,
-        quantity: i32,
+        quantity: u32,
     },
     NpcSell {
         item: &'a str,
-        quantity: i32,
+        quantity: u32,
     },
     //ChristmasExchange,
 }

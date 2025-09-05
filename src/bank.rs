@@ -19,26 +19,22 @@ impl Bank {
         return self.details.read().unwrap().clone();
     }
 
-    pub fn gold(&self) -> i32 {
+    pub fn gold(&self) -> u32 {
         self.details().gold
     }
 
-    pub fn free_slots(&self) -> i32 {
-        self.details().slots - self.content().len() as i32
+    pub fn free_slots(&self) -> u32 {
+        self.details()
+            .slots
+            .saturating_sub(self.content().len() as u32)
     }
 
-    pub fn total_of(&self, item: &str) -> i32 {
+    pub fn total_of(&self, item: &str) -> u32 {
         self.content
             .read()
             .unwrap()
             .iter()
-            .find_map(|i| {
-                if i.code == item {
-                    Some(i.quantity)
-                } else {
-                    None
-                }
-            })
+            .find_map(|i| (i.code == item).then_some(i.quantity))
             .unwrap_or(0)
     }
 

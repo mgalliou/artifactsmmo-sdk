@@ -23,7 +23,7 @@ impl NpcsItemsApi {
 impl PaginatedApi<NpcItem, DataPageNpcItem, GetAllNpcsItemsNpcsItemsGetError> for NpcsItemsApi {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageNpcItem, Error<GetAllNpcsItemsNpcsItemsGetError>> {
         get_all_npcs_items_npcs_items_get(
             &self.configuration,
@@ -41,7 +41,7 @@ impl DataPage<NpcItem> for DataPageNpcItem {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

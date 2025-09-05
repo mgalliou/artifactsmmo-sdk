@@ -30,7 +30,7 @@ impl MapsApi {
 impl PaginatedApi<MapSchema, DataPageMapSchema, GetAllMapsMapsGetError> for MapsApi {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageMapSchema, Error<GetAllMapsMapsGetError>> {
         get_all_maps_maps_get(
             &self.configuration,
@@ -47,7 +47,7 @@ impl DataPage<MapSchema> for DataPageMapSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

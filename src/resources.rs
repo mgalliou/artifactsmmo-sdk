@@ -1,4 +1,4 @@
-use crate::{HasDropTable, PersistedData, events::Events};
+use crate::{HasDropTable, HasLevel, PersistedData, events::Events};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
 use itertools::Itertools;
@@ -66,5 +66,11 @@ impl Resources {
 impl HasDropTable for ResourceSchema {
     fn drops(&self) -> &Vec<DropRateSchema> {
         &self.drops
+    }
+}
+
+impl HasLevel for ResourceSchema {
+    fn level(&self) -> u32 {
+        self.level as u32
     }
 }

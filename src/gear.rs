@@ -344,7 +344,7 @@ pub enum Slot {
 }
 
 impl Slot {
-    pub fn max_quantity(&self) -> i32 {
+    pub fn max_quantity(&self) -> u32 {
         match self.is_utility() {
             true => 100,
             false => 1,

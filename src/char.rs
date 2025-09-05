@@ -37,8 +37,24 @@ pub trait HasCharacterData {
         (d.x, d.y)
     }
 
-    fn level(&self) -> i32 {
-        self.data().level
+    fn level(&self) -> u32 {
+        self.data().level as u32
+    }
+
+    /// Returns the `Character` level in the given `skill`.
+    fn skill_level(&self, skill: Skill) -> u32 {
+        let d = self.data();
+        (match skill {
+            Skill::Combat => d.level,
+            Skill::Mining => d.mining_level,
+            Skill::Woodcutting => d.woodcutting_level,
+            Skill::Fishing => d.fishing_level,
+            Skill::Weaponcrafting => d.weaponcrafting_level,
+            Skill::Gearcrafting => d.gearcrafting_level,
+            Skill::Jewelrycrafting => d.jewelrycrafting_level,
+            Skill::Cooking => d.cooking_level,
+            Skill::Alchemy => d.alchemy_level,
+        }) as u32
     }
 
     fn skill_xp(&self, skill: Skill) -> i32 {
@@ -83,27 +99,11 @@ pub trait HasCharacterData {
         self.max_health() - self.health()
     }
 
-    /// Returns the `Character` level in the given `skill`.
-    fn skill_level(&self, skill: Skill) -> i32 {
-        let d = self.data();
-        match skill {
-            Skill::Combat => d.level,
-            Skill::Mining => d.mining_level,
-            Skill::Woodcutting => d.woodcutting_level,
-            Skill::Fishing => d.fishing_level,
-            Skill::Weaponcrafting => d.weaponcrafting_level,
-            Skill::Gearcrafting => d.gearcrafting_level,
-            Skill::Jewelrycrafting => d.jewelrycrafting_level,
-            Skill::Cooking => d.cooking_level,
-            Skill::Alchemy => d.alchemy_level,
-        }
+    fn gold(&self) -> u32 {
+        self.data().gold as u32
     }
 
-    fn gold(&self) -> i32 {
-        self.data().gold
-    }
-
-    fn quantity_in_slot(&self, s: Slot) -> i32 {
+    fn quantity_in_slot(&self, s: Slot) -> u32 {
         match s {
             Slot::Utility1 => self.data().utility1_slot_quantity,
             Slot::Utility2 => self.data().utility2_slot_quantity,
@@ -142,16 +142,20 @@ pub trait HasCharacterData {
         }
     }
 
-    fn task_progress(&self) -> i32 {
-        self.data().task_progress
+    fn task_progress(&self) -> u32 {
+        self.data().task_progress as u32
     }
 
-    fn task_total(&self) -> i32 {
-        self.data().task_total
+    fn task_total(&self) -> u32 {
+        self.data().task_total as u32
     }
 
-    fn task_missing(&self) -> i32 {
-        self.task_total() - self.task_progress()
+    fn task_missing(&self) -> u32 {
+        if self.task_progress() < self.task_total() {
+            self.task_total() - self.task_progress()
+        } else {
+            0
+        }
     }
 
     fn task_finished(&self) -> bool {
@@ -199,7 +203,7 @@ pub trait HasCharacterData {
         .clone()
     }
 
-    fn has_equiped(&self, item: &str) -> i32 {
+    fn has_equiped(&self, item: &str) -> u32 {
         Slot::iter()
             .filter_map(|s| {
                 if self.equiped_in(s) == item {
@@ -225,10 +229,10 @@ pub trait HasCharacterData {
                 self.level()
             };
             match c.operator {
-                ConditionOperator::Eq => value == c.value,
-                ConditionOperator::Ne => value != c.value,
-                ConditionOperator::Gt => value > c.value,
-                ConditionOperator::Lt => value < c.value,
+                ConditionOperator::Eq => (value as i32) == c.value,
+                ConditionOperator::Ne => (value as i32) != c.value,
+                ConditionOperator::Gt => (value as i32) > c.value,
+                ConditionOperator::Lt => (value as i32) < c.value,
             }
         })
     }

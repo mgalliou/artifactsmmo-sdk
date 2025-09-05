@@ -2,7 +2,7 @@ use super::{
     CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
 };
 use crate::{
-    GOLD, Gear,
+    GOLD, Gear, HasLevel,
     bank::Bank,
     char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
@@ -15,6 +15,7 @@ use crate::{
     maps::{MapSchemaExt, Maps},
     monsters::Monsters,
     npcs::Npcs,
+    npcs_items::NpcItemExt,
     resources::Resources,
     server::Server,
     simulator::HasEffects,
@@ -104,7 +105,7 @@ impl Character {
         let Some(resource) = self.resources.get(&resource_code) else {
             return Err(GatherError::NoResourceOnMap);
         };
-        if self.skill_level(resource.skill.into()) < resource.level {
+        if self.skill_level(resource.skill.into()) < resource.level() {
             return Err(GatherError::SkillLevelInsufficient);
         }
         if !self.inventory.has_space_for_drops_from(resource.as_ref()) {
@@ -128,19 +129,19 @@ impl Character {
         Ok(())
     }
 
-    pub fn rest(&self) -> Result<i32, RestError> {
+    pub fn rest(&self) -> Result<u32, RestError> {
         if self.health() < self.max_health() {
             return Ok(self.inner.request_rest()?);
         }
         Ok(0)
     }
 
-    pub fn r#use(&self, item_code: &str, quantity: i32) -> Result<(), UseError> {
+    pub fn r#use(&self, item_code: &str, quantity: u32) -> Result<(), UseError> {
         self.can_use(item_code, quantity)?;
         Ok(self.inner.request_use_item(item_code, quantity)?)
     }
 
-    pub fn can_use(&self, item_code: &str, quantity: i32) -> Result<(), UseError> {
+    pub fn can_use(&self, item_code: &str, quantity: u32) -> Result<(), UseError> {
         let Some(item) = self.items.get(item_code) else {
             return Err(UseError::ItemNotFound);
         };
@@ -156,12 +157,12 @@ impl Character {
         Ok(())
     }
 
-    pub fn craft(&self, item_code: &str, quantity: i32) -> Result<SkillInfoSchema, CraftError> {
+    pub fn craft(&self, item_code: &str, quantity: u32) -> Result<SkillInfoSchema, CraftError> {
         self.can_craft(item_code, quantity)?;
         Ok(self.inner.request_craft(item_code, quantity)?)
     }
 
-    pub fn can_craft(&self, item_code: &str, quantity: i32) -> Result<(), CraftError> {
+    pub fn can_craft(&self, item_code: &str, quantity: u32) -> Result<(), CraftError> {
         let Some(item) = self.items.get(item_code) else {
             return Err(CraftError::ItemNotFound);
         };
@@ -184,13 +185,13 @@ impl Character {
     pub fn recycle(
         &self,
         item_code: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<RecyclingItemsSchema, RecycleError> {
         self.can_recycle(item_code, quantity)?;
         Ok(self.inner.request_recycle(item_code, quantity)?)
     }
 
-    pub fn can_recycle(&self, item_code: &str, quantity: i32) -> Result<(), RecycleError> {
+    pub fn can_recycle(&self, item_code: &str, quantity: u32) -> Result<(), RecycleError> {
         let Some(item) = self.items.get(item_code) else {
             return Err(RecycleError::ItemNotFound);
         };
@@ -215,12 +216,12 @@ impl Character {
         Ok(())
     }
 
-    pub fn delete(&self, item_code: &str, quantity: i32) -> Result<SimpleItemSchema, DeleteError> {
+    pub fn delete(&self, item_code: &str, quantity: u32) -> Result<SimpleItemSchema, DeleteError> {
         self.can_delete(item_code, quantity)?;
         Ok(self.inner.request_delete(item_code, quantity)?)
     }
 
-    pub fn can_delete(&self, item_code: &str, quantity: i32) -> Result<(), DeleteError> {
+    pub fn can_delete(&self, item_code: &str, quantity: u32) -> Result<(), DeleteError> {
         if self.items.get(item_code).is_none() {
             return Err(DeleteError::ItemNotFound);
         };
@@ -264,14 +265,14 @@ impl Character {
         Ok(())
     }
 
-    fn can_deposit_item(&self, item_code: &str, quantity: i32) -> Result<(), DepositError> {
+    fn can_deposit_item(&self, item_code: &str, quantity: u32) -> Result<(), DepositError> {
         if self.items.get(item_code).is_none() {
             return Err(DepositError::ItemNotFound);
         };
         if self.inventory.total_of(item_code) < quantity {
             return Err(DepositError::InsufficientQuantity);
         }
-        if self.bank.total_of(item_code) <= 0 && self.bank.free_slots() <= 0 {
+        if self.bank.total_of(item_code) == 0 && self.bank.free_slots() == 0 {
             return Err(DepositError::InsufficientBankSpace);
         }
         if !self.current_map().content_type_is(MapContentType::Bank) {
@@ -280,12 +281,12 @@ impl Character {
         Ok(())
     }
 
-    pub fn withdraw_gold(&self, quantity: i32) -> Result<i32, GoldWithdrawError> {
+    pub fn withdraw_gold(&self, quantity: u32) -> Result<u32, GoldWithdrawError> {
         self.can_withdraw_gold(quantity)?;
         Ok(self.inner.request_withdraw_gold(quantity)?)
     }
 
-    pub fn can_withdraw_gold(&self, quantity: i32) -> Result<(), GoldWithdrawError> {
+    pub fn can_withdraw_gold(&self, quantity: u32) -> Result<(), GoldWithdrawError> {
         if self.bank.gold() < quantity {
             return Err(GoldWithdrawError::InsufficientGold);
         }
@@ -295,12 +296,12 @@ impl Character {
         Ok(())
     }
 
-    pub fn deposit_gold(&self, quantity: i32) -> Result<i32, GoldDepositError> {
+    pub fn deposit_gold(&self, quantity: u32) -> Result<u32, GoldDepositError> {
         self.can_deposit_gold(quantity)?;
         Ok(self.inner.request_deposit_gold(quantity)?)
     }
 
-    pub fn can_deposit_gold(&self, quantity: i32) -> Result<(), GoldDepositError> {
+    pub fn can_deposit_gold(&self, quantity: u32) -> Result<(), GoldDepositError> {
         if self.gold() < quantity {
             return Err(GoldDepositError::InsufficientGold);
         }
@@ -310,7 +311,7 @@ impl Character {
         Ok(())
     }
 
-    pub fn expand_bank(&self) -> Result<i32, BankExpansionError> {
+    pub fn expand_bank(&self) -> Result<u32, BankExpansionError> {
         self.can_expand_bank()?;
         Ok(self.inner.request_expand_bank()?)
     }
@@ -325,12 +326,12 @@ impl Character {
         Ok(())
     }
 
-    pub fn equip(&self, item_code: &str, slot: Slot, quantity: i32) -> Result<(), EquipError> {
+    pub fn equip(&self, item_code: &str, slot: Slot, quantity: u32) -> Result<(), EquipError> {
         self.can_equip(item_code, slot, quantity)?;
         Ok(self.inner.request_equip(item_code, slot, quantity)?)
     }
 
-    pub fn can_equip(&self, item_code: &str, slot: Slot, quantity: i32) -> Result<(), EquipError> {
+    pub fn can_equip(&self, item_code: &str, slot: Slot, quantity: u32) -> Result<(), EquipError> {
         let Some(item) = self.items.get(item_code) else {
             return Err(EquipError::ItemNotFound);
         };
@@ -351,18 +352,18 @@ impl Character {
         if !self.meets_conditions_for(&item) {
             return Err(EquipError::ConditionsNotMet);
         }
-        if self.inventory.free_space() + item.inventory_space() <= 0 {
+        if self.inventory.free_space() as i32 + item.inventory_space() <= 0 {
             return Err(EquipError::InsufficientInventorySpace);
         }
         Ok(())
     }
 
-    pub fn unequip(&self, slot: Slot, quantity: i32) -> Result<(), UnequipError> {
+    pub fn unequip(&self, slot: Slot, quantity: u32) -> Result<(), UnequipError> {
         self.can_unequip(slot, quantity)?;
         Ok(self.inner.request_unequip(slot, quantity)?)
     }
 
-    pub fn can_unequip(&self, slot: Slot, quantity: i32) -> Result<(), UnequipError> {
+    pub fn can_unequip(&self, slot: Slot, quantity: u32) -> Result<(), UnequipError> {
         let Some(equiped) = self.items.get(&self.equiped_in(slot)) else {
             return Err(UnequipError::SlotEmpty);
         };
@@ -399,13 +400,13 @@ impl Character {
     pub fn task_trade(
         &self,
         item_code: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<TaskTradeSchema, TaskTradeError> {
         self.can_task_trade(item_code, quantity)?;
         Ok(self.inner.request_task_trade(item_code, quantity)?)
     }
 
-    pub fn can_task_trade(&self, item_code: &str, quantity: i32) -> Result<(), TaskTradeError> {
+    pub fn can_task_trade(&self, item_code: &str, quantity: u32) -> Result<(), TaskTradeError> {
         if self.items.get(item_code).is_none() {
             return Err(TaskTradeError::ItemNotFound);
         };
@@ -497,20 +498,20 @@ impl Character {
     pub fn npc_buy(
         &self,
         item_code: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<NpcItemTransactionSchema, BuyNpcError> {
         self.can_npc_buy(item_code, quantity)?;
         Ok(self.inner.request_npc_buy(item_code, quantity)?)
     }
 
-    fn can_npc_buy(&self, item_code: &str, quantity: i32) -> Result<(), BuyNpcError> {
+    fn can_npc_buy(&self, item_code: &str, quantity: u32) -> Result<(), BuyNpcError> {
         if self.items.get(item_code).is_none() {
             return Err(BuyNpcError::ItemNotFound);
         };
         let Some(item) = self.npcs.items.get(item_code) else {
             return Err(BuyNpcError::ItemNotBuyable);
         };
-        let Some(buy_price) = item.buy_price else {
+        let Some(buy_price) = item.buy_price() else {
             return Err(BuyNpcError::ItemNotBuyable);
         };
         if item.currency == GOLD {
@@ -526,13 +527,13 @@ impl Character {
     pub fn npc_sell(
         &self,
         item_code: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<NpcItemTransactionSchema, SellNpcError> {
         self.can_npc_sell(item_code, quantity)?;
         Ok(self.inner.request_npc_sell(item_code, quantity)?)
     }
 
-    fn can_npc_sell(&self, item_code: &str, quantity: i32) -> Result<(), SellNpcError> {
+    fn can_npc_sell(&self, item_code: &str, quantity: u32) -> Result<(), SellNpcError> {
         if self.items.get(item_code).is_none() {
             return Err(SellNpcError::ItemNotFound);
         };

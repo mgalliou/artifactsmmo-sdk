@@ -1,5 +1,5 @@
 use crate::{
-    HasDropTable, PersistedData, Simulator,
+    HasDropTable, HasLevel, PersistedData, Simulator,
     char::Skill,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
@@ -105,7 +105,7 @@ impl Items {
     }
 
     /// Takes an item `code` and return the mats required to craft it.
-    pub fn mats_for(&self, code: &str, quantity: i32) -> Vec<SimpleItemSchema> {
+    pub fn mats_for(&self, code: &str, quantity: u32) -> Vec<SimpleItemSchema> {
         self.mats_of(code)
             .into_iter()
             .update(|m| m.quantity *= quantity)
@@ -192,7 +192,7 @@ impl Items {
         self.base_mats_of(code).iter().any(|m| m.code == mat)
     }
 
-    pub fn mats_mob_average_lvl(&self, code: &str) -> i32 {
+    pub fn mats_mob_average_lvl(&self, code: &str) -> u32 {
         let mob_mats = self
             .mats_of(code)
             .iter()
@@ -201,12 +201,12 @@ impl Items {
             .collect_vec();
         let len = mob_mats.len();
         if len > 0 {
-            return mob_mats.iter().map(|i| i.level).sum::<i32>() / mob_mats.len() as i32;
+            return mob_mats.iter().map(|i| i.level).sum::<u32>() / mob_mats.len() as u32;
         }
         0
     }
 
-    pub fn mats_mob_max_lvl(&self, code: &str) -> i32 {
+    pub fn mats_mob_max_lvl(&self, code: &str) -> u32 {
         self.mats_of(code)
             .iter()
             .filter_map(|i| self.get(&i.code))
@@ -217,18 +217,18 @@ impl Items {
 
     /// Takes an item `code` and returns the amount of inventory space the mats
     /// required to craft it are taking.
-    pub fn mats_quantity_for(&self, code: &str) -> i32 {
+    pub fn mats_quantity_for(&self, code: &str) -> u32 {
         self.mats_of(code).iter().map(|mat| mat.quantity).sum()
     }
 
-    pub fn recycled_quantity_for(&self, code: &str) -> i32 {
+    pub fn recycled_quantity_for(&self, code: &str) -> u32 {
         let mats_quantity_for = self.mats_quantity_for(code);
         mats_quantity_for / 5 + if mats_quantity_for % 5 > 0 { 1 } else { 0 }
     }
 
     /// Takes an item `code` and returns the best (lowest value) drop rate from
     /// `Monsters` or `Resources`
-    pub fn drop_rate(&self, code: &str) -> i32 {
+    pub fn drop_rate(&self, code: &str) -> u32 {
         self.monsters
             .dropping(code)
             .iter()
@@ -236,7 +236,7 @@ impl Items {
             .chain(self.resources.dropping(code).iter().flat_map(|m| &m.drops))
             .find(|d| d.code == code)
             .map_or(0, |d| {
-                (d.rate as f32 * ((d.min_quantity + d.max_quantity) as f32 / 2.0)).round() as i32
+                (d.rate as f32 * ((d.min_quantity + d.max_quantity) as f32 / 2.0)).round() as u32
             })
     }
 
@@ -247,8 +247,8 @@ impl Items {
         if base_mats.is_empty() {
             return 0.0;
         }
-        let base_mats_quantity: i32 = base_mats.iter().map(|m| m.quantity).sum();
-        let drop_rate_sum: i32 = base_mats
+        let base_mats_quantity: u32 = base_mats.iter().map(|m| m.quantity).sum();
+        let drop_rate_sum: u32 = base_mats
             .iter()
             .map(|m| self.drop_rate(&m.code) * m.quantity)
             .sum();
@@ -256,7 +256,7 @@ impl Items {
         average
     }
 
-    pub fn restoring_utilities(&self, level: i32) -> Vec<Arc<ItemSchema>> {
+    pub fn restoring_utilities(&self, level: u32) -> Vec<Arc<ItemSchema>> {
         self.all()
             .iter()
             .filter(|i| i.r#type().is_utility() && i.restore() > 0 && i.level >= level)
@@ -332,12 +332,12 @@ impl Items {
         sources
     }
 
-    pub fn time_to_get(&self, item: &str) -> Option<i32> {
+    pub fn time_to_get(&self, item: &str) -> Option<u32> {
         self.sources_of(item)
             .iter()
             .map(|s| match s {
                 ItemSource::Resource(_) => 20,
-                ItemSource::Monster(m) => m.level * self.drop_rate(item),
+                ItemSource::Monster(m) => m.level() * self.drop_rate(item),
                 ItemSource::Craft => self
                     .mats_of(item)
                     .iter()
@@ -380,9 +380,9 @@ impl Items {
 
 pub trait ItemSchemaExt {
     fn is_crafted_with(&self, item: &str) -> bool;
-    fn mats_quantity(&self) -> i32;
+    fn mats_quantity(&self) -> u32;
     fn mats(&self) -> Vec<SimpleItemSchema>;
-    fn recycled_quantity(&self) -> i32;
+    fn recycled_quantity(&self) -> u32;
     fn skill_to_craft(&self) -> Option<Skill>;
     fn is_crafted_from_task(&self) -> bool;
     fn is_craftable(&self) -> bool;
@@ -407,11 +407,11 @@ impl ItemSchemaExt for ItemSchema {
         self.mats().iter().any(|m| m.code == item)
     }
 
-    fn mats_quantity(&self) -> i32 {
+    fn mats_quantity(&self) -> u32 {
         self.mats().iter().map(|m| m.quantity).sum()
     }
 
-    fn recycled_quantity(&self) -> i32 {
+    fn recycled_quantity(&self) -> u32 {
         let q = self.mats_quantity();
         q / 5 + if q % 5 > 0 { 1 } else { 0 }
     }

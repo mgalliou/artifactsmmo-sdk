@@ -35,7 +35,7 @@ impl PaginatedApi<ResourceSchema, DataPageResourceSchema, GetAllResourcesResourc
 {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageResourceSchema, Error<GetAllResourcesResourcesGetError>> {
         get_all_resources_resources_get(
             &self.configuration,
@@ -54,7 +54,7 @@ impl DataPage<ResourceSchema> for DataPageResourceSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

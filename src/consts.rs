@@ -1,7 +1,7 @@
-pub const CRAFT_TIME: i32 = 5;
-pub const MAX_LEVEL: i32 = 45;
-pub const TASK_CANCEL_PRICE: i32 = 1;
-pub const TASK_EXCHANGE_PRICE: i32 = 6;
+pub const CRAFT_TIME: u32 = 5;
+pub const MAX_LEVEL: u32 = 45;
+pub const TASK_CANCEL_PRICE: u32 = 1;
+pub const TASK_EXCHANGE_PRICE: u32 = 6;
 
 pub const DIAMOND: &str = "diamond";
 pub const EMERALD: &str = "emerald";
@@ -42,8 +42,8 @@ pub const FISH_SOUP: &str = "fish_soup";
 pub const COOKED_HELLHOUND_MEAT: &str = "cooked_hellhound_meat";
 pub const MAPLE_SYRUP: &str = "maple_syrup";
 
-pub const BANK_MIN_FREE_SLOT: i32 = 3;
-pub const BANK_EXTENSION_SIZE: i32 = 20;
+pub const BANK_MIN_FREE_SLOT: u32 = 3;
+pub const BANK_EXTENSION_SIZE: u32 = 20;
 
 pub const BLUE_CANDY: &str = "blue_candy";
 pub const GREEN_CANDY: &str = "green_candy";

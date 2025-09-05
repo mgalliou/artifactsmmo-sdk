@@ -1,5 +1,5 @@
 use super::CharacterData;
-use crate::{HasDropTable, items::Items};
+use crate::{HasDropTable, HasQuantity, items::Items};
 use artifactsmmo_openapi::models::{InventorySlot, SimpleItemSchema};
 use itertools::Itertools;
 use std::sync::Arc;
@@ -27,25 +27,25 @@ impl Inventory {
     }
 
     /// Returns the amount of item in the `Character` inventory.
-    pub fn total_items(&self) -> i32 {
+    pub fn total_items(&self) -> u32 {
         self.data
             .read()
             .unwrap()
             .inventory
             .iter()
             .flatten()
-            .map(|i| i.quantity)
+            .map(|i| i.quantity())
             .sum()
     }
 
     /// Returns the maximum number of item the inventory can contain.
-    pub fn max_items(&self) -> i32 {
-        self.data.read().unwrap().inventory_max_items
+    pub fn max_items(&self) -> u32 {
+        self.data.read().unwrap().inventory_max_items as u32
     }
 
     /// Returns the free spaces in the `Character` inventory.
-    pub fn free_space(&self) -> i32 {
-        self.max_items() - self.total_items()
+    pub fn free_space(&self) -> u32 {
+        self.max_items().saturating_sub(self.total_items())
     }
 
     pub fn free_slots(&self) -> usize {
@@ -79,7 +79,7 @@ impl Inventory {
             && self.free_space() >= entity.average_drop_quantity()
     }
 
-    pub fn has_space_for(&self, item: &str, quantity: i32) -> bool {
+    pub fn has_space_for(&self, item: &str, quantity: u32) -> bool {
         self.has_space_for_multiple(&[SimpleItemSchema {
             code: item.to_owned(),
             quantity,
@@ -93,7 +93,7 @@ impl Inventory {
     }
 
     /// Returns the amount of the given item `code` in the `Character` inventory.
-    pub fn total_of(&self, item: &str) -> i32 {
+    pub fn total_of(&self, item: &str) -> u32 {
         self.data
             .read()
             .unwrap()
@@ -101,10 +101,10 @@ impl Inventory {
             .iter()
             .flatten()
             .find(|i| i.code == item)
-            .map_or(0, |i| i.quantity)
+            .map_or(0, |i| i.quantity())
     }
 
-    pub fn contains_mats_for(&self, item: &str, quantity: i32) -> bool {
+    pub fn contains_mats_for(&self, item: &str, quantity: u32) -> bool {
         self.items
             .mats_of(item)
             .iter()

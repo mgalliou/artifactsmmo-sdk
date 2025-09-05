@@ -49,3 +49,13 @@ impl NpcsItems {
         self.data.read().unwrap().get(code).cloned()
     }
 }
+
+pub trait NpcItemExt {
+    fn buy_price(&self) -> Option<u32>;
+}
+
+impl NpcItemExt for NpcItem {
+    fn buy_price(&self) -> Option<u32> {
+        self.buy_price.map(|p| p as u32)
+    }
+}

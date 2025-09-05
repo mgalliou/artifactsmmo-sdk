@@ -59,7 +59,7 @@ impl PaginatedApi<TaskFullSchema, DataPageTaskFullSchema, GetAllTasksTasksListGe
 {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageTaskFullSchema, Error<GetAllTasksTasksListGetError>> {
         get_all_tasks_tasks_list_get(
             &self.configuration,
@@ -78,7 +78,7 @@ impl DataPage<TaskFullSchema> for DataPageTaskFullSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

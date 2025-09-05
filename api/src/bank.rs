@@ -32,7 +32,7 @@ impl PaginatedApi<SimpleItemSchema, DataPageSimpleItemSchema, GetBankItemsMyBank
 {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageSimpleItemSchema, Error<GetBankItemsMyBankItemsGetError>> {
         get_bank_items_my_bank_items_get(&self.configuration, None, Some(current_page), Some(100))
     }
@@ -43,7 +43,7 @@ impl DataPage<SimpleItemSchema> for DataPageSimpleItemSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

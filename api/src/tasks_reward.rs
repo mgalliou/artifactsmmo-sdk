@@ -27,7 +27,7 @@ impl PaginatedApi<DropRateSchema, DataPageDropRateSchema, GetAllTasksRewardsTask
 {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageDropRateSchema, Error<GetAllTasksRewardsTasksRewardsGetError>> {
         get_all_tasks_rewards_tasks_rewards_get(&self.configuration, Some(current_page), Some(100))
     }
@@ -38,7 +38,7 @@ impl DataPage<DropRateSchema> for DataPageDropRateSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

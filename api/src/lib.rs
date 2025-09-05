@@ -113,10 +113,10 @@ where
         }
         Ok(npcs)
     }
-    fn api_call(&self, current_page: i32) -> Result<P, Error<E>>;
+    fn api_call(&self, current_page: u32) -> Result<P, Error<E>>;
 }
 
 pub trait DataPage<T> {
     fn data(self) -> Vec<T>;
-    fn pages(&self) -> Option<Option<i32>>;
+    fn pages(&self) -> Option<Option<u32>>;
 }

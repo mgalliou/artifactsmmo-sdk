@@ -1,6 +1,6 @@
 use artifactsmmo_openapi::models::{
-    DropRateSchema, DropSchema, FightSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema,
-    SkillInfoSchema,
+    DropRateSchema, DropSchema, FightSchema, InventorySlot, RewardsSchema, SimpleItemSchema,
+    SkillDataSchema, SkillInfoSchema,
 };
 use fs_extra::file::{read_to_string, write_all};
 use log::error;
@@ -75,40 +75,56 @@ pub trait PersistedData<D: for<'a> Deserialize<'a> + Serialize> {
     fn refresh_data(&self);
 }
 
+pub trait HasQuantity {
+    fn quantity(&self) -> u32;
+}
+
+impl HasQuantity for DropSchema {
+    fn quantity(&self) -> u32 {
+        self.quantity as u32
+    }
+}
+
+impl HasQuantity for InventorySlot {
+    fn quantity(&self) -> u32 {
+        self.quantity as u32
+    }
+}
+
 pub trait HasDrops {
-    fn amount_of(&self, item: &str) -> i32;
+    fn amount_of(&self, item: &str) -> u32;
 }
 
 impl HasDrops for FightSchema {
-    fn amount_of(&self, item: &str) -> i32 {
+    fn amount_of(&self, item: &str) -> u32 {
         self.drops
             .iter()
             .find(|i| i.code == item)
-            .map_or(0, |i| i.quantity)
+            .map_or(0, |i| i.quantity())
     }
 }
 
 impl HasDrops for SkillDataSchema {
-    fn amount_of(&self, item: &str) -> i32 {
+    fn amount_of(&self, item: &str) -> u32 {
         self.details
             .items
             .iter()
             .find(|i| i.code == item)
-            .map_or(0, |i| i.quantity)
+            .map_or(0, |i| i.quantity())
     }
 }
 
 impl HasDrops for SkillInfoSchema {
-    fn amount_of(&self, item: &str) -> i32 {
+    fn amount_of(&self, item: &str) -> u32 {
         self.items
             .iter()
             .find(|i| i.code == item)
-            .map_or(0, |i| i.quantity)
+            .map_or(0, |i| i.quantity())
     }
 }
 
 impl HasDrops for RewardsSchema {
-    fn amount_of(&self, item: &str) -> i32 {
+    fn amount_of(&self, item: &str) -> u32 {
         self.items
             .iter()
             .find(|i| i.code == item)
@@ -117,7 +133,7 @@ impl HasDrops for RewardsSchema {
 }
 
 impl HasDrops for Vec<SimpleItemSchema> {
-    fn amount_of(&self, item: &str) -> i32 {
+    fn amount_of(&self, item: &str) -> u32 {
         self.iter()
             .find(|i| i.code == item)
             .map_or(0, |i| i.quantity)
@@ -125,39 +141,43 @@ impl HasDrops for Vec<SimpleItemSchema> {
 }
 
 impl HasDrops for Vec<DropSchema> {
-    fn amount_of(&self, item: &str) -> i32 {
+    fn amount_of(&self, item: &str) -> u32 {
         self.iter()
             .find(|i| i.code == item)
-            .map_or(0, |i| i.quantity)
+            .map_or(0, |i| i.quantity())
     }
 }
 
 pub trait HasDropTable {
-    fn drop_rate(&self, item: &str) -> Option<i32> {
+    fn drop_rate(&self, item: &str) -> Option<u32> {
         self.drops().iter().find(|i| i.code == item).map(|i| i.rate)
     }
 
-    fn average_drop_quantity(&self) -> i32 {
+    fn average_drop_quantity(&self) -> u32 {
         self.drops()
             .iter()
             .map(|i| 1.0 / i.rate as f32 * (i.max_quantity + i.min_quantity) as f32 / 2.0)
             .sum::<f32>()
-            .ceil() as i32
+            .ceil() as u32
     }
 
-    fn average_drop_slots(&self) -> i32 {
+    fn average_drop_slots(&self) -> u32 {
         self.drops()
             .iter()
             .map(|i| 1.0 / i.rate as f32)
             .sum::<f32>()
-            .ceil() as i32
+            .ceil() as u32
     }
 
-    fn max_drop_quantity(&self) -> i32 {
+    fn max_drop_quantity(&self) -> u32 {
         self.drops().iter().map(|i| i.max_quantity).sum()
     }
 
     fn drops(&self) -> &Vec<DropRateSchema>;
+}
+
+pub trait HasLevel {
+    fn level(&self) -> u32;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]

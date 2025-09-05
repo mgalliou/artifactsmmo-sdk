@@ -31,7 +31,7 @@ impl
 {
     fn api_call(
         &self,
-        current_page: i32,
+        current_page: u32,
     ) -> Result<DataPageActiveEventSchema, Error<GetAllActiveEventsEventsActiveGetError>> {
         get_all_active_events_events_active_get(&self.configuration, Some(current_page), Some(100))
     }
@@ -42,7 +42,7 @@ impl DataPage<ActiveEventSchema> for DataPageActiveEventSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<i32>> {
+    fn pages(&self) -> Option<Option<u32>> {
         self.pages
     }
 }

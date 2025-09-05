@@ -94,7 +94,7 @@ impl MyCharacterApi {
         &self,
         name: &str,
         item: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<UseItemResponseSchema, Error<ActionUseItemMyNameActionUsePostError>> {
         let schema = SimpleItemSchema {
             code: item.to_owned(),
@@ -114,7 +114,7 @@ impl MyCharacterApi {
         &self,
         name: &str,
         code: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<SkillResponseSchema, Error<ActionCraftingMyNameActionCraftingPostError>> {
         let schema = CraftingSchema {
             code: code.to_owned(),
@@ -127,7 +127,7 @@ impl MyCharacterApi {
         &self,
         name: &str,
         code: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<DeleteItemResponseSchema, Error<ActionDeleteItemMyNameActionDeletePostError>> {
         let schema = SimpleItemSchema {
             code: code.to_owned(),
@@ -140,7 +140,7 @@ impl MyCharacterApi {
         &self,
         name: &str,
         code: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<RecyclingResponseSchema, Error<ActionRecyclingMyNameActionRecyclingPostError>> {
         let schema = RecyclingSchema {
             code: code.to_owned(),
@@ -154,7 +154,7 @@ impl MyCharacterApi {
         name: &str,
         code: &str,
         slot: ItemSlot,
-        quantity: Option<i32>,
+        quantity: Option<u32>,
     ) -> Result<EquipmentResponseSchema, Error<ActionEquipItemMyNameActionEquipPostError>> {
         let mut schema = EquipSchema::new(code.to_string(), slot);
         schema.quantity = quantity;
@@ -165,7 +165,7 @@ impl MyCharacterApi {
         &self,
         name: &str,
         slot: ItemSlot,
-        quantity: Option<i32>,
+        quantity: Option<u32>,
     ) -> Result<EquipmentResponseSchema, Error<ActionUnequipItemMyNameActionUnequipPostError>> {
         let mut schema = UnequipSchema::new(slot);
         schema.quantity = quantity;
@@ -205,7 +205,7 @@ impl MyCharacterApi {
     pub fn deposit_gold(
         &self,
         name: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<
         BankGoldTransactionResponseSchema,
         Error<ActionDepositBankGoldMyNameActionBankDepositGoldPostError>,
@@ -217,7 +217,7 @@ impl MyCharacterApi {
     pub fn withdraw_gold(
         &self,
         name: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<
         BankGoldTransactionResponseSchema,
         Error<ActionWithdrawBankGoldMyNameActionBankWithdrawGoldPostError>,
@@ -267,7 +267,7 @@ impl MyCharacterApi {
         &self,
         name: &str,
         code: &str,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<TaskTradeResponseSchema, Error<ActionTaskTradeMyNameActionTaskTradePostError>> {
         action_task_trade_my_name_action_task_trade_post(
             &self.configuration,
@@ -288,7 +288,7 @@ impl MyCharacterApi {
         &self,
         name: &str,
         code: String,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<
         NpcMerchantTransactionResponseSchema,
         Error<ActionNpcBuyItemMyNameActionNpcBuyPostError>,
@@ -301,7 +301,7 @@ impl MyCharacterApi {
         &self,
         name: &str,
         code: String,
-        quantity: i32,
+        quantity: u32,
     ) -> Result<
         NpcMerchantTransactionResponseSchema,
         Error<ActionNpcSellItemMyNameActionNpcSellPostError>,

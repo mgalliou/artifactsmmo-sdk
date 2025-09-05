@@ -1,5 +1,5 @@
 use crate::{
-    HasDropTable, PersistedData, events::Events, items::DamageType, simulator::HasEffects,
+    HasDropTable, HasLevel, PersistedData, events::Events, items::DamageType, simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};
@@ -83,6 +83,12 @@ impl Monsters {
 impl HasDropTable for MonsterSchema {
     fn drops(&self) -> &Vec<DropRateSchema> {
         &self.drops
+    }
+}
+
+impl HasLevel for MonsterSchema {
+    fn level(&self) -> u32 {
+        self.level as u32
     }
 }
 

@@ -53,12 +53,12 @@ impl Tasks {
 }
 
 pub trait TaskFullSchemaExt {
-    fn rewards_quantity(&self) -> i32 {
+    fn rewards_quantity(&self) -> u32 {
         self.rewards().items.iter().map(|i| i.quantity).sum()
     }
 
-    fn rewards_slots(&self) -> usize {
-        self.rewards().items.len()
+    fn rewards_slots(&self) -> u32 {
+        self.rewards().items.len() as u32
     }
 
     fn rewards(&self) -> &RewardsSchema;
