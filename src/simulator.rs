@@ -232,8 +232,9 @@ pub trait HasEffects {
     const DMG: &str = "dmg";
     const CRITICAL_STRIKE: &str = "critical_strike";
     const POISON: &str = "poison";
-    const LIFESTEAL: &str = "lifesteal";
     const WISDOM: &str = "wisdom";
+    const LIFESTEAL: &str = "lifesteal";
+    const BURN: &str = "burn";
     const PROSPECTING: &str = "prospecting";
     const INVENTORY_SPACE: &str = "inventory_space";
 
@@ -277,6 +278,10 @@ pub trait HasEffects {
 
     fn lifesteal(&self) -> i32 {
         self.effect_value(Self::LIFESTEAL)
+    }
+
+    fn burn(&self) -> i32 {
+        self.effect_value(Self::BURN)
     }
 
     fn wisdom(&self) -> i32 {
