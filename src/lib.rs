@@ -207,7 +207,7 @@ pub enum EffectType {
     Corrupted,
 }
 
-pub struct DropSchemas<'a>(&'a Vec<DropSchema>);
+pub struct DropSchemas<'a>(pub &'a Vec<DropSchema>);
 
 impl std::fmt::Display for DropSchemas<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -222,7 +222,7 @@ impl std::fmt::Display for DropSchemas<'_> {
     }
 }
 
-pub struct SimpleItemSchemas<'a>(&'a Vec<SimpleItemSchema>);
+pub struct SimpleItemSchemas<'a>(pub &'a Vec<SimpleItemSchema>);
 
 impl std::fmt::Display for SimpleItemSchemas<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
