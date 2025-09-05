@@ -92,7 +92,6 @@ impl Gear {
             _ => None,
         }
     }
-
     pub fn average_damage_against(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
@@ -117,6 +116,29 @@ impl Gear {
                     self.resistance(t),
                 )
                 .round() as i32
+            })
+            .sum()
+    }
+
+    pub fn critless_damage_against(&self, monster: &MonsterSchema) -> i32 {
+        DamageType::iter()
+            .map(|t| {
+                Simulator::average_dmg(
+                    self.attack_damage(t),
+                    self.damage_increase(t),
+                    0,
+                    monster.resistance(t),
+                )
+                .round() as i32
+            })
+            .sum()
+    }
+
+    pub fn critless_damage_from(&self, monster: &MonsterSchema) -> i32 {
+        DamageType::iter()
+            .map(|t| {
+                Simulator::average_dmg(monster.attack_damage(t), 0, 0, self.resistance(t)).round()
+                    as i32
             })
             .sum()
     }
