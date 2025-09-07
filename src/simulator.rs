@@ -2,22 +2,22 @@ use crate::{char::Skill, gear::Gear, items::DamageType};
 use artifactsmmo_openapi::models::{FightResult, MonsterSchema, SimpleEffectSchema};
 use std::cmp::max;
 
-const BASE_HP: i32 = 115;
-const MAX_TURN: i32 = 100;
-const HP_PER_LEVEL: i32 = 5;
+const BASE_HP: u32 = 115;
+const MAX_TURN: u32 = 100;
+const HP_PER_LEVEL: u32 = 5;
 const CRIT_MULTIPLIER: f32 = 1.5;
 
 pub struct Simulator {}
 
 impl Simulator {
     pub fn average_fight(
-        level: i32,
+        level: u32,
         missing_hp: i32,
         gear: &Gear,
         monster: &MonsterSchema,
         ignore_death: bool,
     ) -> Fight {
-        let base_hp = BASE_HP + HP_PER_LEVEL * level;
+        let base_hp = (BASE_HP + HP_PER_LEVEL * level) as i32;
         let starting_hp = base_hp + gear.health() - missing_hp;
         let mut hp = starting_hp;
         let mut monster_hp = monster.hp;
@@ -91,13 +91,13 @@ impl Simulator {
     }
 
     pub fn random_fight(
-        level: i32,
+        level: u32,
         missing_hp: i32,
         gear: &Gear,
         monster: &MonsterSchema,
         ignore_death: bool,
     ) -> Fight {
-        let base_hp = BASE_HP + HP_PER_LEVEL * level;
+        let base_hp = (BASE_HP + HP_PER_LEVEL * level) as i32;
         let starting_hp = base_hp + gear.health() - missing_hp;
         let mut hp = starting_hp;
         let mut monster_hp = monster.hp;
@@ -197,30 +197,30 @@ impl Simulator {
         }
     }
 
-    pub fn time_to_rest(health: i32) -> i32 {
+    pub fn time_to_rest(health: u32) -> u32 {
         health / 5 + if health % 5 > 0 { 1 } else { 0 }
     }
 
-    fn fight_cd(haste: i32, turns: i32) -> i32 {
+    fn fight_cd(haste: i32, turns: u32) -> u32 {
         max(
             5,
-            ((turns * 2) as f32 - (haste as f32 * 0.01) * (turns * 2) as f32).round() as i32,
+            ((turns * 2) as f32 - (haste as f32 * 0.01) * (turns * 2) as f32).round() as u32,
         )
     }
 
-    pub fn gather_cd(resource_level: i32, cooldown_reduction: i32) -> i32 {
-        ((30.0 + (resource_level as f32 / 2.0)) * (1.0 + cooldown_reduction as f32 / 100.0)) as i32
+    pub fn gather_cd(resource_level: u32, cooldown_reduction: i32) -> u32 {
+        ((30.0 + (resource_level as f32 / 2.0)) * (1.0 + cooldown_reduction as f32 / 100.0)) as u32
     }
 }
 
 #[derive(Debug)]
 pub struct Fight {
-    pub turns: i32,
+    pub turns: u32,
     pub hp: i32,
     pub monster_hp: i32,
     pub hp_lost: i32,
     pub result: FightResult,
-    pub cd: i32,
+    pub cd: u32,
 }
 
 impl Fight {
