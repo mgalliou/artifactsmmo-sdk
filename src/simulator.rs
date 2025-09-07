@@ -26,27 +26,40 @@ impl Simulator {
         let mut monster_burn = gear.critless_damage_from(monster) * monster.burn() / 100;
 
         loop {
+            //character turn
             if turns % 2 == 1 {
+                if turns > 1 {
+                    if monster_burn > 0 {
+                        monster_burn = (monster_burn as f32 * 0.90).round() as i32;
+                        hp -= monster_burn;
+                        if hp <= 0 && !ignore_death {
+                            break;
+                        }
+                    }
+                    hp -= monster.poison();
+                    if hp <= 0 && !ignore_death {
+                        break;
+                    }
+                }
                 let damage = gear.average_damage_against(monster);
                 monster_hp -= damage;
                 hp += damage * gear.lifesteal() / 100;
                 if monster_hp <= 0 {
                     break;
                 }
-                if turns > 1 {
-                    monster_hp -= gear.poison()
-                }
-                if monster_hp <= 0 {
-                    break;
-                }
-                if burn > 0 {
-                    monster_hp -= gear.burn();
-                    burn = (burn as f32 * 0.90).round() as i32;
-                }
-                if monster_hp <= 0 {
-                    break;
-                }
+            //monster turn
             } else {
+                if burn > 0 {
+                    burn = (burn as f32 * 0.90).round() as i32;
+                    monster_hp -= burn;
+                    if monster_hp <= 0 {
+                        break;
+                    }
+                }
+                monster_hp -= gear.poison();
+                if monster_hp <= 0 {
+                    break;
+                }
                 if hp < (base_hp + gear.health()) / 2 {
                     hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
                     hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
@@ -55,19 +68,6 @@ impl Simulator {
                 hp -= damage;
                 monster_hp += damage * gear.lifesteal() / 100;
                 if hp <= 0 && !ignore_death {
-                    break;
-                }
-                if turns > 2 {
-                    hp -= monster.poison()
-                }
-                if hp <= 0 && !ignore_death {
-                    break;
-                }
-                if monster_burn > 0 {
-                    hp -= monster_burn;
-                    monster_burn = (monster_burn as f32 * 0.90).round() as i32;
-                }
-                if monster_hp <= 0 {
                     break;
                 }
             }
@@ -102,9 +102,25 @@ impl Simulator {
         let mut hp = starting_hp;
         let mut monster_hp = monster.hp;
         let mut turns = 1;
+        let mut burn = gear.critless_damage_against(monster) * gear.burn() / 100;
+        let mut monster_burn = gear.critless_damage_from(monster) * monster.burn() / 100;
 
         loop {
+            //character turn
             if turns % 2 == 1 {
+                if turns > 1 {
+                    if monster_burn > 0 {
+                        monster_burn = (monster_burn as f32 * 0.90).round() as i32;
+                        hp -= monster_burn;
+                        if hp <= 0 && !ignore_death {
+                            break;
+                        }
+                    }
+                    hp -= monster.poison();
+                    if hp <= 0 && !ignore_death {
+                        break;
+                    }
+                }
                 for h in gear.simulate_hits_against(monster).iter() {
                     monster_hp -= h.damage;
                     if h.is_crit {
@@ -114,13 +130,19 @@ impl Simulator {
                         break;
                     }
                 }
-                if turns > 1 {
-                    monster_hp -= gear.poison()
+            //monster turn
+            } else {
+                if burn > 0 {
+                    burn = (burn as f32 * 0.90).round() as i32;
+                    monster_hp -= burn;
+                    if monster_hp <= 0 {
+                        break;
+                    }
                 }
+                monster_hp -= gear.poison();
                 if monster_hp <= 0 {
                     break;
                 }
-            } else {
                 if hp < (base_hp + gear.health()) / 2 {
                     hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
                     hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
@@ -133,12 +155,6 @@ impl Simulator {
                     if hp <= 0 && !ignore_death {
                         break;
                     }
-                }
-                if turns > 2 {
-                    hp -= monster.poison()
-                }
-                if hp <= 0 && !ignore_death {
-                    break;
                 }
             }
             if turns >= MAX_TURN {
