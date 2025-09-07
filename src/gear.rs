@@ -26,6 +26,8 @@ pub struct Gear {
     pub artifact1: Option<Arc<ItemSchema>>,
     pub artifact2: Option<Arc<ItemSchema>>,
     pub artifact3: Option<Arc<ItemSchema>>,
+    pub rune: Option<Arc<ItemSchema>>,
+    pub bag: Option<Arc<ItemSchema>>,
 }
 
 impl Gear {
@@ -46,6 +48,8 @@ impl Gear {
         artifact1: Option<Arc<ItemSchema>>,
         artifact2: Option<Arc<ItemSchema>>,
         artifact3: Option<Arc<ItemSchema>>,
+        rune: Option<Arc<ItemSchema>>,
+        bag: Option<Arc<ItemSchema>>,
     ) -> Option<Gear> {
         if utility1.is_some() && utility1 == utility2
             || artifact1.is_some() && artifact1 == artifact2
@@ -69,6 +73,8 @@ impl Gear {
                 artifact1,
                 artifact2,
                 artifact3,
+                rune,
+                bag,
             })
         }
     }
@@ -89,7 +95,8 @@ impl Gear {
             Slot::Artifact3 => self.artifact3.clone(),
             Slot::Utility1 => self.utility1.clone(),
             Slot::Utility2 => self.utility2.clone(),
-            _ => None,
+            Slot::Rune => self.rune.clone(),
+            Slot::Bag => self.bag.clone(),
         }
     }
     pub fn average_damage_against(&self, monster: &MonsterSchema) -> i32 {

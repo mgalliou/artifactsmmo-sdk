@@ -579,6 +579,8 @@ impl Character {
             artifact3: self.items.get(&d.artifact3_slot),
             utility1: self.items.get(&d.utility1_slot),
             utility2: self.items.get(&d.utility2_slot),
+            rune: self.items.get(&d.rune_slot),
+            bag: self.items.get(&d.bag_slot),
         }
     }
 }
