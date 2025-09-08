@@ -264,6 +264,23 @@ impl Items {
             .collect_vec()
     }
 
+    pub fn upgrades_of(&self, item: &str) -> Vec<Arc<ItemSchema>> {
+        if let Some(item) = self.get(item) {
+            self.all()
+                .into_iter()
+                .filter(|i| {
+                    i.code != item.code
+                        && i.is_of_type(item.r#type())
+                        && i.effects()
+                            .iter()
+                            .all(|e| e.value >= item.effect_value(&e.code))
+                })
+                .collect_vec()
+        } else {
+            vec![]
+        }
+    }
+
     /// NOTE: WIP: there is a lot of edge cases here:
     /// if all sources are resources or monsters, then the lowest drop rate source should be returned,
     /// if the drop rate sources is the same for all sources (algea), either the sources also
