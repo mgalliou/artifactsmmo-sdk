@@ -180,6 +180,16 @@ pub trait HasLevel {
     fn level(&self) -> u32;
 }
 
+pub trait CanProvideXp: HasLevel {
+    fn provides_xp_at(&self, level: u32) -> bool {
+        check_lvl_diff(level, self.level())
+    }
+}
+
+pub fn check_lvl_diff(char_level: u32, entity_level: u32) -> bool {
+    char_level.saturating_sub(entity_level) <= MAX_LEVEL_DIFF
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
 #[strum(serialize_all = "snake_case")]
 pub enum EffectType {

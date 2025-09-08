@@ -1,3 +1,5 @@
+pub const MAX_LEVEL_DIFF: u32 = 10;
+
 pub const CRAFT_TIME: u32 = 5;
 pub const MAX_LEVEL: u32 = 45;
 pub const TASK_CANCEL_PRICE: u32 = 1;

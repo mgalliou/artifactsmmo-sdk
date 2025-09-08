@@ -1,4 +1,4 @@
-use crate::{HasDropTable, HasLevel, PersistedData, events::Events};
+use crate::{CanProvideXp, HasDropTable, HasLevel, PersistedData, events::Events};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
 use itertools::Itertools;
@@ -74,3 +74,5 @@ impl HasLevel for ResourceSchema {
         self.level as u32
     }
 }
+
+impl CanProvideXp for ResourceSchema {}

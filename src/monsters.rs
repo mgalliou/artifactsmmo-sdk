@@ -1,5 +1,6 @@
 use crate::{
-    HasDropTable, HasLevel, PersistedData, events::Events, items::DamageType, simulator::HasEffects,
+    CanProvideXp, HasDropTable, HasLevel, PersistedData, events::Events,
+    items::DamageType, simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};
@@ -60,18 +61,17 @@ impl Monsters {
             .collect_vec()
     }
 
-    pub fn lowest_providing_exp(&self, level: i32) -> Option<Arc<MonsterSchema>> {
-        let min = if level > 11 { level - 10 } else { 1 };
+    pub fn lowest_providing_xp_at(&self, level: u32) -> Option<Arc<MonsterSchema>> {
         self.all()
             .into_iter()
-            .filter(|m| m.level >= min && m.level <= level)
+            .filter(|m| m.provides_xp_at(level))
             .min_by_key(|m| m.level)
     }
 
-    pub fn highest_providing_exp(&self, level: i32) -> Option<Arc<MonsterSchema>> {
+    pub fn highest_providing_exp(&self, level: u32) -> Option<Arc<MonsterSchema>> {
         self.all()
             .into_iter()
-            .filter(|m| m.level <= level)
+            .filter(|m| m.provides_xp_at(level))
             .max_by_key(|m| m.level)
     }
 
@@ -115,3 +115,5 @@ impl HasEffects for MonsterSchema {
         self.effects.iter().flatten().collect_vec()
     }
 }
+
+impl CanProvideXp for MonsterSchema {}

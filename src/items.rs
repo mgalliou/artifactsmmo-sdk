@@ -1,6 +1,7 @@
 use crate::{
-    HasDropTable, HasLevel, PersistedData, Simulator,
+    CanProvideXp, HasDropTable, HasLevel, PersistedData, Simulator,
     char::Skill,
+    check_lvl_diff,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
     monsters::Monsters,
@@ -526,6 +527,18 @@ impl ItemSchemaExt for ItemSchema {
 impl HasEffects for ItemSchema {
     fn effects(&self) -> Vec<&SimpleEffectSchema> {
         self.effects.iter().flatten().collect_vec()
+    }
+}
+
+impl HasLevel for ItemSchema {
+    fn level(&self) -> u32 {
+        self.level
+    }
+}
+
+impl CanProvideXp for ItemSchema {
+    fn provides_xp_at(&self, level: u32) -> bool {
+        self.is_craftable() && check_lvl_diff(level, self.level())
     }
 }
 
