@@ -237,6 +237,12 @@ pub enum EffectType {
     Corrupted,
 }
 
+impl PartialEq<EffectType> for String {
+    fn eq(&self, other: &EffectType) -> bool {
+        other.as_ref() == *self
+    }
+}
+
 pub struct DropSchemas<'a>(pub &'a Vec<DropSchema>);
 
 impl std::fmt::Display for DropSchemas<'_> {

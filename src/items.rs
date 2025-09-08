@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, HasDropTable, HasLevel, PersistedData, Simulator,
+    CanProvideXp, EffectType, HasDropTable, HasLevel, PersistedData, Simulator,
     char::Skill,
     check_lvl_diff,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
@@ -271,9 +271,18 @@ impl Items {
                 .filter(|i| {
                     i.code != item.code
                         && i.is_of_type(item.r#type())
-                        && i.effects()
-                            .iter()
-                            .all(|e| e.value >= item.effect_value(&e.code))
+                        && i.effects().iter().all(|e| {
+                            if e.code == EffectType::InventorySpace
+                                || e.code == EffectType::Mining
+                                || e.code == EffectType::Woodcutting
+                                || e.code == EffectType::Fishing
+                                || e.code == EffectType::Alchemy
+                            {
+                                e.value < item.effect_value(&e.code)
+                            } else {
+                                e.value > item.effect_value(&e.code)
+                            }
+                        })
                 })
                 .collect_vec()
         } else {
