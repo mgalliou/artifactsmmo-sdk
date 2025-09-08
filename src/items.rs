@@ -271,16 +271,16 @@ impl Items {
                 .filter(|i| {
                     i.code != item.code
                         && i.is_of_type(item.r#type())
-                        && i.effects().iter().all(|e| {
+                        && item.effects().iter().all(|e| {
                             if e.code == EffectType::InventorySpace
                                 || e.code == EffectType::Mining
                                 || e.code == EffectType::Woodcutting
                                 || e.code == EffectType::Fishing
                                 || e.code == EffectType::Alchemy
                             {
-                                e.value < item.effect_value(&e.code)
+                                e.value > i.effect_value(&e.code)
                             } else {
-                                e.value > item.effect_value(&e.code)
+                                e.value < i.effect_value(&e.code)
                             }
                         })
                 })
