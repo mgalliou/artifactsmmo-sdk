@@ -4,7 +4,7 @@ use crate::{
     check_lvl_diff,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
-    monsters::Monsters,
+    monsters::{MonsterSchemaExt, Monsters},
     npcs::Npcs,
     resources::Resources,
     simulator::HasEffects,
@@ -387,9 +387,9 @@ pub trait ItemSchemaExt {
     fn is_crafted_from_task(&self) -> bool;
     fn is_craftable(&self) -> bool;
     fn craft_schema(&self) -> Option<&CraftSchema>;
-
-    fn attack_damage_against(&self, monster: &MonsterSchema) -> f32;
-    fn damage_increase_against_with(&self, monster: &MonsterSchema, weapon: &ItemSchema) -> f32;
+    fn average_damage(&self, monster: &MonsterSchema) -> f32;
+    fn average_damage_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32;
+    fn damage_boot_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32;
     fn damage_reduction_against(&self, monster: &MonsterSchema) -> f32;
 
     fn is_food(&self) -> bool;
@@ -444,7 +444,8 @@ impl ItemSchemaExt for ItemSchema {
         self.craft.iter().flatten().map(|c| c.deref()).next_back()
     }
 
-    fn attack_damage_against(&self, monster: &MonsterSchema) -> f32 {
+    // Returns the average attack damage done by the weapon `self` against `monster`
+    fn average_damage(&self, monster: &MonsterSchema) -> f32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
@@ -457,45 +458,28 @@ impl ItemSchemaExt for ItemSchema {
             .sum()
     }
 
-    fn damage_increase_against_with(&self, monster: &MonsterSchema, weapon: &ItemSchema) -> f32 {
+    // Returns the average attack damage done by the weapon `self` against `monster` with the
+    // damage boost from `item`
+    fn average_damage_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
-                    weapon.attack_damage(t),
-                    self.damage_increase(t),
-                    weapon.critical_strike() + self.critical_strike(),
+                    self.attack_damage(t),
+                    item.damage_increase(t),
+                    self.critical_strike() + item.critical_strike(),
                     monster.resistance(t),
                 )
             })
-            .sum::<f32>()
-            - DamageType::iter()
-                .map(|t| {
-                    Simulator::average_dmg(
-                        weapon.attack_damage(t),
-                        0,
-                        weapon.critical_strike(),
-                        monster.resistance(t),
-                    )
-                })
-                .sum::<f32>()
+            .sum()
+    }
+
+    // Returns the damage boost provided by `item` when using the weapon `self against `monster`
+    fn damage_boot_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32 {
+        self.average_damage_with(item, monster) - self.average_damage(monster)
     }
 
     fn damage_reduction_against(&self, monster: &MonsterSchema) -> f32 {
-        DamageType::iter()
-            .map(|t| {
-                Simulator::average_dmg(monster.attack_damage(t), 0, monster.critical_strike(), 0)
-            })
-            .sum::<f32>()
-            - DamageType::iter()
-                .map(|t| {
-                    Simulator::average_dmg(
-                        monster.attack_damage(t),
-                        0,
-                        monster.critical_strike(),
-                        self.resistance(t),
-                    )
-                })
-                .sum::<f32>()
+        monster.average_damage() - monster.average_damage_against(self)
     }
 
     fn is_food(&self) -> bool {

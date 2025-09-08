@@ -1,14 +1,15 @@
 use crate::{
-    CanProvideXp, HasDropTable, HasLevel, PersistedData, events::Events, items::DamageType,
-    simulator::HasEffects,
+    CanProvideXp, HasDropTable, HasLevel, PersistedData, Simulator, events::Events,
+    items::DamageType, simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
-use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};
+use artifactsmmo_openapi::models::{DropRateSchema, ItemSchema, MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
+use strum::IntoEnumIterator;
 
 #[derive(Default, Debug)]
 pub struct Monsters {
@@ -125,3 +126,29 @@ impl HasEffects for MonsterSchema {
 }
 
 impl CanProvideXp for MonsterSchema {}
+
+pub trait MonsterSchemaExt {
+    fn average_damage(&self) -> f32;
+    fn average_damage_against(&self, item: &ItemSchema) -> f32;
+}
+
+impl MonsterSchemaExt for MonsterSchema {
+    fn average_damage(&self) -> f32 {
+        DamageType::iter()
+            .map(|t| Simulator::average_dmg(self.attack_damage(t), 0, self.critical_strike(), 0))
+            .sum()
+    }
+
+    fn average_damage_against(&self, item: &ItemSchema) -> f32 {
+        DamageType::iter()
+            .map(|t| {
+                Simulator::average_dmg(
+                    self.attack_damage(t),
+                    0,
+                    self.critical_strike(),
+                    item.resistance(t),
+                )
+            })
+            .sum::<f32>()
+    }
+}
