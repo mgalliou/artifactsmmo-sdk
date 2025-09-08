@@ -403,6 +403,7 @@ pub trait ItemSchemaExt {
     fn skill_to_craft(&self) -> Option<Skill>;
     fn is_crafted_from_task(&self) -> bool;
     fn is_craftable(&self) -> bool;
+    fn is_recyclable(&self) -> bool;
     fn craft_schema(&self) -> Option<&CraftSchema>;
     fn average_damage(&self, monster: &MonsterSchema) -> f32;
     fn average_damage_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32;
@@ -428,17 +429,17 @@ impl ItemSchemaExt for ItemSchema {
         self.mats().iter().map(|m| m.quantity).sum()
     }
 
-    fn recycled_quantity(&self) -> u32 {
-        let q = self.mats_quantity();
-        q / 5 + if q % 5 > 0 { 1 } else { 0 }
-    }
-
     fn mats(&self) -> Vec<SimpleItemSchema> {
         self.craft_schema()
             .iter()
             .filter_map(|i| i.items.clone())
             .flatten()
             .collect_vec()
+    }
+
+    fn recycled_quantity(&self) -> u32 {
+        let q = self.mats_quantity();
+        q / 5 + if q % 5 > 0 { 1 } else { 0 }
     }
 
     fn skill_to_craft(&self) -> Option<Skill> {
@@ -455,6 +456,11 @@ impl ItemSchemaExt for ItemSchema {
 
     fn is_craftable(&self) -> bool {
         self.craft_schema().is_some()
+    }
+
+    fn is_recyclable(&self) -> bool {
+        self.skill_to_craft()
+            .is_some_and(|s| s.is_weaponcrafting() || s.is_gearcrafting() || s.is_jewelrycrafting())
     }
 
     fn craft_schema(&self) -> Option<&CraftSchema> {
