@@ -173,9 +173,10 @@ impl Items {
     pub fn unique_craft(&self, code: &str) -> Option<Arc<ItemSchema>> {
         let crafts = self.crafted_with(code);
         if crafts.len() == 1 {
-            return Some(crafts[0].clone());
+            crafts.first().cloned()
+        } else {
+            None
         }
-        None
     }
 
     /// Takes an item `code` and returns the items crafted with it as base mat.
@@ -197,8 +198,7 @@ impl Items {
         let mob_mats = self
             .mats_of(code)
             .iter()
-            .filter_map(|i| self.get(&i.code))
-            .filter(|i| i.subtype == SubType::Mob)
+            .filter_map(|i| self.get(&i.code).filter(|i| i.subtype == SubType::Mob))
             .collect_vec();
         let len = mob_mats.len();
         if len > 0 {
@@ -210,8 +210,7 @@ impl Items {
     pub fn mats_mob_max_lvl(&self, code: &str) -> u32 {
         self.mats_of(code)
             .iter()
-            .filter_map(|i| self.get(&i.code))
-            .filter(|i| i.subtype == SubType::Mob)
+            .filter_map(|i| self.get(&i.code).filter(|i| i.subtype == SubType::Mob))
             .max_by_key(|i| i.level)
             .map_or(0, |i| i.level)
     }

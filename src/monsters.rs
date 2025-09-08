@@ -1,6 +1,6 @@
 use crate::{
-    CanProvideXp, HasDropTable, HasLevel, PersistedData, events::Events,
-    items::DamageType, simulator::HasEffects,
+    CanProvideXp, HasDropTable, HasLevel, PersistedData, events::Events, items::DamageType,
+    simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};
@@ -93,21 +93,29 @@ impl HasLevel for MonsterSchema {
 }
 
 impl HasEffects for MonsterSchema {
+    fn health(&self) -> i32 {
+        self.hp
+    }
+
     fn attack_damage(&self, r#type: DamageType) -> i32 {
         match r#type {
-            DamageType::Air => self.attack_air,
-            DamageType::Earth => self.attack_earth,
             DamageType::Fire => self.attack_fire,
+            DamageType::Earth => self.attack_earth,
             DamageType::Water => self.attack_water,
+            DamageType::Air => self.attack_air,
         }
+    }
+
+    fn critical_strike(&self) -> i32 {
+        self.critical_strike
     }
 
     fn resistance(&self, r#type: DamageType) -> i32 {
         match r#type {
-            DamageType::Air => self.res_air,
-            DamageType::Earth => self.res_earth,
             DamageType::Fire => self.res_fire,
+            DamageType::Earth => self.res_earth,
             DamageType::Water => self.res_water,
+            DamageType::Air => self.res_air,
         }
     }
 

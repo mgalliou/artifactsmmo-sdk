@@ -6,6 +6,7 @@ const BASE_HP: u32 = 115;
 const MAX_TURN: u32 = 100;
 const HP_PER_LEVEL: u32 = 5;
 const CRIT_MULTIPLIER: f32 = 1.5;
+const BURN_MULTIPLIER: f32 = 0.90;
 
 pub struct Simulator {}
 
@@ -20,17 +21,17 @@ impl Simulator {
         let base_hp = (BASE_HP + HP_PER_LEVEL * level) as i32;
         let starting_hp = base_hp + gear.health() - missing_hp;
         let mut hp = starting_hp;
-        let mut monster_hp = monster.hp;
-        let mut turns = 1;
+        let mut monster_hp = monster.health();
+        let mut turn = 1;
         let mut burn = gear.critless_damage_against(monster) * gear.burn() / 100;
         let mut monster_burn = gear.critless_damage_from(monster) * monster.burn() / 100;
 
         loop {
             //character turn
-            if turns % 2 == 1 {
-                if turns > 1 {
+            if turn % 2 == 1 {
+                if turn > 1 {
                     if monster_burn > 0 {
-                        monster_burn = (monster_burn as f32 * 0.90).round() as i32;
+                        Self::decrease_burn(&mut monster_burn);
                         hp -= monster_burn;
                         if hp <= 0 && !ignore_death {
                             break;
@@ -49,8 +50,11 @@ impl Simulator {
                 }
             //monster turn
             } else {
+                if turn == monster.reconstitution() as u32 {
+                    monster_hp = monster.health();
+                }
                 if burn > 0 {
-                    burn = (burn as f32 * 0.90).round() as i32;
+                    Self::decrease_burn(&mut burn);
                     monster_hp -= burn;
                     if monster_hp <= 0 {
                         break;
@@ -71,22 +75,22 @@ impl Simulator {
                     break;
                 }
             }
-            if turns >= MAX_TURN {
+            if turn >= MAX_TURN {
                 break;
             }
-            turns += 1;
+            turn += 1;
         }
         Fight {
-            turns,
+            turns: turn,
             hp,
             monster_hp,
             hp_lost: starting_hp - hp,
-            result: if hp <= 0 || turns > MAX_TURN {
+            result: if hp <= 0 || turn > MAX_TURN {
                 FightResult::Loss
             } else {
                 FightResult::Win
             },
-            cd: Self::fight_cd(gear.haste(), turns),
+            cd: Self::fight_cd(gear.haste(), turn),
         }
     }
 
@@ -100,17 +104,17 @@ impl Simulator {
         let base_hp = (BASE_HP + HP_PER_LEVEL * level) as i32;
         let starting_hp = base_hp + gear.health() - missing_hp;
         let mut hp = starting_hp;
-        let mut monster_hp = monster.hp;
-        let mut turns = 1;
+        let mut monster_hp = monster.health();
+        let mut turn = 1;
         let mut burn = gear.critless_damage_against(monster) * gear.burn() / 100;
         let mut monster_burn = gear.critless_damage_from(monster) * monster.burn() / 100;
 
         loop {
             //character turn
-            if turns % 2 == 1 {
-                if turns > 1 {
+            if turn % 2 == 1 {
+                if turn > 1 {
                     if monster_burn > 0 {
-                        monster_burn = (monster_burn as f32 * 0.90).round() as i32;
+                        Self::decrease_burn(&mut monster_burn);
                         hp -= monster_burn;
                         if hp <= 0 && !ignore_death {
                             break;
@@ -132,8 +136,11 @@ impl Simulator {
                 }
             //monster turn
             } else {
+                if turn == monster.reconstitution() as u32 {
+                    monster_hp = monster.health();
+                }
                 if burn > 0 {
-                    burn = (burn as f32 * 0.90).round() as i32;
+                    Self::decrease_burn(&mut burn);
                     monster_hp -= burn;
                     if monster_hp <= 0 {
                         break;
@@ -144,8 +151,8 @@ impl Simulator {
                     break;
                 }
                 if hp < (base_hp + gear.health()) / 2 {
-                    hp += gear.utility1.as_ref().map(|u| u.restore()).unwrap_or(0);
-                    hp += gear.utility2.as_ref().map(|u| u.restore()).unwrap_or(0);
+                    hp += gear.utility1.as_ref().map_or(0, |u| u.restore());
+                    hp += gear.utility2.as_ref().map_or(0, |u| u.restore());
                 }
                 for h in gear.simulate_hits_from(monster).iter() {
                     hp -= h.damage;
@@ -157,22 +164,22 @@ impl Simulator {
                     }
                 }
             }
-            if turns >= MAX_TURN {
+            if turn >= MAX_TURN {
                 break;
             }
-            turns += 1;
+            turn += 1;
         }
         Fight {
-            turns,
+            turns: turn,
             hp,
             monster_hp,
             hp_lost: starting_hp - hp,
-            result: if hp <= 0 || turns > MAX_TURN {
+            result: if hp <= 0 || turn > MAX_TURN {
                 FightResult::Loss
             } else {
                 FightResult::Win
             },
-            cd: Self::fight_cd(gear.haste(), turns),
+            cd: Self::fight_cd(gear.haste(), turn),
         }
     }
 
@@ -183,11 +190,11 @@ impl Simulator {
         critical_strike: i32,
         target_resistance: i32,
     ) -> f32 {
-        let mut dmg = attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
+        let multiplier = (1.0 + damage_increase as f32 * 0.01)
+            * (1.0 + critical_strike as f32 * 0.005)
+            * (1.0 - target_resistance as f32 * 0.01);
 
-        dmg += dmg * (critical_strike as f32 / 100.0) / 2.0;
-        dmg -= dmg * target_resistance as f32 * 0.01;
-        dmg
+        attack_damage as f32 * multiplier
     }
 
     pub fn simulate_hit(
@@ -197,15 +204,16 @@ impl Simulator {
         r#type: DamageType,
         target_resistance: i32,
     ) -> Hit {
+        let mut damage = attack_damage as f32;
         let mut is_crit = false;
-        let mut damage =
-            attack_damage as f32 + (attack_damage as f32 * damage_increase as f32 * 0.01);
+        let multiplier =
+            (1.0 + damage_increase as f32 * 0.01) * (1.0 - target_resistance as f32 * 0.01);
 
+        damage *= multiplier;
         if rand::random_range(0..=100) <= critical_strike {
             damage *= CRIT_MULTIPLIER;
             is_crit = true
         }
-        damage -= damage * target_resistance as f32 * 0.01;
         Hit {
             r#type,
             damage: damage.round() as i32,
@@ -225,7 +233,11 @@ impl Simulator {
     }
 
     pub fn gather_cd(resource_level: u32, cooldown_reduction: i32) -> u32 {
-        ((30.0 + (resource_level as f32 / 2.0)) * (1.0 + cooldown_reduction as f32 / 100.0)) as u32
+        ((30.0 + (resource_level as f32 / 2.0)) * (1.0 + cooldown_reduction as f32 * 0.01)) as u32
+    }
+
+    fn decrease_burn(burn: &mut i32) {
+        *burn = (*burn as f32 * BURN_MULTIPLIER).round() as i32;
     }
 }
 
@@ -267,6 +279,7 @@ pub trait HasEffects {
     const WISDOM: &str = "wisdom";
     const LIFESTEAL: &str = "lifesteal";
     const BURN: &str = "burn";
+    const RECONSTITUTION: &str = "reconstitution";
     const PROSPECTING: &str = "prospecting";
     const INVENTORY_SPACE: &str = "inventory_space";
 
@@ -314,6 +327,10 @@ pub trait HasEffects {
 
     fn burn(&self) -> i32 {
         self.effect_value(Self::BURN)
+    }
+
+    fn reconstitution(&self) -> i32 {
+        self.effect_value(Self::RECONSTITUTION)
     }
 
     fn wisdom(&self) -> i32 {
