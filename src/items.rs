@@ -278,9 +278,9 @@ impl Items {
                                 || e.code == EffectType::Fishing
                                 || e.code == EffectType::Alchemy
                             {
-                                e.value > i.effect_value(&e.code)
+                                e.value >= i.effect_value(&e.code)
                             } else {
-                                e.value < i.effect_value(&e.code)
+                                e.value <= i.effect_value(&e.code)
                             }
                         })
                 })
