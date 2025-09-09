@@ -422,6 +422,7 @@ pub trait ItemSchemaExt {
     fn is_food(&self) -> bool;
     fn is_consumable(&self) -> bool;
     fn is_tool(&self) -> bool;
+    fn is_gear(&self) -> bool;
 
     fn is_of_type(&self, r#type: Type) -> bool;
     fn r#type(&self) -> Type;
@@ -524,6 +525,24 @@ impl ItemSchemaExt for ItemSchema {
 
     fn is_tool(&self) -> bool {
         Skill::iter().any(|s| self.skill_cooldown_reduction(s) < 0)
+    }
+
+    fn is_gear(&self) -> bool {
+        match self.r#type() {
+            Type::BodyArmor
+            | Type::Weapon
+            | Type::LegArmor
+            | Type::Helmet
+            | Type::Boots
+            | Type::Shield
+            | Type::Amulet
+            | Type::Ring
+            | Type::Artifact
+            | Type::Utility
+            | Type::Bag
+            | Type::Rune => true,
+            Type::Consumable | Type::Currency | Type::Resource => false,
+        }
     }
 
     fn is_of_type(&self, r#type: Type) -> bool {
