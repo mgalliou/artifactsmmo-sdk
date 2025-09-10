@@ -568,7 +568,7 @@ impl ItemSchemaExt for ItemSchema {
     }
 
     fn subtype(&self) -> Option<SubType> {
-        SubType::from_str(&self.r#type).ok()
+        SubType::from_str(&self.subtype).ok()
     }
 
     fn name(&self) -> String {
