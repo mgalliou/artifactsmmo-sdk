@@ -270,7 +270,7 @@ impl Items {
                 .into_iter()
                 .filter(|i| {
                     i.code != item.code
-                        && i.is_of_type(item.r#type())
+                        && i.type_is(item.r#type())
                         && item.effects().iter().all(|e| {
                             if e.code == EffectType::InventorySpace
                                 || e.code == EffectType::Mining
@@ -414,18 +414,24 @@ pub trait ItemSchemaExt {
     fn is_craftable(&self) -> bool;
     fn is_recyclable(&self) -> bool;
     fn craft_schema(&self) -> Option<&CraftSchema>;
+
     fn average_damage(&self, monster: &MonsterSchema) -> f32;
     fn average_damage_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32;
     fn damage_boot_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32;
     fn damage_reduction_against(&self, monster: &MonsterSchema) -> f32;
 
-    fn is_food(&self) -> bool;
-    fn is_consumable(&self) -> bool;
-    fn is_tool(&self) -> bool;
     fn is_gear(&self) -> bool;
+    fn is_tool(&self) -> bool;
 
-    fn is_of_type(&self, r#type: Type) -> bool;
+    fn is_consumable(&self) -> bool;
+    fn is_food(&self) -> bool;
+    fn is_gold_bag(&self) -> bool;
+
+    fn type_is(&self, r#type: Type) -> bool;
     fn r#type(&self) -> Type;
+
+    fn subtype_is(&self, subtype: SubType) -> bool;
+    fn subtype(&self) -> Option<SubType>;
 
     fn name(&self) -> String;
 }
@@ -515,18 +521,6 @@ impl ItemSchemaExt for ItemSchema {
         monster.average_damage() - monster.average_damage_against(self)
     }
 
-    fn is_food(&self) -> bool {
-        self.is_consumable() && self.heal() > 0
-    }
-
-    fn is_consumable(&self) -> bool {
-        self.is_of_type(Type::Consumable)
-    }
-
-    fn is_tool(&self) -> bool {
-        Skill::iter().any(|s| self.skill_cooldown_reduction(s) < 0)
-    }
-
     fn is_gear(&self) -> bool {
         match self.r#type() {
             Type::BodyArmor
@@ -545,12 +539,36 @@ impl ItemSchemaExt for ItemSchema {
         }
     }
 
-    fn is_of_type(&self, r#type: Type) -> bool {
+    fn is_tool(&self) -> bool {
+        self.subtype_is(SubType::Tool)
+    }
+
+    fn is_consumable(&self) -> bool {
+        self.type_is(Type::Consumable)
+    }
+
+    fn is_food(&self) -> bool {
+        self.is_consumable() && self.subtype_is(SubType::Food)
+    }
+
+    fn is_gold_bag(&self) -> bool {
+        self.is_consumable() && self.subtype_is(SubType::Bag)
+    }
+
+    fn type_is(&self, r#type: Type) -> bool {
         self.r#type == r#type
     }
 
     fn r#type(&self) -> Type {
         Type::from_str(&self.r#type).expect("type to be valid")
+    }
+
+    fn subtype_is(&self, subtype: SubType) -> bool {
+        self.subtype().is_some_and(|st| st == subtype)
+    }
+
+    fn subtype(&self) -> Option<SubType> {
+        SubType::from_str(&self.r#type).ok()
     }
 
     fn name(&self) -> String {
@@ -631,16 +649,25 @@ impl PartialEq<Type> for String {
     }
 }
 
-#[derive(Debug, PartialEq, AsRefStr, EnumString)]
+#[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
 #[strum(serialize_all = "snake_case")]
 pub enum SubType {
-    Mining,
-    Woodcutting,
+    Alchemy,
+    Alloy,
+    Bar,
+    Bag,
     Fishing,
     Food,
-    Bar,
-    Plank,
+    Mining,
     Mob,
+    Npc,
+    Potion,
+    Sap,
+    Plank,
+    Tool,
+    Task,
+    PreciousStone,
+    Woodcutting,
 }
 
 impl PartialEq<SubType> for String {
