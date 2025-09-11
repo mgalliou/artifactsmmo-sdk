@@ -35,4 +35,11 @@ impl ContainerSlot for InventorySlot {
 }
 
 impl LimitedContainer for Inventory {}
-impl SlotLimited for Inventory {}
+impl SlotLimited for Inventory {
+    fn free_slots(&self) -> u32 {
+        self.content()
+            .iter()
+            .filter(|i| i.code().is_empty())
+            .count() as u32
+    }
+}

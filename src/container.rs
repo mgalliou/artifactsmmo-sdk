@@ -28,12 +28,7 @@ pub trait ItemContainer {
 }
 
 pub trait SlotLimited: ItemContainer {
-    fn free_slots(&self) -> u32 {
-        self.content()
-            .iter()
-            .filter(|i| i.code().is_empty())
-            .count() as u32
-    }
+    fn free_slots(&self) -> u32;
 }
 
 pub trait SpaceLimited: ItemContainer {

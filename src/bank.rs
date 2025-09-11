@@ -34,7 +34,13 @@ impl Bank {
     }
 }
 
-impl SlotLimited for Bank {}
+impl SlotLimited for Bank {
+    fn free_slots(&self) -> u32 {
+        self.details()
+            .slots
+            .saturating_sub(self.content().len() as u32)
+    }
+}
 
 impl ItemContainer for Bank {
     type Slot = SimpleItemSchema;
