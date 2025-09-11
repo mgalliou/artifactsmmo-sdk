@@ -2,7 +2,7 @@ use super::{
     CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
 };
 use crate::{
-    GOLD, Gear, HasLevel,
+    GOLD, Gear, HasLevel, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited,
     bank::Bank,
     char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
@@ -32,7 +32,6 @@ use std::sync::Arc;
 pub struct Character {
     pub id: usize,
     inner: CharacterRequestHandler,
-    pub inventory: Arc<Inventory>,
     bank: Arc<Bank>,
     items: Arc<Items>,
     resources: Arc<Resources>,
@@ -59,7 +58,6 @@ impl Character {
         Self {
             id,
             inner: CharacterRequestHandler::new(api, data.clone(), bank.clone(), server.clone()),
-            inventory: Arc::new(Inventory::new(data, items.clone())),
             bank,
             items,
             resources,
@@ -68,6 +66,10 @@ impl Character {
             npcs,
             server,
         }
+    }
+
+    pub fn inventory(&self) -> Inventory {
+        Inventory::new(self.data())
     }
 
     pub fn current_map(&self) -> Arc<MapSchema> {
@@ -87,7 +89,7 @@ impl Character {
         let Some(monster) = self.monsters.get(&monster_code) else {
             return Err(FightError::NoMonsterOnMap);
         };
-        if !self.inventory.has_space_for_drops_from(monster.as_ref()) {
+        if !self.inventory().has_space_for_drops_from(monster.as_ref()) {
             return Err(FightError::InsufficientInventorySpace);
         }
         Ok(())
@@ -108,7 +110,7 @@ impl Character {
         if self.skill_level(resource.skill.into()) < resource.level() {
             return Err(GatherError::SkillLevelInsufficient);
         }
-        if !self.inventory.has_space_for_drops_from(resource.as_ref()) {
+        if !self.inventory().has_space_for_drops_from(resource.as_ref()) {
             return Err(GatherError::InsufficientInventorySpace);
         }
         Ok(())
@@ -148,7 +150,7 @@ impl Character {
         if !item.is_consumable() {
             return Err(UseError::ItemNotConsumable);
         }
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory().total_of(item_code) < quantity {
             return Err(UseError::InsufficientQuantity);
         }
         if self.level() < item.level {
@@ -172,7 +174,7 @@ impl Character {
         if self.skill_level(skill) < item.level {
             return Err(CraftError::InsufficientSkillLevel);
         }
-        if !self.inventory.contains_mats_for(item_code, quantity) {
+        if !self.inventory().contains_multiple(&item.mats_for(quantity)) {
             return Err(CraftError::InsufficientMaterials);
         }
         // TODO: check if InssuficientInventorySpace can happen
@@ -204,10 +206,10 @@ impl Character {
         if self.skill_level(skill) < item.level {
             return Err(RecycleError::InsufficientSkillLevel);
         }
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory().total_of(item_code) < quantity {
             return Err(RecycleError::InsufficientQuantity);
         }
-        if self.inventory.free_space() + quantity < item.recycled_quantity() {
+        if self.inventory().free_space() + quantity < item.recycled_quantity() {
             return Err(RecycleError::InsufficientInventorySpace);
         }
         if !self.current_map().content_code_is(skill.as_ref()) {
@@ -225,7 +227,7 @@ impl Character {
         if self.items.get(item_code).is_none() {
             return Err(DeleteError::ItemNotFound);
         };
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory().total_of(item_code) < quantity {
             return Err(DeleteError::InsufficientQuantity);
         }
         Ok(())
@@ -243,7 +245,7 @@ impl Character {
         {
             return Err(WithdrawError::InsufficientQuantity);
         };
-        if !self.inventory.has_space_for_multiple(items) {
+        if !self.inventory().has_space_for_multiple(items) {
             return Err(WithdrawError::InsufficientInventorySpace);
         }
         if !self.current_map().content_type_is(MapContentType::Bank) {
@@ -269,7 +271,7 @@ impl Character {
         if self.items.get(item_code).is_none() {
             return Err(DepositError::ItemNotFound);
         };
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory().total_of(item_code) < quantity {
             return Err(DepositError::InsufficientQuantity);
         }
         if self.bank.total_of(item_code) == 0 && self.bank.free_slots() == 0 {
@@ -335,7 +337,7 @@ impl Character {
         let Some(item) = self.items.get(item_code) else {
             return Err(EquipError::ItemNotFound);
         };
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory().total_of(item_code) < quantity {
             return Err(EquipError::InsufficientQuantity);
         }
         if let Some(equiped) = self.items.get(&self.equiped_in(slot)) {
@@ -352,7 +354,7 @@ impl Character {
         if !self.meets_conditions_for(&item) {
             return Err(EquipError::ConditionsNotMet);
         }
-        if self.inventory.free_space() as i32 + item.inventory_space() <= 0 {
+        if self.inventory().free_space() as i32 + item.inventory_space() <= 0 {
             return Err(EquipError::InsufficientInventorySpace);
         }
         Ok(())
@@ -373,7 +375,7 @@ impl Character {
         if self.quantity_in_slot(slot) < quantity {
             return Err(UnequipError::InsufficientQuantity);
         }
-        if !self.inventory.has_space_for(&equiped.code, quantity) {
+        if !self.inventory().has_space_for(&equiped.code, quantity) {
             return Err(UnequipError::InsufficientInventorySpace);
         }
         Ok(())
@@ -413,7 +415,7 @@ impl Character {
         if item_code != self.task() {
             return Err(TaskTradeError::WrongTask);
         }
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory().total_of(item_code) < quantity {
             return Err(TaskTradeError::InsufficientQuantity);
         }
         if self.task_missing() < quantity {
@@ -441,7 +443,7 @@ impl Character {
         if !self.task_finished() {
             return Err(TaskCompletionError::TaskNotFullfilled);
         }
-        if self.inventory.free_space() < 2 {
+        if self.inventory().free_space() < 2 {
             return Err(TaskCompletionError::InsufficientInventorySpace);
         }
         if !self
@@ -463,7 +465,7 @@ impl Character {
         let Some(task_type) = self.task_type() else {
             return Err(TaskCancellationError::NoCurrentTask);
         };
-        if self.inventory.total_of("tasks_coin") < 1 {
+        if self.inventory().total_of("tasks_coin") < 1 {
             return Err(TaskCancellationError::InsufficientTasksCoinQuantity);
         }
         if !self
@@ -482,7 +484,7 @@ impl Character {
     }
 
     pub fn can_exchange_tasks_coin(&self) -> Result<(), TasksCoinExchangeError> {
-        if self.inventory.total_of("tasks_coin") < 6 {
+        if self.inventory().total_of("tasks_coin") < 6 {
             return Err(TasksCoinExchangeError::InsufficientTasksCoinQuantity);
         }
         if !self
@@ -518,7 +520,7 @@ impl Character {
             if self.gold() < buy_price * quantity {
                 return Err(BuyNpcError::InsufficientGold);
             }
-        } else if self.inventory.total_of(&item.currency) < buy_price * quantity {
+        } else if self.inventory().total_of(&item.currency) < buy_price * quantity {
             return Err(BuyNpcError::InsufficientQuantity);
         }
         Ok(())
@@ -540,7 +542,7 @@ impl Character {
         if !self.items.is_salable(item_code) {
             return Err(SellNpcError::ItemNotSalable);
         }
-        if self.inventory.total_of(item_code) < quantity {
+        if self.inventory().total_of(item_code) < quantity {
             return Err(SellNpcError::InsufficientQuantity);
         }
         Ok(())

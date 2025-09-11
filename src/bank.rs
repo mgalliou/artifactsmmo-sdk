@@ -1,6 +1,8 @@
 use artifactsmmo_openapi::models::{BankSchema, SimpleItemSchema};
 use std::sync::{Arc, RwLock};
 
+use crate::{ContainerSlot, ItemContainer, SlotLimited};
+
 #[derive(Default, Debug)]
 pub struct Bank {
     pub details: RwLock<Arc<BankSchema>>,
@@ -23,30 +25,27 @@ impl Bank {
         self.details().gold
     }
 
-    pub fn free_slots(&self) -> u32 {
-        self.details()
-            .slots
-            .saturating_sub(self.content().len() as u32)
-    }
-
-    pub fn total_of(&self, item: &str) -> u32 {
-        self.content
-            .read()
-            .unwrap()
-            .iter()
-            .find_map(|i| (i.code == item).then_some(i.quantity))
-            .unwrap_or(0)
-    }
-
-    pub fn content(&self) -> Arc<Vec<SimpleItemSchema>> {
-        return self.content.read().unwrap().clone();
-    }
-
     pub fn update_details(&self, details: BankSchema) {
         *self.details.write().unwrap() = Arc::new(details)
     }
 
     pub fn update_content(&self, content: Vec<SimpleItemSchema>) {
         *self.content.write().unwrap() = Arc::new(content)
+    }
+}
+
+impl SlotLimited for Bank {}
+
+impl ItemContainer for Bank {
+    type Slot = SimpleItemSchema;
+
+    fn content(&self) -> Arc<Vec<SimpleItemSchema>> {
+        self.content.read().unwrap().clone()
+    }
+}
+
+impl ContainerSlot for SimpleItemSchema {
+    fn code(&self) -> &str {
+        &self.code
     }
 }

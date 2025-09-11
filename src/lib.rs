@@ -15,6 +15,7 @@ pub use bank::Bank;
 pub use char::Character;
 pub use client::Client;
 pub use consts::*;
+pub use container::*;
 pub use events::Events;
 pub use gear::Gear;
 pub use items::Items;
@@ -31,6 +32,7 @@ pub mod bank;
 pub mod char;
 pub mod client;
 pub mod consts;
+pub mod container;
 pub mod error;
 pub mod events;
 pub mod gear;
@@ -88,6 +90,12 @@ impl HasQuantity for DropSchema {
 impl HasQuantity for InventorySlot {
     fn quantity(&self) -> u32 {
         self.quantity as u32
+    }
+}
+
+impl HasQuantity for SimpleItemSchema {
+    fn quantity(&self) -> u32 {
+        self.quantity
     }
 }
 

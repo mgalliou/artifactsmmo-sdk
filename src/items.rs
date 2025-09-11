@@ -408,6 +408,7 @@ pub trait ItemSchemaExt {
     fn is_crafted_with(&self, item: &str) -> bool;
     fn mats_quantity(&self) -> u32;
     fn mats(&self) -> Vec<SimpleItemSchema>;
+    fn mats_for(&self, quantity: u32) -> Vec<SimpleItemSchema>;
     fn recycled_quantity(&self) -> u32;
     fn skill_to_craft(&self) -> Option<Skill>;
     fn is_crafted_from_task(&self) -> bool;
@@ -450,6 +451,15 @@ impl ItemSchemaExt for ItemSchema {
             .iter()
             .filter_map(|i| i.items.clone())
             .flatten()
+            .collect_vec()
+    }
+
+    fn mats_for(&self, quantity: u32) -> Vec<SimpleItemSchema> {
+        self.craft_schema()
+            .iter()
+            .filter_map(|i| i.items.clone())
+            .flatten()
+            .update(|i| i.quantity *= quantity)
             .collect_vec()
     }
 
