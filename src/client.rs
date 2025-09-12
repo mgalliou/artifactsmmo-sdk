@@ -1,5 +1,5 @@
 use crate::{
-    Account, Bank, Character, Events, Items, Maps, Monsters, Resources, Server, Tasks,
+    Account, BankClient, Character, Events, Items, Maps, Monsters, Resources, Server, Tasks,
     TasksRewards, error::ClientError, npcs::Npcs, npcs_items::NpcsItems,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
@@ -37,7 +37,7 @@ impl Client {
                     .bank
                     .all()
                     .map_err(|e| ClientError::Api(Box::new(e)))?;
-                Ok(Arc::new(Bank::new(*bank_details.data, bank_items)))
+                Ok(Arc::new(BankClient::new(*bank_details.data, bank_items)))
             });
 
             let api_clone = api.clone();
@@ -71,7 +71,7 @@ impl Client {
             )
         });
 
-        let bank: Arc<Bank> = bank_res?;
+        let bank: Arc<BankClient> = bank_res?;
 
         let (resources, monsters, maps) = thread::scope(|s| {
             let api_clone = api.clone();

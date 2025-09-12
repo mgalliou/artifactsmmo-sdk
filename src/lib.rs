@@ -11,7 +11,7 @@ use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 pub use artifactsmmo_openapi::models;
 
 pub use account::Account;
-pub use bank::Bank;
+pub use bank::BankClient;
 pub use char::Character;
 pub use client::Client;
 pub use consts::*;

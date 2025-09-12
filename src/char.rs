@@ -9,7 +9,7 @@ use std::{
 use strum::IntoEnumIterator;
 
 pub use character::Character;
-pub use inventory::Inventory;
+pub use inventory::InventoryClient;
 pub use skill::Skill;
 
 pub mod action;

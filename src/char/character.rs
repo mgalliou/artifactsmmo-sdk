@@ -1,24 +1,13 @@
 use super::{
-    CharacterData, HasCharacterData, inventory::Inventory, request_handler::CharacterRequestHandler,
+    CharacterData, HasCharacterData, inventory::InventoryClient, request_handler::CharacterRequestHandler,
 };
 use crate::{
-    GOLD, Gear, HasLevel, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited,
-    bank::Bank,
-    char::error::{
+    bank::{Bank, BankClient}, char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
         FightError, GatherError, GoldDepositError, GoldWithdrawError, MoveError, RecycleError,
         RestError, SellNpcError, TaskAcceptationError, TaskCancellationError, TaskCompletionError,
         TaskTradeError, TasksCoinExchangeError, UnequipError, UseError, WithdrawError,
-    },
-    gear::Slot,
-    items::{ItemSchemaExt, Items},
-    maps::{MapSchemaExt, Maps},
-    monsters::Monsters,
-    npcs::Npcs,
-    npcs_items::NpcItemExt,
-    resources::Resources,
-    server::Server,
-    simulator::HasEffects,
+    }, gear::Slot, items::{ItemSchemaExt, Items}, maps::{MapSchemaExt, Maps}, monsters::Monsters, npcs::Npcs, npcs_items::NpcItemExt, resources::Resources, server::Server, simulator::HasEffects, Gear, HasLevel, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited, GOLD
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
@@ -32,7 +21,7 @@ use std::sync::Arc;
 pub struct Character {
     pub id: usize,
     inner: CharacterRequestHandler,
-    bank: Arc<Bank>,
+    bank: Arc<BankClient>,
     items: Arc<Items>,
     resources: Arc<Resources>,
     monsters: Arc<Monsters>,
@@ -46,7 +35,7 @@ impl Character {
     pub(crate) fn new(
         id: usize,
         data: CharacterData,
-        bank: Arc<Bank>,
+        bank: Arc<BankClient>,
         items: Arc<Items>,
         resources: Arc<Resources>,
         monsters: Arc<Monsters>,
@@ -68,8 +57,8 @@ impl Character {
         }
     }
 
-    pub fn inventory(&self) -> Inventory {
-        Inventory::new(self.data())
+    pub fn inventory(&self) -> InventoryClient {
+        InventoryClient::new(self.data())
     }
 
     pub fn current_map(&self) -> Arc<MapSchema> {

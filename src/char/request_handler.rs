@@ -1,7 +1,7 @@
 use super::CharacterData;
 use crate::{
     DropSchemas, SimpleItemSchemas,
-    bank::Bank,
+    bank::BankClient,
     char::{HasCharacterData, action::Action},
     consts::BANK_EXTENSION_SIZE,
     gear::Slot,
@@ -42,7 +42,7 @@ use thiserror::Error;
 pub struct CharacterRequestHandler {
     api: Arc<ArtifactApi>,
     data: CharacterData,
-    bank: Arc<Bank>,
+    bank: Arc<BankClient>,
     server: Arc<Server>,
 }
 
@@ -50,7 +50,7 @@ impl CharacterRequestHandler {
     pub fn new(
         api: Arc<ArtifactApi>,
         data: CharacterData,
-        bank: Arc<Bank>,
+        bank: Arc<BankClient>,
         server: Arc<Server>,
     ) -> Self {
         Self {
