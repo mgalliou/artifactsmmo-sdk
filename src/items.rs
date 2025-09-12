@@ -409,6 +409,7 @@ pub trait ItemSchemaExt {
     fn mats_for(&self, quantity: u32) -> Vec<SimpleItemSchema>;
     fn recycled_quantity(&self) -> u32;
     fn skill_to_craft(&self) -> Option<Skill>;
+    fn skill_to_craft_is(&self, skill: Skill) -> bool;
     fn is_crafted_from_task(&self) -> bool;
     fn is_craftable(&self) -> bool;
     fn is_recyclable(&self) -> bool;
@@ -470,6 +471,10 @@ impl ItemSchemaExt for ItemSchema {
         self.craft_schema()
             .and_then(|schema| schema.skill)
             .map(Skill::from)
+    }
+
+    fn skill_to_craft_is(&self, skill: Skill) -> bool {
+        self.skill_to_craft().is_some_and(|s| s == skill)
     }
 
     fn is_crafted_from_task(&self) -> bool {
