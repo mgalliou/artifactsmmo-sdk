@@ -1,13 +1,25 @@
 use super::{
-    CharacterData, HasCharacterData, inventory::InventoryClient, request_handler::CharacterRequestHandler,
+    CharacterData, HasCharacterData, inventory::InventoryClient,
+    request_handler::CharacterRequestHandler,
 };
 use crate::{
-    bank::{Bank, BankClient}, char::error::{
+    GOLD, Gear, HasLevel, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited,
+    bank::{Bank, BankClient},
+    char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
         FightError, GatherError, GoldDepositError, GoldWithdrawError, MoveError, RecycleError,
         RestError, SellNpcError, TaskAcceptationError, TaskCancellationError, TaskCompletionError,
         TaskTradeError, TasksCoinExchangeError, UnequipError, UseError, WithdrawError,
-    }, gear::Slot, items::{ItemSchemaExt, Items}, maps::{MapSchemaExt, Maps}, monsters::Monsters, npcs::Npcs, npcs_items::NpcItemExt, resources::Resources, server::Server, simulator::HasEffects, Gear, HasLevel, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited, GOLD
+    },
+    gear::Slot,
+    items::{ItemSchemaExt, Items},
+    maps::{MapSchemaExt, Maps},
+    monsters::Monsters,
+    npcs::Npcs,
+    npcs_items::NpcItemExt,
+    resources::Resources,
+    server::Server,
+    simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
@@ -27,7 +39,6 @@ pub struct Character {
     monsters: Arc<Monsters>,
     maps: Arc<Maps>,
     npcs: Arc<Npcs>,
-    server: Arc<Server>,
 }
 
 impl Character {
@@ -53,7 +64,6 @@ impl Character {
             monsters,
             maps,
             npcs,
-            server,
         }
     }
 
@@ -579,10 +589,6 @@ impl Character {
 impl HasCharacterData for Character {
     fn data(&self) -> Arc<CharacterSchema> {
         self.inner.data()
-    }
-
-    fn server(&self) -> Arc<Server> {
-        self.server.clone()
     }
 
     fn refresh_data(&self) {

@@ -1,10 +1,9 @@
-use crate::{Server, gear::Slot};
+use crate::{gear::Slot, items::ItemCondition};
 use artifactsmmo_openapi::models::{CharacterSchema, ConditionOperator, ItemSchema, TaskType};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, format::Item};
 use std::{
-    cmp::Ordering,
+    str::FromStr,
     sync::{Arc, RwLock},
-    time::Duration,
 };
 use strum::IntoEnumIterator;
 
@@ -23,7 +22,6 @@ pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 
 pub trait HasCharacterData {
     fn data(&self) -> Arc<CharacterSchema>;
-    fn server(&self) -> Arc<Server>;
     fn refresh_data(&self);
     fn update_data(&self, schema: CharacterSchema);
 
@@ -151,15 +149,11 @@ pub trait HasCharacterData {
     }
 
     fn task_missing(&self) -> u32 {
-        if self.task_progress() < self.task_total() {
-            self.task_total() - self.task_progress()
-        } else {
-            0
-        }
+        self.task_total().saturating_sub(self.task_progress())
     }
 
     fn task_finished(&self) -> bool {
-        !self.task().is_empty() && self.task_progress() >= self.task_total()
+        !self.task().is_empty() && self.task_missing() < 1
     }
 
     /// Returns the cooldown expiration timestamp of the `Character`.
@@ -168,16 +162,6 @@ pub trait HasCharacterData {
             .cooldown_expiration
             .as_ref()
             .map(|cd| DateTime::parse_from_rfc3339(cd).ok().map(|dt| dt.to_utc()))?
-    }
-
-    fn remaining_cooldown(&self) -> Duration {
-        if let Some(exp) = self.cooldown_expiration() {
-            let synced = Utc::now() - *self.server().server_offset.read().unwrap();
-            if synced.cmp(&exp.to_utc()) == Ordering::Less {
-                return (exp.to_utc() - synced).to_std().unwrap();
-            }
-        }
-        Duration::from_secs(0)
     }
 
     fn equiped_in(&self, slot: Slot) -> String {
@@ -205,29 +189,16 @@ pub trait HasCharacterData {
 
     fn has_equiped(&self, item: &str) -> u32 {
         Slot::iter()
-            .filter_map(|s| {
-                if self.equiped_in(s) == item {
-                    Some(self.quantity_in_slot(s))
-                } else {
-                    None
-                }
-            })
+            .filter_map(|s| (self.equiped_in(s) == item).then_some(self.quantity_in_slot(s)))
             .sum()
     }
 
     fn meets_conditions_for(&self, item: &ItemSchema) -> bool {
         item.conditions.iter().flatten().all(|c| {
-            let value = if c.code == "alchemy_level" {
-                self.skill_level(Skill::Alchemy)
-            } else if c.code == "mining_level" {
-                self.skill_level(Skill::Mining)
-            } else if c.code == "woodcutting_level" {
-                self.skill_level(Skill::Woodcutting)
-            } else if c.code == "fishing_level" {
-                self.skill_level(Skill::Fishing)
-            } else {
-                self.level()
+            let Ok(condition) = ItemCondition::from_str(&c.code) else {
+                return false;
             };
+            let value = self.skill_level(condition.into());
             match c.operator {
                 ConditionOperator::Eq => (value as i32) == c.value,
                 ConditionOperator::Ne => (value as i32) != c.value,

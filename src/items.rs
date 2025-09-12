@@ -1,6 +1,6 @@
 use crate::{
     CanProvideXp, EffectType, HasDropTable, HasLevel, PersistedData, Simulator,
-    char::Skill,
+    char::{HasCharacterData, Skill},
     check_lvl_diff,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
@@ -15,6 +15,7 @@ use artifactsmmo_openapi::models::{
     CraftSchema, ItemSchema, MonsterSchema, NpcSchema, NpcType, ResourceSchema, SimpleEffectSchema,
     SimpleItemSchema,
 };
+use chrono::format::Item;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -172,11 +173,9 @@ impl Items {
     /// `None` otherwise.
     pub fn unique_craft(&self, code: &str) -> Option<Arc<ItemSchema>> {
         let crafts = self.crafted_with(code);
-        if crafts.len() == 1 {
-            crafts.first().cloned()
-        } else {
-            None
-        }
+        (crafts.len() == 1)
+            .then_some(crafts.first().cloned())
+            .flatten()
     }
 
     /// Takes an item `code` and returns the items crafted with it as base mat.
@@ -200,11 +199,11 @@ impl Items {
             .iter()
             .filter_map(|i| self.get(&i.code).filter(|i| i.subtype == SubType::Mob))
             .collect_vec();
-        let len = mob_mats.len();
-        if len > 0 {
-            return mob_mats.iter().map(|i| i.level).sum::<u32>() / mob_mats.len() as u32;
+        let len = mob_mats.len() as u32;
+        if len < 1 {
+            return 0;
         }
-        0
+        mob_mats.iter().map(|i| i.level).sum::<u32>() / len
     }
 
     pub fn mats_mob_max_lvl(&self, code: &str) -> u32 {
@@ -265,29 +264,28 @@ impl Items {
     }
 
     pub fn upgrades_of(&self, item: &str) -> Vec<Arc<ItemSchema>> {
-        if let Some(item) = self.get(item) {
-            self.all()
-                .into_iter()
-                .filter(|i| {
-                    i.code != item.code
-                        && i.type_is(item.r#type())
-                        && item.effects().iter().all(|e| {
-                            if e.code == EffectType::InventorySpace
-                                || e.code == EffectType::Mining
-                                || e.code == EffectType::Woodcutting
-                                || e.code == EffectType::Fishing
-                                || e.code == EffectType::Alchemy
-                            {
-                                e.value >= i.effect_value(&e.code)
-                            } else {
-                                e.value <= i.effect_value(&e.code)
-                            }
-                        })
-                })
-                .collect_vec()
-        } else {
-            vec![]
-        }
+        let Some(item) = self.get(item) else {
+            return vec![];
+        };
+        self.all()
+            .into_iter()
+            .filter(|i| {
+                i.code != item.code
+                    && i.type_is(item.r#type())
+                    && item.effects().iter().all(|e| {
+                        if e.code == EffectType::InventorySpace
+                            || e.code == EffectType::Mining
+                            || e.code == EffectType::Woodcutting
+                            || e.code == EffectType::Fishing
+                            || e.code == EffectType::Alchemy
+                        {
+                            e.value >= i.effect_value(&e.code)
+                        } else {
+                            e.value <= i.effect_value(&e.code)
+                        }
+                    })
+            })
+            .collect_vec()
     }
 
     /// NOTE: WIP: there is a lot of edge cases here:
@@ -741,6 +739,34 @@ pub enum ItemSource {
     Craft,
     TaskReward,
     Task,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
+#[strum(serialize_all = "snake_case")]
+pub enum ItemCondition {
+    AlchemyLevel,
+    MiningLevel,
+    WoodcuttingLevel,
+    FishingLevel,
+    Level,
+}
+
+impl From<ItemCondition> for Skill {
+    fn from(value: ItemCondition) -> Self {
+        match value {
+            ItemCondition::AlchemyLevel => Skill::Alchemy,
+            ItemCondition::MiningLevel => Skill::Mining,
+            ItemCondition::WoodcuttingLevel => Skill::Woodcutting,
+            ItemCondition::FishingLevel => Skill::Fishing,
+            ItemCondition::Level => Skill::Combat,
+        }
+    }
+}
+
+impl PartialEq<ItemCondition> for String {
+    fn eq(&self, other: &ItemCondition) -> bool {
+        other.as_ref() == *self
+    }
 }
 
 #[cfg(test)]
