@@ -10,7 +10,11 @@ pub struct Account {
 }
 
 impl Account {
-    pub(crate) fn new(name: String, bank: Arc<BankClient>, characters: Vec<Arc<Character>>) -> Self {
+    pub(crate) fn new(
+        name: String,
+        bank: Arc<BankClient>,
+        characters: Vec<Arc<Character>>,
+    ) -> Self {
         Self {
             name,
             bank,

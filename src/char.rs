@@ -1,6 +1,6 @@
 use crate::{gear::Slot, items::ItemCondition};
 use artifactsmmo_openapi::models::{CharacterSchema, ConditionOperator, ItemSchema, TaskType};
-use chrono::{DateTime, Utc, format::Item};
+use chrono::{DateTime, Utc};
 use std::{
     str::FromStr,
     sync::{Arc, RwLock},

@@ -1,6 +1,6 @@
 use crate::{
     CanProvideXp, EffectType, HasDropTable, HasLevel, PersistedData, Simulator,
-    char::{HasCharacterData, Skill},
+    char::Skill,
     check_lvl_diff,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
@@ -15,7 +15,6 @@ use artifactsmmo_openapi::models::{
     CraftSchema, ItemSchema, MonsterSchema, NpcSchema, NpcType, ResourceSchema, SimpleEffectSchema,
     SimpleItemSchema,
 };
-use chrono::format::Item;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -101,6 +100,13 @@ impl Items {
         self.data.read().unwrap().values().cloned().collect_vec()
     }
 
+    pub fn filtered<F>(&self, f: F) -> Vec<Arc<ItemSchema>>
+    where
+        F: FnMut(&Arc<ItemSchema>) -> bool,
+    {
+        self.all().into_iter().filter(f).collect_vec()
+    }
+
     /// Takes an item `code` and return the mats required to craft it.
     pub fn mats_of(&self, code: &str) -> Vec<SimpleItemSchema> {
         self.get(code).iter().flat_map(|i| i.mats()).collect_vec()
@@ -155,12 +161,8 @@ impl Items {
     }
 
     /// Takes an item `code` and returns the items directly crafted with it.
-    pub fn crafted_with(&self, code: &str) -> Vec<Arc<ItemSchema>> {
-        self.all()
-            .iter()
-            .filter(|i| i.is_crafted_with(code))
-            .cloned()
-            .collect_vec()
+    pub fn crafted_with(self, code: &str) -> Vec<Arc<ItemSchema>> {
+        self.filtered(|i| i.is_crafted_with(code))
     }
 
     pub fn require_task_reward(&self, code: &str) -> bool {
@@ -171,7 +173,7 @@ impl Items {
 
     /// Takes an item `code` and returns the only item it can be crafted in, or
     /// `None` otherwise.
-    pub fn unique_craft(&self, code: &str) -> Option<Arc<ItemSchema>> {
+    pub fn unique_craft(self, code: &str) -> Option<Arc<ItemSchema>> {
         let crafts = self.crafted_with(code);
         (crafts.len() == 1)
             .then_some(crafts.first().cloned())
@@ -180,11 +182,7 @@ impl Items {
 
     /// Takes an item `code` and returns the items crafted with it as base mat.
     pub fn crafted_with_base_mat(&self, code: &str) -> Vec<Arc<ItemSchema>> {
-        self.all()
-            .iter()
-            .filter(|i| self.is_crafted_with_base_mat(&i.code, code))
-            .cloned()
-            .collect_vec()
+        self.filtered(|i| self.is_crafted_with_base_mat(&i.code, code))
     }
 
     /// Takes an item `code` and checks if it is crafted with `mat` as a base
@@ -255,37 +253,30 @@ impl Items {
         average
     }
 
-    pub fn restoring_utilities(&self, level: u32) -> Vec<Arc<ItemSchema>> {
-        self.all()
-            .iter()
-            .filter(|i| i.r#type().is_utility() && i.restore() > 0 && i.level >= level)
-            .cloned()
-            .collect_vec()
+    pub fn restoring_utilities(self, level: u32) -> Vec<Arc<ItemSchema>> {
+        self.filtered(|i| i.r#type().is_utility() && i.restore() > 0 && i.level >= level)
     }
 
-    pub fn upgrades_of(&self, item: &str) -> Vec<Arc<ItemSchema>> {
+    pub fn upgrades_of(self, item: &str) -> Vec<Arc<ItemSchema>> {
         let Some(item) = self.get(item) else {
             return vec![];
         };
-        self.all()
-            .into_iter()
-            .filter(|i| {
-                i.code != item.code
-                    && i.type_is(item.r#type())
-                    && item.effects().iter().all(|e| {
-                        if e.code == EffectType::InventorySpace
-                            || e.code == EffectType::Mining
-                            || e.code == EffectType::Woodcutting
-                            || e.code == EffectType::Fishing
-                            || e.code == EffectType::Alchemy
-                        {
-                            e.value >= i.effect_value(&e.code)
-                        } else {
-                            e.value <= i.effect_value(&e.code)
-                        }
-                    })
-            })
-            .collect_vec()
+        self.filtered(|i| {
+            i.code != item.code
+                && i.type_is(item.r#type())
+                && item.effects().iter().all(|e| {
+                    if e.code == EffectType::InventorySpace
+                        || e.code == EffectType::Mining
+                        || e.code == EffectType::Woodcutting
+                        || e.code == EffectType::Fishing
+                        || e.code == EffectType::Alchemy
+                    {
+                        e.value >= i.effect_value(&e.code)
+                    } else {
+                        e.value <= i.effect_value(&e.code)
+                    }
+                })
+        })
     }
 
     /// NOTE: WIP: there is a lot of edge cases here:
