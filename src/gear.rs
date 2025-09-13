@@ -118,8 +118,8 @@ impl Gear {
             .map(|t| {
                 Simulator::average_dmg(
                     monster.attack_damage(t),
-                    0,
-                    self.critical_strike(),
+                    monster.damage_increase(t),
+                    monster.critical_strike(),
                     self.resistance(t),
                 )
                 .round() as i32
@@ -144,36 +144,64 @@ impl Gear {
     pub fn critless_damage_from(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(monster.attack_damage(t), 0, 0, self.resistance(t)).round()
-                    as i32
+                Simulator::average_dmg(
+                    monster.attack_damage(t),
+                    monster.damage_increase(t),
+                    0,
+                    self.resistance(t),
+                )
+                .round() as i32
             })
             .sum()
     }
 
-    pub fn simulate_hits_against(&self, monster: &MonsterSchema) -> Vec<Hit> {
+    pub fn hits_against(&self, monster: &MonsterSchema, average: bool) -> Vec<Hit> {
+        let is_crit = rand::random_range(0..=100) <= self.critical_strike();
         DamageType::iter()
             .map(|t| {
-                Simulator::simulate_hit(
-                    self.attack_damage(t),
-                    self.damage_increase(t),
-                    self.critical_strike(),
-                    t,
-                    monster.resistance(t),
-                )
+                if average {
+                    Hit::average(
+                        self.attack_damage(t),
+                        self.damage_increase(t),
+                        self.critical_strike(),
+                        t,
+                        monster.resistance(t),
+                    )
+                } else {
+                    Hit::new(
+                        self.attack_damage(t),
+                        self.damage_increase(t),
+                        t,
+                        monster.resistance(t),
+                        is_crit,
+                    )
+                }
             })
+            .filter(|h| h.damage > 0)
             .collect_vec()
     }
 
-    pub fn simulate_hits_from(&self, monster: &MonsterSchema) -> Vec<Hit> {
+    pub fn hits_from(&self, monster: &MonsterSchema, average: bool) -> Vec<Hit> {
+        let is_crit = rand::random_range(0..=100) <= self.critical_strike();
         DamageType::iter()
             .map(|t| {
-                Simulator::simulate_hit(
-                    monster.attack_damage(t),
-                    0,
-                    monster.critical_strike(),
-                    t,
-                    self.resistance(t),
-                )
+                if average {
+                    Hit::average(
+                        monster.attack_damage(t),
+                        monster.damage_increase(t),
+                        monster.critical_strike(),
+                        t,
+                        self.resistance(t),
+                    )
+                } else {
+                    Hit::new(
+                        monster.attack_damage(t),
+                        monster.damage_increase(t),
+                        t,
+                        self.resistance(t),
+                        is_crit,
+                    )
+                }
             })
             .filter(|h| h.damage > 0)
             .collect_vec()
