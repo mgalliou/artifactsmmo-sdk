@@ -51,14 +51,11 @@ impl Gear {
         rune: Option<Arc<ItemSchema>>,
         bag: Option<Arc<ItemSchema>>,
     ) -> Option<Gear> {
-        if utility1.is_some() && utility1 == utility2
+        (!(utility1.is_some() && utility1 == utility2
             || artifact1.is_some() && artifact1 == artifact2
             || artifact2.is_some() && artifact2 == artifact3
-            || artifact1.is_some() && artifact1 == artifact3
-        {
-            None
-        } else {
-            Some(Self {
+            || artifact1.is_some() && artifact1 == artifact3))
+            .then_some(Self {
                 weapon,
                 helmet,
                 shield,
@@ -76,7 +73,6 @@ impl Gear {
                 rune,
                 bag,
             })
-        }
     }
 
     pub fn item_in(&self, slot: Slot) -> Option<Arc<ItemSchema>> {
@@ -208,29 +204,19 @@ impl Gear {
     }
 
     pub fn align_to(&mut self, other: &Gear) {
-        if self.item_in(Slot::Ring1) == other.item_in(Slot::Ring2)
-            || self.item_in(Slot::Ring2) == other.item_in(Slot::Ring1)
-        {
+        if self.ring1 == other.ring2 || self.ring2 == other.ring1 {
             swap(&mut self.ring1, &mut self.ring2);
         }
-        if self.item_in(Slot::Utility1) == other.item_in(Slot::Utility2)
-            || self.item_in(Slot::Utility2) == other.item_in(Slot::Utility1)
-        {
+        if self.utility1 == other.utility2 || self.utility2 == other.utility1 {
             swap(&mut self.utility1, &mut self.utility2);
         }
-        if self.item_in(Slot::Artifact1) == other.item_in(Slot::Artifact2)
-            || self.item_in(Slot::Artifact2) == other.item_in(Slot::Artifact1)
-        {
+        if self.artifact1 == other.artifact2 || self.artifact2 == other.artifact1 {
             swap(&mut self.artifact1, &mut self.artifact2);
         }
-        if self.item_in(Slot::Artifact1) == other.item_in(Slot::Artifact3)
-            || self.item_in(Slot::Artifact3) == other.item_in(Slot::Artifact1)
-        {
+        if self.artifact1 == other.artifact3 || self.artifact3 == other.artifact1 {
             swap(&mut self.artifact1, &mut self.artifact3);
         }
-        if self.item_in(Slot::Artifact2) == other.item_in(Slot::Artifact3)
-            || self.item_in(Slot::Artifact3) == other.item_in(Slot::Artifact2)
-        {
+        if self.artifact2 == other.artifact3 || self.artifact3 == other.artifact2 {
             swap(&mut self.artifact2, &mut self.artifact3);
         }
     }
@@ -255,122 +241,47 @@ impl HasEffects for Gear {
 
 impl Display for Gear {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "Weapon: {:?}",
-            self.weapon.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Shield: {:?}",
-            self.shield.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Helmet: {:?}",
-            self.helmet.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Body Armor: {:?}",
-            self.body_armor.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Leg Armor: {:?}",
-            self.leg_armor.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Boots: {:?}",
-            self.boots.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Ring 1: {:?}",
-            self.ring1.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Ring 2: {:?}",
-            self.ring2.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Amulet: {:?}",
-            self.amulet.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Artifact 1: {:?}",
-            self.artifact1.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Artifact 2: {:?}",
-            self.artifact2.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Artifact 3: {:?}",
-            self.artifact3.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Consumable 1: {:?}",
-            self.utility1.as_ref().map(|w| w.name.to_string())
-        )?;
-        writeln!(
-            f,
-            "Consumable 2: {:?}",
-            self.utility2.as_ref().map(|w| w.name.to_string())
-        )
+        for s in Slot::iter() {
+            writeln!(
+                f,
+                "{}: {}",
+                s,
+                self.item_in(s).as_ref().map_or("empty", |i| &i.code)
+            )?;
+        }
+        Ok(())
     }
 }
 
 impl From<Gear> for Vec<SimpleItemSchema> {
-    fn from(val: Gear) -> Self {
+    fn from(value: Gear) -> Self {
         let mut items = Slot::iter()
             .filter_map(|slot| {
-                if let Some(item) = val.item_in(slot)
-                    && !slot.is_ring()
-                {
-                    Some(SimpleItemSchema {
-                        code: item.code.to_owned(),
+                value.item_in(slot).and_then(|i| {
+                    (!slot.is_ring()).then_some(SimpleItemSchema {
+                        code: i.code.to_owned(),
                         quantity: slot.max_quantity(),
                     })
-                } else {
-                    None
-                }
+                })
             })
             .collect_vec();
-        match (val.ring1, val.ring2) {
-            (Some(r1), Some(r2)) => {
-                if r1 == r2 {
-                    items.push(SimpleItemSchema {
-                        code: r1.code.to_owned(),
-                        quantity: 2,
-                    })
-                } else {
-                    items.push(SimpleItemSchema {
-                        code: r1.code.to_owned(),
-                        quantity: 1,
-                    });
-                    items.push(SimpleItemSchema {
-                        code: r2.code.to_owned(),
-                        quantity: 1,
-                    });
-                }
-            }
-            (Some(r), None) => items.push(SimpleItemSchema {
-                code: r.code.to_owned(),
-                quantity: 1,
-            }),
-            (None, Some(r)) => items.push(SimpleItemSchema {
-                code: r.code.to_owned(),
-                quantity: 1,
-            }),
-            (None, None) => (),
+        let mut quantity = 1;
+        if value.ring1 == value.ring2 {
+            quantity = 2;
+        }
+        if let Some(ring1) = value.ring1 {
+            items.push(SimpleItemSchema {
+                code: ring1.code.to_owned(),
+                quantity,
+            })
+        }
+        if quantity == 1
+            && let Some(ring2) = value.ring2
+        {
+            items.push(SimpleItemSchema {
+                code: ring2.code.to_owned(),
+                quantity,
+            })
         }
         items
     }
