@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, EffectType, HasDropTable, HasLevel, PersistedData, Simulator,
+    CanProvideXp, DropRateSchemaExt, EffectType, HasDropTable, HasLevel, PersistedData, Simulator,
     char::Skill,
     check_lvl_diff,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
@@ -195,7 +195,7 @@ impl Items {
         let mob_mats = self
             .mats_of(code)
             .iter()
-            .filter_map(|i| self.get(&i.code).filter(|i| i.subtype == SubType::Mob))
+            .filter_map(|i| self.get(&i.code).filter(|i| i.subtype_is(SubType::Mob)))
             .collect_vec();
         let len = mob_mats.len() as u32;
         if len < 1 {
@@ -207,7 +207,7 @@ impl Items {
     pub fn mats_mob_max_lvl(&self, code: &str) -> u32 {
         self.mats_of(code)
             .iter()
-            .filter_map(|i| self.get(&i.code).filter(|i| i.subtype == SubType::Mob))
+            .filter_map(|i| self.get(&i.code).filter(|i| i.subtype_is(SubType::Mob)))
             .max_by_key(|i| i.level)
             .map_or(0, |i| i.level)
     }
@@ -232,9 +232,7 @@ impl Items {
             .flat_map(|m| &m.drops)
             .chain(self.resources.dropping(code).iter().flat_map(|m| &m.drops))
             .find(|d| d.code == code)
-            .map_or(0, |d| {
-                (d.rate as f32 * ((d.min_quantity + d.max_quantity) as f32 / 2.0)).round() as u32
-            })
+            .map_or(0, |d| (d.rate as f32 * d.average_quantity()).round() as u32)
     }
 
     /// Takes an item `code` and aggregate the drop rates of its base materials
@@ -345,24 +343,6 @@ impl Items {
             sources.push(ItemSource::Task);
         }
         sources
-    }
-
-    pub fn time_to_get(&self, item: &str) -> Option<u32> {
-        self.sources_of(item)
-            .iter()
-            .map(|s| match s {
-                ItemSource::Resource(_) => 20,
-                ItemSource::Monster(m) => m.level() * self.drop_rate(item),
-                ItemSource::Craft => self
-                    .mats_of(item)
-                    .iter()
-                    .map(|m| self.time_to_get(&m.code).unwrap_or(10000) * m.quantity)
-                    .sum(),
-                ItemSource::TaskReward => 20000,
-                ItemSource::Task => 20000,
-                ItemSource::Npc(_) => 60,
-            })
-            .min()
     }
 
     pub fn is_from_event(&self, code: &str) -> bool {

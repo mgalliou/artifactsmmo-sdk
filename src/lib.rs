@@ -164,7 +164,7 @@ pub trait HasDropTable {
     fn average_drop_quantity(&self) -> u32 {
         self.drops()
             .iter()
-            .map(|i| 1.0 / i.rate as f32 * (i.max_quantity + i.min_quantity) as f32 / 2.0)
+            .map(|i| 1.0 / i.rate as f32 * i.average_quantity())
             .sum::<f32>()
             .ceil() as u32
     }
@@ -191,6 +191,16 @@ pub trait HasLevel {
 pub trait CanProvideXp: HasLevel {
     fn provides_xp_at(&self, level: u32) -> bool {
         check_lvl_diff(level, self.level())
+    }
+}
+
+pub trait DropRateSchemaExt {
+    fn average_quantity(&self) -> f32;
+}
+
+impl DropRateSchemaExt for DropRateSchema {
+    fn average_quantity(&self) -> f32 {
+        (self.min_quantity + self.max_quantity) as f32 / 2.0
     }
 }
 
