@@ -1,32 +1,44 @@
-use crate::PersistedData;
+use crate::{Collection, Data, PersistedData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::DropRateSchema;
-use itertools::Itertools;
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock, RwLockReadGuard},
+};
 
 #[derive(Default, Debug)]
 pub struct TasksRewards {
-    data: RwLock<Vec<Arc<DropRateSchema>>>,
+    data: RwLock<HashMap<String, Arc<DropRateSchema>>>,
     api: Arc<ArtifactApi>,
 }
 
-impl PersistedData<Vec<Arc<DropRateSchema>>> for TasksRewards {
+impl PersistedData<HashMap<String, Arc<DropRateSchema>>> for TasksRewards {
     const PATH: &'static str = ".cache/tasks_rewards.json";
 
-    fn data_from_api(&self) -> Vec<Arc<DropRateSchema>> {
+    fn data_from_api(&self) -> HashMap<String, Arc<DropRateSchema>> {
         self.api
             .tasks_reward
             .all()
             .unwrap()
             .into_iter()
-            .map(Arc::new)
-            .collect_vec()
+            .map(|tr| (tr.code.clone(), Arc::new(tr)))
+            .collect()
     }
 
     fn refresh_data(&self) {
         *self.data.write().unwrap() = self.data_from_api();
     }
 }
+
+impl Data for TasksRewards {
+    type Item = Arc<DropRateSchema>;
+
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>> {
+        self.data.read().unwrap()
+    }
+}
+
+impl Collection for TasksRewards {}
 
 impl TasksRewards {
     pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
@@ -36,9 +48,5 @@ impl TasksRewards {
         };
         *rewards.data.write().unwrap() = rewards.retrieve_data();
         rewards
-    }
-
-    pub fn all(&self) -> Vec<Arc<DropRateSchema>> {
-        self.data.read().unwrap().iter().cloned().collect()
     }
 }

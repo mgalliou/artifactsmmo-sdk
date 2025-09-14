@@ -1,5 +1,6 @@
 use crate::{
-    CanProvideXp, DropRateSchemaExt, EffectType, HasDropTable, HasLevel, PersistedData, Simulator,
+    CanProvideXp, Collection, Data, DropRateSchemaExt, EffectType, HasDropTable, HasLevel,
+    PersistedData, Simulator,
     char::Skill,
     check_lvl_diff,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
@@ -21,7 +22,7 @@ use std::{
     fmt,
     ops::Deref,
     str::FromStr,
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, RwLockReadGuard},
     vec::{IntoIter, Vec},
 };
 use strum::IntoEnumIterator;
@@ -71,6 +72,16 @@ impl IntoIterator for Items {
     }
 }
 
+impl Data for Items {
+    type Item = Arc<ItemSchema>;
+
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<ItemSchema>>> {
+        self.data.read().unwrap()
+    }
+}
+
+impl Collection for Items {}
+
 impl Items {
     pub(crate) fn new(
         api: Arc<ArtifactApi>,
@@ -89,22 +100,6 @@ impl Items {
         };
         *items.data.write().unwrap() = items.retrieve_data();
         items
-    }
-
-    /// Takes an item `code` and return its schema.
-    pub fn get(&self, code: &str) -> Option<Arc<ItemSchema>> {
-        self.data.read().unwrap().get(code).cloned()
-    }
-
-    pub fn all(&self) -> Vec<Arc<ItemSchema>> {
-        self.data.read().unwrap().values().cloned().collect_vec()
-    }
-
-    pub fn filtered<F>(&self, f: F) -> Vec<Arc<ItemSchema>>
-    where
-        F: FnMut(&Arc<ItemSchema>) -> bool,
-    {
-        self.all().into_iter().filter(f).collect_vec()
     }
 
     /// Takes an item `code` and return the mats required to craft it.

@@ -1,13 +1,13 @@
 use crate::{
-    CanProvideXp, HasDropTable, HasLevel, PersistedData, Simulator, events::Events,
-    items::DamageType, simulator::HasEffects,
+    CanProvideXp, Collection, Data, HasDropTable, HasLevel, PersistedData, Simulator,
+    events::Events, items::DamageType, simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, ItemSchema, MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, RwLockReadGuard},
 };
 use strum::IntoEnumIterator;
 
@@ -36,6 +36,16 @@ impl PersistedData<HashMap<String, Arc<MonsterSchema>>> for Monsters {
     }
 }
 
+impl Data for Monsters {
+    type Item = Arc<MonsterSchema>;
+
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<MonsterSchema>>> {
+        self.data.read().unwrap()
+    }
+}
+
+impl Collection for Monsters {}
+
 impl Monsters {
     pub(crate) fn new(api: Arc<ArtifactApi>, events: Arc<Events>) -> Self {
         let monsters = Self {
@@ -45,14 +55,6 @@ impl Monsters {
         };
         *monsters.data.write().unwrap() = monsters.retrieve_data();
         monsters
-    }
-
-    pub fn get(&self, code: &str) -> Option<Arc<MonsterSchema>> {
-        self.data.read().unwrap().get(code).cloned()
-    }
-
-    pub fn all(&self) -> Vec<Arc<MonsterSchema>> {
-        self.data.read().unwrap().values().cloned().collect_vec()
     }
 
     pub fn dropping(&self, item: &str) -> Vec<Arc<MonsterSchema>> {

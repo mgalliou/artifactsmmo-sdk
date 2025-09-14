@@ -1,10 +1,12 @@
-use crate::{CanProvideXp, HasDropTable, HasLevel, PersistedData, events::Events};
+use crate::{
+    CanProvideXp, Collection, Data, HasDropTable, HasLevel, PersistedData, events::Events,
+};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, RwLockReadGuard},
 };
 
 #[derive(Default, Debug)]
@@ -32,6 +34,16 @@ impl PersistedData<HashMap<String, Arc<ResourceSchema>>> for Resources {
     }
 }
 
+impl Data for Resources {
+    type Item = Arc<ResourceSchema>;
+
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<ResourceSchema>>> {
+        self.data.read().unwrap()
+    }
+}
+
+impl Collection for Resources {}
+
 impl Resources {
     pub(crate) fn new(api: Arc<ArtifactApi>, events: Arc<Events>) -> Self {
         let resources = Self {
@@ -41,14 +53,6 @@ impl Resources {
         };
         *resources.data.write().unwrap() = resources.retrieve_data();
         resources
-    }
-
-    pub fn get(&self, code: &str) -> Option<Arc<ResourceSchema>> {
-        self.data.read().unwrap().get(code).cloned()
-    }
-
-    pub fn all(&self) -> Vec<Arc<ResourceSchema>> {
-        self.data.read().unwrap().values().cloned().collect_vec()
     }
 
     pub fn dropping(&self, item: &str) -> Vec<Arc<ResourceSchema>> {

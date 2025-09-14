@@ -3,7 +3,7 @@ use super::{
     request_handler::CharacterRequestHandler,
 };
 use crate::{
-    GOLD, Gear, HasLevel, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited,
+    Collection, GOLD, Gear, HasLevel, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited,
     bank::{Bank, BankClient},
     char::error::{
         BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,

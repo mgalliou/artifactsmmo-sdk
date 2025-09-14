@@ -1,10 +1,10 @@
-use crate::PersistedData;
+use crate::{Collection, Data, PersistedData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::NpcItem;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, RwLockReadGuard},
 };
 
 #[derive(Default, Debug)]
@@ -31,6 +31,16 @@ impl PersistedData<HashMap<String, Arc<NpcItem>>> for NpcsItems {
     }
 }
 
+impl Data for NpcsItems {
+    type Item = Arc<NpcItem>;
+
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<NpcItem>>> {
+        self.data.read().unwrap()
+    }
+}
+
+impl Collection for NpcsItems {}
+
 impl NpcsItems {
     pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
         let npcs_items = Self {
@@ -39,14 +49,6 @@ impl NpcsItems {
         };
         *npcs_items.data.write().unwrap() = npcs_items.retrieve_data();
         npcs_items
-    }
-
-    pub fn all(&self) -> Vec<Arc<NpcItem>> {
-        self.data.read().unwrap().values().cloned().collect_vec()
-    }
-
-    pub fn get(&self, code: &str) -> Option<Arc<NpcItem>> {
-        self.data.read().unwrap().get(code).cloned()
     }
 }
 

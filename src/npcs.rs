@@ -1,13 +1,12 @@
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{Arc, RwLock, RwLockReadGuard},
 };
 
+use crate::{Collection, Data, PersistedData, npcs_items::NpcsItems};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::NpcSchema;
 use itertools::Itertools;
-
-use crate::{PersistedData, npcs_items::NpcsItems};
 
 #[derive(Default, Debug)]
 pub struct Npcs {
@@ -34,6 +33,16 @@ impl PersistedData<HashMap<String, Arc<NpcSchema>>> for Npcs {
     }
 }
 
+impl Data for Npcs {
+    type Item = Arc<NpcSchema>;
+
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<NpcSchema>>> {
+        self.data.read().unwrap()
+    }
+}
+
+impl Collection for Npcs {}
+
 impl Npcs {
     pub(crate) fn new(api: Arc<ArtifactApi>, items: Arc<NpcsItems>) -> Self {
         let npcs = Self {
@@ -43,14 +52,6 @@ impl Npcs {
         };
         *npcs.data.write().unwrap() = npcs.retrieve_data();
         npcs
-    }
-
-    pub fn all(&self) -> Vec<Arc<NpcSchema>> {
-        self.data.read().unwrap().values().cloned().collect_vec()
-    }
-
-    pub fn get(&self, code: &str) -> Option<Arc<NpcSchema>> {
-        self.data.read().unwrap().get(code).cloned()
     }
 
     pub fn selling(&self, code: &str) -> Vec<Arc<NpcSchema>> {

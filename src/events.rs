@@ -1,29 +1,32 @@
-use crate::PersistedData;
+use crate::{Collection, Data, PersistedData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
 use itertools::Itertools;
 use log::debug;
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock, RwLockReadGuard},
+};
 
 #[derive(Default, Debug)]
 pub struct Events {
-    data: RwLock<Vec<Arc<EventSchema>>>,
+    data: RwLock<HashMap<String, Arc<EventSchema>>>,
     api: Arc<ArtifactApi>,
     active: RwLock<Vec<Arc<ActiveEventSchema>>>,
     last_refresh: RwLock<DateTime<Utc>>,
 }
 
-impl PersistedData<Vec<Arc<EventSchema>>> for Events {
+impl PersistedData<HashMap<String, Arc<EventSchema>>> for Events {
     const PATH: &'static str = ".cache/events.json";
 
-    fn data_from_api(&self) -> Vec<Arc<EventSchema>> {
+    fn data_from_api(&self) -> HashMap<String, Arc<EventSchema>> {
         self.api
             .events
             .all()
             .unwrap()
             .into_iter()
-            .map(Arc::new)
+            .map(|event| (event.code.clone(), Arc::new(event)))
             .collect()
     }
 
@@ -32,10 +35,20 @@ impl PersistedData<Vec<Arc<EventSchema>>> for Events {
     }
 }
 
+impl Data for Events {
+    type Item = Arc<EventSchema>;
+
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<EventSchema>>> {
+        self.data.read().unwrap()
+    }
+}
+
+impl Collection for Events {}
+
 impl Events {
     pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
         let events = Self {
-            data: RwLock::new(vec![]),
+            data: Default::default(),
             api,
             active: RwLock::new(vec![]),
             last_refresh: RwLock::new(DateTime::<Utc>::MIN_UTC),
@@ -43,10 +56,6 @@ impl Events {
         *events.data.write().unwrap() = events.retrieve_data();
         events.refresh_active();
         events
-    }
-
-    pub fn all(&self) -> Vec<Arc<EventSchema>> {
-        self.data.read().unwrap().iter().cloned().collect_vec()
     }
 
     pub fn active(&self) -> Vec<Arc<ActiveEventSchema>> {

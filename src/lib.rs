@@ -3,9 +3,10 @@ use artifactsmmo_openapi::models::{
     SkillDataSchema, SkillInfoSchema,
 };
 use fs_extra::file::{read_to_string, write_all};
+use itertools::Itertools;
 use log::error;
 use serde::{Deserialize, Serialize};
-use std::path::Path;
+use std::{collections::HashMap, path::Path, sync::RwLockReadGuard};
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
 pub use artifactsmmo_openapi::models;
@@ -75,6 +76,29 @@ pub trait PersistedData<D: for<'a> Deserialize<'a> + Serialize> {
         )?)
     }
     fn refresh_data(&self);
+}
+
+pub(crate) trait Data {
+    type Item: Clone;
+
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>>;
+}
+
+pub trait Collection: Data {
+    fn get(&self, code: &str) -> Option<Self::Item> {
+        self.data().get(code).cloned()
+    }
+
+    fn all(&self) -> Vec<Self::Item> {
+        self.data().values().cloned().collect_vec()
+    }
+
+    fn filtered<F>(&self, f: F) -> Vec<Self::Item>
+    where
+        F: FnMut(&Self::Item) -> bool,
+    {
+        self.all().into_iter().filter(f).collect_vec()
+    }
 }
 
 pub trait HasQuantity {
