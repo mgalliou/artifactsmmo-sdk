@@ -78,9 +78,11 @@ pub trait PersistedData<D: for<'a> Deserialize<'a> + Serialize> {
     fn refresh_data(&self);
 }
 
-pub(crate) trait Data {
+pub trait DataItem {
     type Item: Clone;
+}
 
+pub(crate) trait Data: DataItem {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>>;
 }
 

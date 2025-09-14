@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, Collection, Data, HasDropTable, HasLevel, PersistedData, Simulator,
+    CanProvideXp, Collection, Data, DataItem, HasDropTable, HasLevel, PersistedData, Simulator,
     events::Events, items::DamageType, simulator::HasEffects,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
@@ -36,9 +36,11 @@ impl PersistedData<HashMap<String, Arc<MonsterSchema>>> for Monsters {
     }
 }
 
-impl Data for Monsters {
+impl DataItem for Monsters {
     type Item = Arc<MonsterSchema>;
+}
 
+impl Data for Monsters {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<MonsterSchema>>> {
         self.data.read().unwrap()
     }

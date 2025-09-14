@@ -1,7 +1,6 @@
-use crate::{Collection, Data, PersistedData};
+use crate::{Collection, Data, DataItem, PersistedData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::NpcItem;
-use itertools::Itertools;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock, RwLockReadGuard},
@@ -31,9 +30,11 @@ impl PersistedData<HashMap<String, Arc<NpcItem>>> for NpcsItems {
     }
 }
 
-impl Data for NpcsItems {
+impl DataItem for NpcsItems {
     type Item = Arc<NpcItem>;
+}
 
+impl Data for NpcsItems {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<NpcItem>>> {
         self.data.read().unwrap()
     }

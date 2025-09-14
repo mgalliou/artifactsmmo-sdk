@@ -1,4 +1,4 @@
-use crate::{Collection, Data, PersistedData};
+use crate::{Collection, Data, DataItem, PersistedData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
@@ -35,9 +35,11 @@ impl PersistedData<HashMap<String, Arc<EventSchema>>> for Events {
     }
 }
 
-impl Data for Events {
+impl DataItem for Events {
     type Item = Arc<EventSchema>;
+}
 
+impl Data for Events {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<EventSchema>>> {
         self.data.read().unwrap()
     }

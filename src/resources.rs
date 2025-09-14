@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, Collection, Data, HasDropTable, HasLevel, PersistedData, events::Events,
+    CanProvideXp, Collection, Data, DataItem, HasDropTable, HasLevel, PersistedData, events::Events,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
@@ -34,9 +34,11 @@ impl PersistedData<HashMap<String, Arc<ResourceSchema>>> for Resources {
     }
 }
 
-impl Data for Resources {
+impl DataItem for Resources {
     type Item = Arc<ResourceSchema>;
+}
 
+impl Data for Resources {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<ResourceSchema>>> {
         self.data.read().unwrap()
     }

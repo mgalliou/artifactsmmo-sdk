@@ -1,6 +1,6 @@
 use crate::{
-    CanProvideXp, Collection, Data, DropRateSchemaExt, EffectType, HasDropTable, HasLevel,
-    PersistedData, Simulator,
+    CanProvideXp, Collection, Data, DataItem, DropRateSchemaExt, EffectType, HasDropTable,
+    HasLevel, PersistedData, Simulator,
     char::Skill,
     check_lvl_diff,
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
@@ -72,9 +72,11 @@ impl IntoIterator for Items {
     }
 }
 
-impl Data for Items {
+impl DataItem for Items {
     type Item = Arc<ItemSchema>;
+}
 
+impl Data for Items {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<ItemSchema>>> {
         self.data.read().unwrap()
     }

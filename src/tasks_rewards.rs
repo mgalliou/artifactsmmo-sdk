@@ -1,4 +1,4 @@
-use crate::{Collection, Data, PersistedData};
+use crate::{Collection, Data, DataItem, PersistedData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::DropRateSchema;
 use std::{
@@ -30,9 +30,11 @@ impl PersistedData<HashMap<String, Arc<DropRateSchema>>> for TasksRewards {
     }
 }
 
-impl Data for TasksRewards {
+impl DataItem for TasksRewards {
     type Item = Arc<DropRateSchema>;
+}
 
+impl Data for TasksRewards {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>> {
         self.data.read().unwrap()
     }
