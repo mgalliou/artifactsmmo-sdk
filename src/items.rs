@@ -161,7 +161,7 @@ impl Items {
     }
 
     /// Takes an item `code` and returns the items directly crafted with it.
-    pub fn crafted_with(self, code: &str) -> Vec<Arc<ItemSchema>> {
+    pub fn crafted_with(&self, code: &str) -> Vec<Arc<ItemSchema>> {
         self.filtered(|i| i.is_crafted_with(code))
     }
 
@@ -173,7 +173,7 @@ impl Items {
 
     /// Takes an item `code` and returns the only item it can be crafted in, or
     /// `None` otherwise.
-    pub fn unique_craft(self, code: &str) -> Option<Arc<ItemSchema>> {
+    pub fn unique_craft(&self, code: &str) -> Option<Arc<ItemSchema>> {
         let crafts = self.crafted_with(code);
         (crafts.len() == 1)
             .then_some(crafts.first().cloned())
@@ -253,11 +253,11 @@ impl Items {
         average
     }
 
-    pub fn restoring_utilities(self, level: u32) -> Vec<Arc<ItemSchema>> {
+    pub fn restoring_utilities(&self, level: u32) -> Vec<Arc<ItemSchema>> {
         self.filtered(|i| i.r#type().is_utility() && i.restore() > 0 && i.level >= level)
     }
 
-    pub fn upgrades_of(self, item: &str) -> Vec<Arc<ItemSchema>> {
+    pub fn upgrades_of(&self, item: &str) -> Vec<Arc<ItemSchema>> {
         let Some(item) = self.get(item) else {
             return vec![];
         };
