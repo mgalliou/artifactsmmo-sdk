@@ -1,5 +1,6 @@
-use super::request_handler::{RequestError, ResponseSchema};
-use crate::gear::Slot;
+use crate::{client::character::error::RequestError, gear::Slot};
+
+use super::request_handler::ResponseSchema;
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::SimpleItemSchema;
 use strum_macros::{Display, EnumIs};

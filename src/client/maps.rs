@@ -1,4 +1,4 @@
-use crate::{char::Skill, events::Events};
+use crate::{client::events::EventsClient, skill::Skill};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema, TaskType};
 use chrono::{DateTime, Utc};
@@ -8,13 +8,13 @@ use std::{
 };
 
 #[derive(Default, Debug)]
-pub struct Maps {
+pub struct MapsClient {
     data: HashMap<(i32, i32), RwLock<Arc<MapSchema>>>,
-    events: Arc<Events>,
+    events: Arc<EventsClient>,
 }
 
-impl Maps {
-    pub(crate) fn new(api: &Arc<ArtifactApi>, events: Arc<Events>) -> Self {
+impl MapsClient {
+    pub(crate) fn new(api: &Arc<ArtifactApi>, events: Arc<EventsClient>) -> Self {
         Self {
             data: api
                 .maps
@@ -198,7 +198,7 @@ impl MapSchemaExt for MapSchema {
     }
 
     fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>> {
-        Maps::closest_from_amoung(self.x, self.y, others)
+        MapsClient::closest_from_amoung(self.x, self.y, others)
     }
 
     fn is_tasksmaster(&self, task_type: Option<TaskType>) -> bool {

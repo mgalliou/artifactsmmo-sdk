@@ -1,7 +1,7 @@
 use artifactsmmo_openapi::models::{BankSchema, SimpleItemSchema};
 use std::sync::{Arc, RwLock};
 
-use crate::{ContainerSlot, ItemContainer, LimitedContainer, SlotLimited};
+use crate::{ItemContainer, LimitedContainer, SlotLimited};
 
 #[derive(Default, Debug)]
 pub struct BankClient {
@@ -87,13 +87,7 @@ impl LimitedContainer for BankClient {
         true
     }
 
-    fn has_space_for_drops_from<H: crate::HasDropTable>(&self, entity: &H) -> bool {
+    fn has_space_for_drops_from<H: crate::DropsItems>(&self, entity: &H) -> bool {
         self.free_slots() >= entity.average_drop_slots()
-    }
-}
-
-impl ContainerSlot for SimpleItemSchema {
-    fn code(&self) -> &str {
-        &self.code
     }
 }

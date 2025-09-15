@@ -1,58 +1,77 @@
-use super::{
-    CharacterData, HasCharacterData, inventory::InventoryClient,
-    request_handler::CharacterRequestHandler,
-};
 use crate::{
-    Collection, GOLD, Gear, HasLevel, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited,
-    bank::{Bank, BankClient},
-    char::error::{
-        BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
-        FightError, GatherError, GoldDepositError, GoldWithdrawError, MoveError, RecycleError,
-        RestError, SellNpcError, TaskAcceptationError, TaskCancellationError, TaskCompletionError,
-        TaskTradeError, TasksCoinExchangeError, UnequipError, UseError, WithdrawError,
+    CollectionClient, GOLD, Gear, ItemContainer, Level, LimitedContainer, SlotLimited,
+    SpaceLimited,
+    client::{
+        bank::{Bank, BankClient},
+        character::{
+            error::{
+                BankExpansionError, BuyNpcError, CraftError, DeleteError, DepositError, EquipError,
+                FightError, GatherError, GoldDepositError, GoldWithdrawError, MoveError,
+                RecycleError, RestError, SellNpcError, TaskAcceptationError, TaskCancellationError,
+                TaskCompletionError, TaskTradeError, TasksCoinExchangeError, UnequipError,
+                UseError, WithdrawError,
+            },
+            request_handler::CharacterRequestHandler,
+        },
+        items::{ItemCondition, ItemSchemaExt, ItemsClient},
+        maps::{MapSchemaExt, MapsClient},
+        monsters::MonstersClient,
+        npcs::NpcsClient,
+        npcs_items::NpcItemExt,
+        resources::ResourcesClient,
+        server::ServerClient,
     },
     gear::Slot,
-    items::{ItemSchemaExt, Items},
-    maps::{MapSchemaExt, Maps},
-    monsters::Monsters,
-    npcs::Npcs,
-    npcs_items::NpcItemExt,
-    resources::Resources,
-    server::Server,
     simulator::HasEffects,
+    skill::Skill,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CharacterSchema, FightSchema, MapContentType, MapSchema, NpcItemTransactionSchema,
-    RecyclingItemsSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
-    TaskSchema, TaskTradeSchema,
+    CharacterSchema, ConditionOperator, FightSchema, ItemSchema, MapContentType, MapSchema,
+    NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema, SimpleItemSchema,
+    SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
 };
-use std::sync::Arc;
+use chrono::{DateTime, Utc};
+use std::{
+    str::FromStr,
+    sync::{Arc, RwLock},
+};
+use strum::IntoEnumIterator;
+
+pub use inventory::InventoryClient;
+
+pub mod error;
+pub mod inventory;
+
+pub mod action;
+mod request_handler;
+
+pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 
 #[derive(Default, Debug)]
-pub struct Character {
+pub struct CharacterClient {
     pub id: usize,
     inner: CharacterRequestHandler,
     bank: Arc<BankClient>,
-    items: Arc<Items>,
-    resources: Arc<Resources>,
-    monsters: Arc<Monsters>,
-    maps: Arc<Maps>,
-    npcs: Arc<Npcs>,
+    items: Arc<ItemsClient>,
+    resources: Arc<ResourcesClient>,
+    monsters: Arc<MonstersClient>,
+    maps: Arc<MapsClient>,
+    npcs: Arc<NpcsClient>,
 }
 
-impl Character {
+impl CharacterClient {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         id: usize,
         data: CharacterData,
         bank: Arc<BankClient>,
-        items: Arc<Items>,
-        resources: Arc<Resources>,
-        monsters: Arc<Monsters>,
-        maps: Arc<Maps>,
-        npcs: Arc<Npcs>,
-        server: Arc<Server>,
+        items: Arc<ItemsClient>,
+        resources: Arc<ResourcesClient>,
+        monsters: Arc<MonstersClient>,
+        maps: Arc<MapsClient>,
+        npcs: Arc<NpcsClient>,
+        server: Arc<ServerClient>,
         api: Arc<ArtifactApi>,
     ) -> Self {
         Self {
@@ -318,7 +337,7 @@ impl Character {
     }
 
     pub fn can_expand_bank(&self) -> Result<(), BankExpansionError> {
-        if self.gold() < self.bank.details().next_expansion_cost {
+        if self.gold() < self.bank.next_expansion_cost() {
             return Err(BankExpansionError::InsufficientGold);
         }
         if !self.current_map().content_type_is(MapContentType::Bank) {
@@ -586,7 +605,7 @@ impl Character {
     }
 }
 
-impl HasCharacterData for Character {
+impl HasCharacterData for CharacterClient {
     fn data(&self) -> Arc<CharacterSchema> {
         self.inner.data()
     }
@@ -600,13 +619,202 @@ impl HasCharacterData for Character {
     }
 }
 
+pub trait HasCharacterData {
+    fn data(&self) -> Arc<CharacterSchema>;
+    fn refresh_data(&self);
+    fn update_data(&self, schema: CharacterSchema);
+
+    fn name(&self) -> String {
+        self.data().name.to_owned()
+    }
+
+    /// Returns the `Character` position (coordinates).
+    fn position(&self) -> (i32, i32) {
+        let d = self.data();
+        (d.x, d.y)
+    }
+
+    fn level(&self) -> u32 {
+        self.data().level as u32
+    }
+
+    /// Returns the `Character` level in the given `skill`.
+    fn skill_level(&self, skill: Skill) -> u32 {
+        let d = self.data();
+        (match skill {
+            Skill::Combat => d.level,
+            Skill::Mining => d.mining_level,
+            Skill::Woodcutting => d.woodcutting_level,
+            Skill::Fishing => d.fishing_level,
+            Skill::Weaponcrafting => d.weaponcrafting_level,
+            Skill::Gearcrafting => d.gearcrafting_level,
+            Skill::Jewelrycrafting => d.jewelrycrafting_level,
+            Skill::Cooking => d.cooking_level,
+            Skill::Alchemy => d.alchemy_level,
+        }) as u32
+    }
+
+    fn skill_xp(&self, skill: Skill) -> i32 {
+        let d = self.data();
+        match skill {
+            Skill::Combat => d.xp,
+            Skill::Mining => d.mining_xp,
+            Skill::Woodcutting => d.woodcutting_xp,
+            Skill::Fishing => d.fishing_xp,
+            Skill::Weaponcrafting => d.weaponcrafting_xp,
+            Skill::Gearcrafting => d.gearcrafting_xp,
+            Skill::Jewelrycrafting => d.jewelrycrafting_xp,
+            Skill::Cooking => d.cooking_xp,
+            Skill::Alchemy => d.alchemy_xp,
+        }
+    }
+
+    fn skill_max_xp(&self, skill: Skill) -> i32 {
+        let d = self.data();
+        match skill {
+            Skill::Combat => d.max_xp,
+            Skill::Mining => d.mining_max_xp,
+            Skill::Woodcutting => d.woodcutting_max_xp,
+            Skill::Fishing => d.fishing_max_xp,
+            Skill::Weaponcrafting => d.weaponcrafting_max_xp,
+            Skill::Gearcrafting => d.gearcrafting_max_xp,
+            Skill::Jewelrycrafting => d.jewelrycrafting_max_xp,
+            Skill::Cooking => d.cooking_max_xp,
+            Skill::Alchemy => d.alchemy_max_xp,
+        }
+    }
+
+    fn max_health(&self) -> i32 {
+        self.data().max_hp
+    }
+
+    fn health(&self) -> i32 {
+        self.data().hp
+    }
+
+    fn missing_hp(&self) -> i32 {
+        self.max_health() - self.health()
+    }
+
+    fn gold(&self) -> u32 {
+        self.data().gold as u32
+    }
+
+    fn quantity_in_slot(&self, s: Slot) -> u32 {
+        match s {
+            Slot::Utility1 => self.data().utility1_slot_quantity,
+            Slot::Utility2 => self.data().utility2_slot_quantity,
+            Slot::Weapon
+            | Slot::Shield
+            | Slot::Helmet
+            | Slot::BodyArmor
+            | Slot::LegArmor
+            | Slot::Boots
+            | Slot::Ring1
+            | Slot::Ring2
+            | Slot::Amulet
+            | Slot::Artifact1
+            | Slot::Artifact2
+            | Slot::Artifact3
+            | Slot::Bag
+            | Slot::Rune => {
+                if self.equiped_in(s).is_empty() {
+                    0
+                } else {
+                    1
+                }
+            }
+        }
+    }
+
+    fn task(&self) -> String {
+        self.data().task.to_owned()
+    }
+
+    fn task_type(&self) -> Option<TaskType> {
+        match self.data().task_type.as_str() {
+            "monsters" => Some(TaskType::Monsters),
+            "items" => Some(TaskType::Items),
+            _ => None,
+        }
+    }
+
+    fn task_progress(&self) -> u32 {
+        self.data().task_progress as u32
+    }
+
+    fn task_total(&self) -> u32 {
+        self.data().task_total as u32
+    }
+
+    fn task_missing(&self) -> u32 {
+        self.task_total().saturating_sub(self.task_progress())
+    }
+
+    fn task_finished(&self) -> bool {
+        !self.task().is_empty() && self.task_missing() < 1
+    }
+
+    /// Returns the cooldown expiration timestamp of the `Character`.
+    fn cooldown_expiration(&self) -> Option<DateTime<Utc>> {
+        self.data()
+            .cooldown_expiration
+            .as_ref()
+            .map(|cd| DateTime::parse_from_rfc3339(cd).ok().map(|dt| dt.to_utc()))?
+    }
+
+    fn equiped_in(&self, slot: Slot) -> String {
+        let d = self.data();
+        match slot {
+            Slot::Weapon => &d.weapon_slot,
+            Slot::Shield => &d.shield_slot,
+            Slot::Helmet => &d.helmet_slot,
+            Slot::BodyArmor => &d.body_armor_slot,
+            Slot::LegArmor => &d.leg_armor_slot,
+            Slot::Boots => &d.boots_slot,
+            Slot::Ring1 => &d.ring1_slot,
+            Slot::Ring2 => &d.ring2_slot,
+            Slot::Amulet => &d.amulet_slot,
+            Slot::Artifact1 => &d.artifact1_slot,
+            Slot::Artifact2 => &d.artifact2_slot,
+            Slot::Artifact3 => &d.artifact3_slot,
+            Slot::Utility1 => &d.utility1_slot,
+            Slot::Utility2 => &d.utility2_slot,
+            Slot::Bag => &d.bag_slot,
+            Slot::Rune => &d.rune_slot,
+        }
+        .clone()
+    }
+
+    fn has_equiped(&self, item: &str) -> u32 {
+        Slot::iter()
+            .filter_map(|s| (self.equiped_in(s) == item).then_some(self.quantity_in_slot(s)))
+            .sum()
+    }
+
+    fn meets_conditions_for(&self, item: &ItemSchema) -> bool {
+        item.conditions.iter().flatten().all(|c| {
+            let Ok(condition) = ItemCondition::from_str(&c.code) else {
+                return false;
+            };
+            let value = self.skill_level(condition.into());
+            match c.operator {
+                ConditionOperator::Eq => (value as i32) == c.value,
+                ConditionOperator::Ne => (value as i32) != c.value,
+                ConditionOperator::Gt => (value as i32) > c.value,
+                ConditionOperator::Lt => (value as i32) < c.value,
+            }
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use artifactsmmo_openapi::models::InventorySlot;
     use std::sync::RwLock;
 
-    impl From<CharacterSchema> for Character {
+    impl From<CharacterSchema> for CharacterClient {
         fn from(value: CharacterSchema) -> Self {
             Self::new(
                 1,
@@ -699,7 +907,7 @@ mod tests {
 
     #[test]
     fn can_move() {
-        let char = Character::from(CharacterSchema::default());
+        let char = CharacterClient::from(CharacterSchema::default());
         assert!(char.can_move(0, 0).is_ok());
         assert!(matches!(
             char.can_move(1000, 0),
@@ -711,7 +919,7 @@ mod tests {
     fn can_use() {
         let item1 = "cooked_chicken";
         let item2 = "cooked_shrimp";
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             level: 5,
             inventory: Some(vec![
                 InventorySlot {
@@ -748,7 +956,7 @@ mod tests {
 
     #[test]
     fn can_craft() {
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             cooking_level: 1,
             inventory: Some(vec![
                 InventorySlot {
@@ -789,7 +997,7 @@ mod tests {
             char.can_craft("cooked_gudgeon", 1),
             Err(CraftError::NoWorkshopOnMap)
         ));
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             cooking_level: 1,
             inventory: Some(vec![InventorySlot {
                 slot: 0,
@@ -806,7 +1014,7 @@ mod tests {
 
     #[test]
     fn can_recycle() {
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             cooking_level: 1,
             weaponcrafting_level: 1,
             inventory: Some(vec![
@@ -849,7 +1057,7 @@ mod tests {
             char.can_recycle("copper_dagger", 1),
             Err(RecycleError::NoWorkshopOnMap)
         ));
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             weaponcrafting_level: 1,
             inventory: Some(vec![InventorySlot {
                 slot: 0,
@@ -865,7 +1073,7 @@ mod tests {
             char.can_recycle("copper_dagger", 1),
             Err(RecycleError::InsufficientInventorySpace)
         ));
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             weaponcrafting_level: 1,
             inventory: Some(vec![InventorySlot {
                 slot: 0,
@@ -882,7 +1090,7 @@ mod tests {
 
     #[test]
     fn can_delete() {
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             cooking_level: 1,
             weaponcrafting_level: 1,
             inventory: Some(vec![InventorySlot {
@@ -906,7 +1114,7 @@ mod tests {
 
     #[test]
     fn can_withdraw() {
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             inventory_max_items: 100,
             ..Default::default()
         });
@@ -937,7 +1145,7 @@ mod tests {
         //     char.can_withdraw_item("iron_sword", 10),
         //     Err(WithdrawError::NoBankOnMap)
         // ));
-        let char = Character::from(CharacterSchema {
+        let char = CharacterClient::from(CharacterSchema {
             inventory_max_items: 100,
             x: 4,
             y: 1,

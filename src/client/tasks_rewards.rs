@@ -1,4 +1,4 @@
-use crate::{Collection, Data, DataItem, PersistedData};
+use crate::{CollectionClient, Data, DataItem, PersistData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::DropRateSchema;
 use std::{
@@ -7,12 +7,12 @@ use std::{
 };
 
 #[derive(Default, Debug)]
-pub struct TasksRewards {
+pub struct TasksRewardsClient {
     data: RwLock<HashMap<String, Arc<DropRateSchema>>>,
     api: Arc<ArtifactApi>,
 }
 
-impl PersistedData<HashMap<String, Arc<DropRateSchema>>> for TasksRewards {
+impl PersistData<HashMap<String, Arc<DropRateSchema>>> for TasksRewardsClient {
     const PATH: &'static str = ".cache/tasks_rewards.json";
 
     fn data_from_api(&self) -> HashMap<String, Arc<DropRateSchema>> {
@@ -30,19 +30,19 @@ impl PersistedData<HashMap<String, Arc<DropRateSchema>>> for TasksRewards {
     }
 }
 
-impl DataItem for TasksRewards {
+impl DataItem for TasksRewardsClient {
     type Item = Arc<DropRateSchema>;
 }
 
-impl Data for TasksRewards {
+impl Data for TasksRewardsClient {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>> {
         self.data.read().unwrap()
     }
 }
 
-impl Collection for TasksRewards {}
+impl CollectionClient for TasksRewardsClient {}
 
-impl TasksRewards {
+impl TasksRewardsClient {
     pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
         let rewards = Self {
             data: Default::default(),

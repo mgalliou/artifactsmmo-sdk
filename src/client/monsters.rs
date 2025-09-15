@@ -1,6 +1,7 @@
 use crate::{
-    CanProvideXp, Collection, Data, DataItem, HasDropTable, HasLevel, PersistedData, Simulator,
-    events::Events, items::DamageType, simulator::HasEffects,
+    CanProvideXp, CollectionClient, Data, DataItem, DropsItems, Level, PersistData, Simulator,
+    client::events::EventsClient,
+    simulator::{DamageType, HasEffects},
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, ItemSchema, MonsterSchema, SimpleEffectSchema};
@@ -12,13 +13,13 @@ use std::{
 use strum::IntoEnumIterator;
 
 #[derive(Default, Debug)]
-pub struct Monsters {
+pub struct MonstersClient {
     data: RwLock<HashMap<String, Arc<MonsterSchema>>>,
     api: Arc<ArtifactApi>,
-    events: Arc<Events>,
+    events: Arc<EventsClient>,
 }
 
-impl PersistedData<HashMap<String, Arc<MonsterSchema>>> for Monsters {
+impl PersistData<HashMap<String, Arc<MonsterSchema>>> for MonstersClient {
     const PATH: &'static str = ".cache/monsters.json";
 
     fn data_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
@@ -36,20 +37,20 @@ impl PersistedData<HashMap<String, Arc<MonsterSchema>>> for Monsters {
     }
 }
 
-impl DataItem for Monsters {
+impl DataItem for MonstersClient {
     type Item = Arc<MonsterSchema>;
 }
 
-impl Data for Monsters {
+impl Data for MonstersClient {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<MonsterSchema>>> {
         self.data.read().unwrap()
     }
 }
 
-impl Collection for Monsters {}
+impl CollectionClient for MonstersClient {}
 
-impl Monsters {
-    pub(crate) fn new(api: Arc<ArtifactApi>, events: Arc<Events>) -> Self {
+impl MonstersClient {
+    pub(crate) fn new(api: Arc<ArtifactApi>, events: Arc<EventsClient>) -> Self {
         let monsters = Self {
             data: Default::default(),
             api,
@@ -85,13 +86,13 @@ impl Monsters {
     }
 }
 
-impl HasDropTable for MonsterSchema {
+impl DropsItems for MonsterSchema {
     fn drops(&self) -> &Vec<DropRateSchema> {
         &self.drops
     }
 }
 
-impl HasLevel for MonsterSchema {
+impl Level for MonsterSchema {
     fn level(&self) -> u32 {
         self.level as u32
     }

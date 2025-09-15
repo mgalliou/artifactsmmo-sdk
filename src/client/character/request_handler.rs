@@ -1,50 +1,47 @@
 use super::CharacterData;
 use crate::{
     DropSchemas, SimpleItemSchemas,
-    bank::BankClient,
-    char::{HasCharacterData, action::Action},
+    client::{
+        bank::BankClient,
+        character::error::RequestError,
+        character::{HasCharacterData, action::Action},
+        maps::MapSchemaExt,
+        server::ServerClient,
+    },
     consts::BANK_EXTENSION_SIZE,
     gear::Slot,
-    maps::MapSchemaExt,
-    server::Server,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::{
-    apis::Error,
-    models::{
-        ActionType, BankExtensionTransactionResponseSchema, BankGoldTransactionResponseSchema,
-        BankItemTransactionResponseSchema, BankSchema, CharacterFightResponseSchema,
-        CharacterMovementResponseSchema, CharacterRestResponseSchema, CharacterSchema,
-        DeleteItemResponseSchema, EquipmentResponseSchema, FightResult, FightSchema, MapSchema,
-        NpcItemTransactionSchema, NpcMerchantTransactionResponseSchema, RecyclingItemsSchema,
-        RecyclingResponseSchema, RewardDataResponseSchema, RewardsSchema, SimpleItemSchema,
-        SkillDataSchema, SkillInfoSchema, SkillResponseSchema, TaskCancelledResponseSchema,
-        TaskResponseSchema, TaskSchema, TaskTradeResponseSchema, TaskTradeSchema,
-        UseItemResponseSchema,
-    },
+use artifactsmmo_openapi::models::{
+    ActionType, BankExtensionTransactionResponseSchema, BankGoldTransactionResponseSchema,
+    BankItemTransactionResponseSchema, BankSchema, CharacterFightResponseSchema,
+    CharacterMovementResponseSchema, CharacterRestResponseSchema, CharacterSchema,
+    DeleteItemResponseSchema, EquipmentResponseSchema, FightResult, FightSchema, MapSchema,
+    NpcItemTransactionSchema, NpcMerchantTransactionResponseSchema, RecyclingItemsSchema,
+    RecyclingResponseSchema, RewardDataResponseSchema, RewardsSchema, SimpleItemSchema,
+    SkillDataSchema, SkillInfoSchema, SkillResponseSchema, TaskCancelledResponseSchema,
+    TaskResponseSchema, TaskSchema, TaskTradeResponseSchema, TaskTradeSchema,
+    UseItemResponseSchema,
 };
 use chrono::Utc;
 use downcast_rs::{Downcast, impl_downcast};
 use log::{debug, error, info, warn};
-use serde::{Deserialize, Serialize};
 use std::{
     cmp::Ordering,
-    fmt::{self, Display, Formatter},
     sync::{Arc, RwLockWriteGuard},
     thread::sleep,
     time::Duration,
 };
-use thiserror::Error;
 
 /// First layer of abstraction around the character API.
 /// It is responsible for handling the character action requests responce and errors
 /// by updating character and bank data, and retrying requests in case of errors.
 #[derive(Default, Debug)]
-pub struct CharacterRequestHandler {
+pub(crate) struct CharacterRequestHandler {
     api: Arc<ArtifactApi>,
     data: CharacterData,
     bank: Arc<BankClient>,
-    server: Arc<Server>,
+    server: Arc<ServerClient>,
 }
 
 impl CharacterRequestHandler {
@@ -52,7 +49,7 @@ impl CharacterRequestHandler {
         api: Arc<ArtifactApi>,
         data: CharacterData,
         bank: Arc<BankClient>,
-        server: Arc<Server>,
+        server: Arc<ServerClient>,
     ) -> Self {
         Self {
             api,
@@ -711,49 +708,4 @@ impl<T: ResponseSchema + 'static> From<T> for Box<dyn ResponseSchema> {
     fn from(value: T) -> Self {
         Box::new(value)
     }
-}
-
-#[derive(Error, Debug)]
-pub enum RequestError {
-    #[error("reqwest error: {0}")]
-    Reqwest(reqwest::Error),
-    #[error("serde error: {0}")]
-    Serde(serde_json::Error),
-    #[error("io error: {0}")]
-    Io(std::io::Error),
-    #[error("response error: {0}")]
-    ResponseError(ApiErrorResponseSchema),
-    #[error("downcast error")]
-    DowncastError,
-}
-
-impl<T> From<Error<T>> for RequestError {
-    fn from(value: Error<T>) -> Self {
-        match value {
-            Error::Reqwest(e) => RequestError::Reqwest(e),
-            Error::Serde(e) => RequestError::Serde(e),
-            Error::Io(e) => RequestError::Io(e),
-            Error::ResponseError(res) => match serde_json::from_str(&res.content) {
-                Ok(e) => RequestError::ResponseError(e),
-                Err(e) => RequestError::Serde(e),
-            },
-        }
-    }
-}
-
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ApiErrorResponseSchema {
-    pub error: ApiErrorSchema,
-}
-
-impl Display for ApiErrorResponseSchema {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{} ({})", self.error.message, self.error.code)
-    }
-}
-
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ApiErrorSchema {
-    pub code: u32,
-    pub message: String,
 }

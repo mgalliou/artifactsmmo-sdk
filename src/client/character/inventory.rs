@@ -1,6 +1,6 @@
 use crate::{
-    HasDropTable,
-    container::{ContainerSlot, ItemContainer, LimitedContainer, SlotLimited, SpaceLimited},
+    Code, DropsItems,
+    container::{ItemContainer, LimitedContainer, SlotLimited, SpaceLimited},
 };
 use artifactsmmo_openapi::models::{CharacterSchema, InventorySlot, SimpleItemSchema};
 use itertools::Itertools;
@@ -64,14 +64,8 @@ impl LimitedContainer for InventoryClient {
         true
     }
 
-    fn has_space_for_drops_from<H: HasDropTable>(&self, entity: &H) -> bool {
+    fn has_space_for_drops_from<H: DropsItems>(&self, entity: &H) -> bool {
         self.free_slots() >= entity.average_drop_slots()
             && self.free_space() >= entity.average_drop_quantity()
-    }
-}
-
-impl ContainerSlot for InventorySlot {
-    fn code(&self) -> &str {
-        &self.code
     }
 }

@@ -7,49 +7,23 @@ use itertools::Itertools;
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path, sync::RwLockReadGuard};
-use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
 pub use artifactsmmo_openapi::models;
 
-pub use account::Account;
-pub use bank::BankClient;
-pub use char::Character;
-pub use client::Client;
+pub use client::*;
 pub use consts::*;
 pub use container::*;
-pub use events::Events;
 pub use gear::Gear;
-pub use items::Items;
-pub use maps::Maps;
-pub use monsters::Monsters;
-pub use resources::Resources;
-pub use server::Server;
 pub use simulator::Simulator;
-pub use tasks::Tasks;
-pub use tasks_rewards::TasksRewards;
 
-pub mod account;
-pub mod bank;
-pub mod char;
 pub mod client;
 pub mod consts;
 pub mod container;
-pub mod error;
-pub mod events;
 pub mod gear;
-pub mod item_code;
-pub mod items;
-pub mod maps;
-pub mod monsters;
-pub mod npcs;
-pub mod npcs_items;
-pub mod resources;
-pub mod server;
 pub mod simulator;
-pub mod tasks;
-pub mod tasks_rewards;
+pub mod skill;
 
-pub trait PersistedData<D: for<'a> Deserialize<'a> + Serialize> {
+pub(crate) trait PersistData<D: for<'a> Deserialize<'a> + Serialize> {
     const PATH: &'static str;
 
     fn retrieve_data(&self) -> D {
@@ -64,29 +38,25 @@ pub trait PersistedData<D: for<'a> Deserialize<'a> + Serialize> {
         }
     }
     fn data_from_api(&self) -> D;
+
     fn data_from_file<T: for<'a> Deserialize<'a>>(&self) -> Result<T, Box<dyn std::error::Error>> {
         Ok(serde_json::from_str(&read_to_string(Path::new(
             Self::PATH,
         ))?)?)
     }
+
     fn persist_data<T: Serialize>(data: T) -> Result<(), Box<dyn std::error::Error>> {
         Ok(write_all(
             Path::new(Self::PATH),
             &serde_json::to_string_pretty(&data)?,
         )?)
     }
+
     fn refresh_data(&self);
 }
 
-pub trait DataItem {
-    type Item: Clone;
-}
-
-pub(crate) trait Data: DataItem {
-    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>>;
-}
-
-pub trait Collection: Data {
+#[allow(private_bounds)]
+pub trait CollectionClient: Data {
     fn get(&self, code: &str) -> Option<Self::Item> {
         self.data().get(code).cloned()
     }
@@ -103,23 +73,47 @@ pub trait Collection: Data {
     }
 }
 
-pub trait HasQuantity {
+pub(crate) trait Data: DataItem {
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>>;
+}
+
+pub trait DataItem {
+    type Item: Clone;
+}
+
+pub trait Code {
+    fn code(&self) -> &str;
+}
+
+impl Code for InventorySlot {
+    fn code(&self) -> &str {
+        &self.code
+    }
+}
+
+impl Code for SimpleItemSchema {
+    fn code(&self) -> &str {
+        &self.code
+    }
+}
+
+pub trait Quantity {
     fn quantity(&self) -> u32;
 }
 
-impl HasQuantity for DropSchema {
+impl Quantity for DropSchema {
     fn quantity(&self) -> u32 {
         self.quantity as u32
     }
 }
 
-impl HasQuantity for InventorySlot {
+impl Quantity for InventorySlot {
     fn quantity(&self) -> u32 {
         self.quantity as u32
     }
 }
 
-impl HasQuantity for SimpleItemSchema {
+impl Quantity for SimpleItemSchema {
     fn quantity(&self) -> u32 {
         self.quantity
     }
@@ -182,7 +176,7 @@ impl HasDrops for Vec<DropSchema> {
     }
 }
 
-pub trait HasDropTable {
+pub trait DropsItems {
     fn drop_rate(&self, item: &str) -> Option<u32> {
         self.drops().iter().find(|i| i.code == item).map(|i| i.rate)
     }
@@ -210,11 +204,11 @@ pub trait HasDropTable {
     fn drops(&self) -> &Vec<DropRateSchema>;
 }
 
-pub trait HasLevel {
+pub trait Level {
     fn level(&self) -> u32;
 }
 
-pub trait CanProvideXp: HasLevel {
+pub trait CanProvideXp: Level {
     fn provides_xp_at(&self, level: u32) -> bool {
         check_lvl_diff(level, self.level())
     }
@@ -234,60 +228,7 @@ pub fn check_lvl_diff(char_level: u32, entity_level: u32) -> bool {
     char_level >= entity_level && char_level.saturating_sub(entity_level) <= MAX_LEVEL_DIFF
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
-#[strum(serialize_all = "snake_case")]
-pub enum EffectType {
-    CriticalStrike,
-    Burn,
-    Poison,
-    Haste,
-    Prospecting,
-    Wisdom,
-    Restore,
-    Hp,
-    BoostHp,
-    Heal,
-    Healing,
-    Lifesteal,
-    InventorySpace,
-
-    AttackFire,
-    AttackEarth,
-    AttackWater,
-    AttackAir,
-
-    Dmg,
-    DmgFire,
-    DmgEarth,
-    DmgWater,
-    DmgAir,
-
-    BoostDmgFire,
-    BoostDmgEarth,
-    BoostDmgWater,
-    BoostDmgAir,
-    ResDmgFire,
-    ResDmgEarth,
-    ResDmgWater,
-    ResDmgAir,
-
-    Mining,
-    Woodcutting,
-    Fishing,
-    Alchemy,
-
-    //Monster specific
-    Reconstitution,
-    Corrupted,
-}
-
-impl PartialEq<EffectType> for String {
-    fn eq(&self, other: &EffectType) -> bool {
-        other.as_ref() == *self
-    }
-}
-
-pub struct DropSchemas<'a>(pub &'a Vec<DropSchema>);
+pub struct DropSchemas<'a>(pub &'a [DropSchema]);
 
 impl std::fmt::Display for DropSchemas<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -302,7 +243,7 @@ impl std::fmt::Display for DropSchemas<'_> {
     }
 }
 
-pub struct SimpleItemSchemas<'a>(pub &'a Vec<SimpleItemSchema>);
+pub struct SimpleItemSchemas<'a>(pub &'a [SimpleItemSchema]);
 
 impl std::fmt::Display for SimpleItemSchemas<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

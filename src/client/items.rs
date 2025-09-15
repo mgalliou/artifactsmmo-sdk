@@ -1,15 +1,16 @@
 use crate::{
-    CanProvideXp, Collection, Data, DataItem, DropRateSchemaExt, EffectType, HasDropTable,
-    HasLevel, PersistedData, Simulator,
-    char::Skill,
-    check_lvl_diff,
+    CanProvideXp, CollectionClient, Data, DataItem, DropRateSchemaExt, DropsItems, Level,
+    PersistData, Simulator, check_lvl_diff,
+    client::{
+        monsters::{MonsterSchemaExt, MonstersClient},
+        npcs::NpcsClient,
+        resources::ResourcesClient,
+        tasks_rewards::TasksRewardsClient,
+    },
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
-    monsters::{MonsterSchemaExt, Monsters},
-    npcs::Npcs,
-    resources::Resources,
-    simulator::HasEffects,
-    tasks_rewards::TasksRewards,
+    simulator::{DamageType, EffectType, HasEffects},
+    skill::Skill,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{
@@ -29,16 +30,16 @@ use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
 #[derive(Default, Debug)]
-pub struct Items {
+pub struct ItemsClient {
     data: RwLock<HashMap<String, Arc<ItemSchema>>>,
     api: Arc<ArtifactApi>,
-    resources: Arc<Resources>,
-    monsters: Arc<Monsters>,
-    tasks_rewards: Arc<TasksRewards>,
-    npcs: Arc<Npcs>,
+    resources: Arc<ResourcesClient>,
+    monsters: Arc<MonstersClient>,
+    tasks_rewards: Arc<TasksRewardsClient>,
+    npcs: Arc<NpcsClient>,
 }
 
-impl PersistedData<HashMap<String, Arc<ItemSchema>>> for Items {
+impl PersistData<HashMap<String, Arc<ItemSchema>>> for ItemsClient {
     const PATH: &'static str = ".cache/items.json";
 
     fn data_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
@@ -56,7 +57,7 @@ impl PersistedData<HashMap<String, Arc<ItemSchema>>> for Items {
     }
 }
 
-impl IntoIterator for Items {
+impl IntoIterator for ItemsClient {
     type Item = Arc<ItemSchema>;
 
     type IntoIter = IntoIter<Self::Item>;
@@ -72,25 +73,25 @@ impl IntoIterator for Items {
     }
 }
 
-impl DataItem for Items {
+impl DataItem for ItemsClient {
     type Item = Arc<ItemSchema>;
 }
 
-impl Data for Items {
+impl Data for ItemsClient {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<ItemSchema>>> {
         self.data.read().unwrap()
     }
 }
 
-impl Collection for Items {}
+impl CollectionClient for ItemsClient {}
 
-impl Items {
+impl ItemsClient {
     pub(crate) fn new(
         api: Arc<ArtifactApi>,
-        resources: Arc<Resources>,
-        monsters: Arc<Monsters>,
-        tasks_rewards: Arc<TasksRewards>,
-        npcs: Arc<Npcs>,
+        resources: Arc<ResourcesClient>,
+        monsters: Arc<MonstersClient>,
+        tasks_rewards: Arc<TasksRewardsClient>,
+        npcs: Arc<NpcsClient>,
     ) -> Self {
         let items = Self {
             data: Default::default(),
@@ -563,7 +564,7 @@ impl HasEffects for ItemSchema {
     }
 }
 
-impl HasLevel for ItemSchema {
+impl Level for ItemSchema {
     fn level(&self) -> u32 {
         self.level
     }
@@ -654,53 +655,6 @@ pub enum SubType {
 impl PartialEq<SubType> for String {
     fn eq(&self, other: &SubType) -> bool {
         other.as_ref() == *self
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, AsRefStr, EnumIter, EnumString)]
-#[strum(serialize_all = "snake_case")]
-pub enum DamageType {
-    Fire,
-    Earth,
-    Water,
-    Air,
-}
-
-impl DamageType {
-    pub fn into_attack(&self) -> &'static str {
-        match self {
-            DamageType::Fire => "attack_fire",
-            DamageType::Earth => "attack_earth",
-            DamageType::Water => "attack_water",
-            DamageType::Air => "attack_air",
-        }
-    }
-
-    pub fn into_damage(&self) -> &'static str {
-        match self {
-            DamageType::Fire => "dmg_fire",
-            DamageType::Earth => "dmg_earth",
-            DamageType::Water => "dmg_water",
-            DamageType::Air => "dmg_air",
-        }
-    }
-
-    pub fn into_boost_damage(&self) -> &'static str {
-        match self {
-            DamageType::Fire => "boost_dmg_fire",
-            DamageType::Earth => "boost_dmg_earth",
-            DamageType::Water => "boost_dmg_water",
-            DamageType::Air => "boost_dmg_air",
-        }
-    }
-
-    pub fn into_resistance(&self) -> &'static str {
-        match self {
-            DamageType::Fire => "res_fire",
-            DamageType::Earth => "res_earth",
-            DamageType::Water => "res_water",
-            DamageType::Air => "res_air",
-        }
     }
 }
 

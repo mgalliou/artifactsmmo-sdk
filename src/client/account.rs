@@ -1,19 +1,19 @@
 use std::sync::Arc;
 
-use crate::{BankClient, Character};
+use crate::client::{bank::BankClient, character::CharacterClient};
 
 #[derive(Default, Debug)]
-pub struct Account {
+pub struct AccountClient {
     pub name: String,
     pub bank: Arc<BankClient>,
-    pub characters: Vec<Arc<Character>>,
+    pub characters: Vec<Arc<CharacterClient>>,
 }
 
-impl Account {
+impl AccountClient {
     pub(crate) fn new(
         name: String,
         bank: Arc<BankClient>,
-        characters: Vec<Arc<Character>>,
+        characters: Vec<Arc<CharacterClient>>,
     ) -> Self {
         Self {
             name,

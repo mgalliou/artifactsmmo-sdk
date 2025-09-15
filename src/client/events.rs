@@ -1,4 +1,4 @@
-use crate::{Collection, Data, DataItem, PersistedData};
+use crate::{CollectionClient, Data, DataItem, PersistData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
@@ -10,14 +10,14 @@ use std::{
 };
 
 #[derive(Default, Debug)]
-pub struct Events {
+pub struct EventsClient {
     data: RwLock<HashMap<String, Arc<EventSchema>>>,
     api: Arc<ArtifactApi>,
     active: RwLock<Vec<Arc<ActiveEventSchema>>>,
     last_refresh: RwLock<DateTime<Utc>>,
 }
 
-impl PersistedData<HashMap<String, Arc<EventSchema>>> for Events {
+impl PersistData<HashMap<String, Arc<EventSchema>>> for EventsClient {
     const PATH: &'static str = ".cache/events.json";
 
     fn data_from_api(&self) -> HashMap<String, Arc<EventSchema>> {
@@ -35,19 +35,19 @@ impl PersistedData<HashMap<String, Arc<EventSchema>>> for Events {
     }
 }
 
-impl DataItem for Events {
+impl DataItem for EventsClient {
     type Item = Arc<EventSchema>;
 }
 
-impl Data for Events {
+impl Data for EventsClient {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<EventSchema>>> {
         self.data.read().unwrap()
     }
 }
 
-impl Collection for Events {}
+impl CollectionClient for EventsClient {}
 
-impl Events {
+impl EventsClient {
     pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
         let events = Self {
             data: Default::default(),

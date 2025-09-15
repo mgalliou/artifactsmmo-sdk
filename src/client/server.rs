@@ -5,12 +5,12 @@ use log::{debug, error};
 use std::sync::{Arc, RwLock};
 
 #[derive(Default, Debug)]
-pub struct Server {
+pub struct ServerClient {
     api: Arc<ArtifactApi>,
     pub server_offset: RwLock<TimeDelta>,
 }
 
-impl Server {
+impl ServerClient {
     pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
         let server = Self {
             api,

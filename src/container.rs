@@ -1,13 +1,9 @@
-use crate::{HasDropTable, HasQuantity};
+use crate::{Code, DropsItems, Quantity};
 use artifactsmmo_openapi::models::SimpleItemSchema;
 use std::sync::Arc;
 
-pub trait ContainerSlot: HasQuantity {
-    fn code(&self) -> &str;
-}
-
 pub trait ItemContainer {
-    type Slot: ContainerSlot;
+    type Slot: Code + Quantity;
 
     fn content(&self) -> Arc<Vec<Self::Slot>>;
 
@@ -42,7 +38,7 @@ pub trait SpaceLimited: ItemContainer {
 pub trait LimitedContainer {
     fn is_full(&self) -> bool;
     fn has_space_for_multiple(&self, items: &[SimpleItemSchema]) -> bool;
-    fn has_space_for_drops_from<H: HasDropTable>(&self, entity: &H) -> bool;
+    fn has_space_for_drops_from<H: DropsItems>(&self, entity: &H) -> bool;
 
     fn has_space_for(&self, item: &str, quantity: u32) -> bool {
         self.has_space_for_multiple(&[SimpleItemSchema {

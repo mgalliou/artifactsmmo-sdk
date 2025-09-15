@@ -1,11 +1,19 @@
-use crate::{char::Skill, gear::Gear, items::DamageType};
 use artifactsmmo_openapi::models::{FightResult, MonsterSchema, SimpleEffectSchema};
 use std::cmp::max;
+use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
+
+use crate::{Gear, skill::Skill};
 
 const BASE_HP: u32 = 115;
-const MAX_TURN: u32 = 100;
 const HP_PER_LEVEL: u32 = 5;
-const CRIT_MULTIPLIER: f32 = 1.5;
+
+const MAX_TURN: u32 = 100;
+const SECOND_PER_TURN: u32 = 2;
+const MIN_FIGHT_CD: u32 = 5;
+
+const REST_HP_PER_SEC: u32 = 5;
+
+const CRIT_MULTIPLIER: f32 = 0.5;
 const BURN_MULTIPLIER: f32 = 0.90;
 
 pub struct Simulator {}
@@ -122,7 +130,7 @@ impl Simulator {
     fn crit_multiplier(damage_increase: i32, target_resistance: i32) -> f32 {
         (1.0 + damage_increase as f32 * 0.01)
             * (1.0 - target_resistance as f32 * 0.01)
-            * CRIT_MULTIPLIER
+            * (1.0 + CRIT_MULTIPLIER)
     }
 
     fn average_multiplier(
@@ -131,22 +139,27 @@ impl Simulator {
         target_resistance: i32,
     ) -> f32 {
         Self::critless_multiplier(damage_increase, target_resistance)
-            * (1.0 + critical_strike as f32 * 0.005)
+            * (1.0 + critical_strike as f32 * 0.01 * CRIT_MULTIPLIER)
     }
 
     pub fn time_to_rest(health: u32) -> u32 {
-        health / 5 + if health % 5 > 0 { 1 } else { 0 }
+        health / REST_HP_PER_SEC + if health % REST_HP_PER_SEC > 0 { 1 } else { 0 }
     }
 
     fn fight_cd(haste: i32, turns: u32) -> u32 {
         max(
-            5,
-            ((turns * 2) as f32 - (haste as f32 * 0.01) * (turns * 2) as f32).round() as u32,
+            MIN_FIGHT_CD,
+            ((turns * SECOND_PER_TURN) as f32
+                - (haste as f32 * 0.01) * (turns * SECOND_PER_TURN) as f32)
+                .round() as u32,
         )
     }
 
     pub fn gather_cd(resource_level: u32, cooldown_reduction: i32) -> u32 {
-        ((30.0 + (resource_level as f32 / 2.0)) * (1.0 + cooldown_reduction as f32 * 0.01)) as u32
+        let level = resource_level as f32;
+        let reduction = cooldown_reduction as f32;
+
+        ((30.0 + (level / 2.0)) * (1.0 + reduction * 0.01)).round() as u32
     }
 
     fn decrease_burn(burn: &mut i32) {
@@ -217,6 +230,53 @@ impl Hit {
             r#type,
             damage: damage.round() as i32,
             is_crit: true,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, AsRefStr, EnumIter, EnumString)]
+#[strum(serialize_all = "snake_case")]
+pub enum DamageType {
+    Fire,
+    Earth,
+    Water,
+    Air,
+}
+
+impl DamageType {
+    pub fn into_attack(&self) -> &'static str {
+        match self {
+            DamageType::Fire => "attack_fire",
+            DamageType::Earth => "attack_earth",
+            DamageType::Water => "attack_water",
+            DamageType::Air => "attack_air",
+        }
+    }
+
+    pub fn into_damage(&self) -> &'static str {
+        match self {
+            DamageType::Fire => "dmg_fire",
+            DamageType::Earth => "dmg_earth",
+            DamageType::Water => "dmg_water",
+            DamageType::Air => "dmg_air",
+        }
+    }
+
+    pub fn into_boost_damage(&self) -> &'static str {
+        match self {
+            DamageType::Fire => "boost_dmg_fire",
+            DamageType::Earth => "boost_dmg_earth",
+            DamageType::Water => "boost_dmg_water",
+            DamageType::Air => "boost_dmg_air",
+        }
+    }
+
+    pub fn into_resistance(&self) -> &'static str {
+        match self {
+            DamageType::Fire => "res_fire",
+            DamageType::Earth => "res_earth",
+            DamageType::Water => "res_water",
+            DamageType::Air => "res_air",
         }
     }
 }
@@ -311,6 +371,59 @@ pub trait HasEffects {
     }
 
     fn effects(&self) -> Vec<&SimpleEffectSchema>;
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
+#[strum(serialize_all = "snake_case")]
+pub enum EffectType {
+    CriticalStrike,
+    Burn,
+    Poison,
+    Haste,
+    Prospecting,
+    Wisdom,
+    Restore,
+    Hp,
+    BoostHp,
+    Heal,
+    Healing,
+    Lifesteal,
+    InventorySpace,
+
+    AttackFire,
+    AttackEarth,
+    AttackWater,
+    AttackAir,
+
+    Dmg,
+    DmgFire,
+    DmgEarth,
+    DmgWater,
+    DmgAir,
+
+    BoostDmgFire,
+    BoostDmgEarth,
+    BoostDmgWater,
+    BoostDmgAir,
+    ResDmgFire,
+    ResDmgEarth,
+    ResDmgWater,
+    ResDmgAir,
+
+    Mining,
+    Woodcutting,
+    Fishing,
+    Alchemy,
+
+    //Monster specific
+    Reconstitution,
+    Corrupted,
+}
+
+impl PartialEq<EffectType> for String {
+    fn eq(&self, other: &EffectType) -> bool {
+        other.as_ref() == *self
+    }
 }
 
 #[cfg(test)]

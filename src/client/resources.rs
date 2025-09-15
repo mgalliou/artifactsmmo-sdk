@@ -1,5 +1,6 @@
 use crate::{
-    CanProvideXp, Collection, Data, DataItem, HasDropTable, HasLevel, PersistedData, events::Events,
+    CanProvideXp, CollectionClient, Data, DataItem, DropsItems, Level, PersistData,
+    client::events::EventsClient,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
@@ -10,13 +11,13 @@ use std::{
 };
 
 #[derive(Default, Debug)]
-pub struct Resources {
+pub struct ResourcesClient {
     data: RwLock<HashMap<String, Arc<ResourceSchema>>>,
     api: Arc<ArtifactApi>,
-    events: Arc<Events>,
+    events: Arc<EventsClient>,
 }
 
-impl PersistedData<HashMap<String, Arc<ResourceSchema>>> for Resources {
+impl PersistData<HashMap<String, Arc<ResourceSchema>>> for ResourcesClient {
     const PATH: &'static str = ".cache/resources.json";
 
     fn data_from_api(&self) -> HashMap<String, Arc<ResourceSchema>> {
@@ -34,20 +35,20 @@ impl PersistedData<HashMap<String, Arc<ResourceSchema>>> for Resources {
     }
 }
 
-impl DataItem for Resources {
+impl DataItem for ResourcesClient {
     type Item = Arc<ResourceSchema>;
 }
 
-impl Data for Resources {
+impl Data for ResourcesClient {
     fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<ResourceSchema>>> {
         self.data.read().unwrap()
     }
 }
 
-impl Collection for Resources {}
+impl CollectionClient for ResourcesClient {}
 
-impl Resources {
-    pub(crate) fn new(api: Arc<ArtifactApi>, events: Arc<Events>) -> Self {
+impl ResourcesClient {
+    pub(crate) fn new(api: Arc<ArtifactApi>, events: Arc<EventsClient>) -> Self {
         let resources = Self {
             data: Default::default(),
             api,
@@ -69,13 +70,13 @@ impl Resources {
     }
 }
 
-impl HasDropTable for ResourceSchema {
+impl DropsItems for ResourceSchema {
     fn drops(&self) -> &Vec<DropRateSchema> {
         &self.drops
     }
 }
 
-impl HasLevel for ResourceSchema {
+impl Level for ResourceSchema {
     fn level(&self) -> u32 {
         self.level as u32
     }

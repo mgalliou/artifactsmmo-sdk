@@ -1,5 +1,7 @@
-use crate::char::request_handler::RequestError;
+use artifactsmmo_openapi::apis::Error;
 use derive_more::TryFrom;
+use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display, Formatter};
 use thiserror::Error;
 
 const ENTITY_NOT_FOUND: isize = 404;
@@ -29,6 +31,51 @@ const INVENTORY_FULL: isize = 497;
 //const CHARACTER_NOT_FOUND: isize = 498;
 //const CHARACTER_ON_COOLDOWN: isize = 499;
 const ENTITY_NOT_FOUND_ON_MAP: isize = 598;
+
+#[derive(Error, Debug)]
+pub enum RequestError {
+    #[error("reqwest error: {0}")]
+    Reqwest(reqwest::Error),
+    #[error("serde error: {0}")]
+    Serde(serde_json::Error),
+    #[error("io error: {0}")]
+    Io(std::io::Error),
+    #[error("response error: {0}")]
+    ResponseError(ApiErrorResponseSchema),
+    #[error("downcast error")]
+    DowncastError,
+}
+
+impl<T> From<Error<T>> for RequestError {
+    fn from(value: Error<T>) -> Self {
+        match value {
+            Error::Reqwest(e) => RequestError::Reqwest(e),
+            Error::Serde(e) => RequestError::Serde(e),
+            Error::Io(e) => RequestError::Io(e),
+            Error::ResponseError(res) => match serde_json::from_str(&res.content) {
+                Ok(e) => RequestError::ResponseError(e),
+                Err(e) => RequestError::Serde(e),
+            },
+        }
+    }
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ApiErrorResponseSchema {
+    pub error: ApiErrorSchema,
+}
+
+impl Display for ApiErrorResponseSchema {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{} ({})", self.error.message, self.error.code)
+    }
+}
+
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ApiErrorSchema {
+    pub code: u32,
+    pub message: String,
+}
 
 #[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
