@@ -21,14 +21,13 @@ pub struct Simulator {}
 impl Simulator {
     pub fn fight(
         level: u32,
-        missing_hp: i32,
         gear: &Gear,
         monster: &MonsterSchema,
-        ignore_death: bool,
-        average: bool,
+        params: FightOptionalParams,
     ) -> Fight {
         let base_hp = (BASE_HP + HP_PER_LEVEL * level) as i32;
-        let starting_hp = base_hp + gear.health() - missing_hp;
+        let max_hp = base_hp + gear.health();
+        let starting_hp = max_hp - params.missing_hp;
         let mut char_hp = starting_hp;
         let mut monster_hp = monster.health();
         let mut turn = 1;
@@ -36,29 +35,31 @@ impl Simulator {
         let mut monster_turn = 1;
         let mut char_burn = gear.critless_damage_against(monster) * gear.burn() / 100;
         let mut monster_burn = gear.critless_damage_from(monster) * monster.burn() / 100;
+        let mut utility1_quantity = params.utility1_quantity;
+        let mut utility2_quantity = params.utility2_quantity;
 
         loop {
             //character turn
             if turn % 2 == 1 {
                 if (char_turn % 3) == 0 && gear.healing() > 0 {
-                    char_hp += gear.healing_provided()
+                    char_hp += Self::compute_healing(max_hp, gear.healing());
                 }
                 if turn > 1 {
                     if monster_burn > 0 {
                         Self::decrease_burn(&mut monster_burn);
                         char_hp -= monster_burn;
-                        if char_hp <= 0 && !ignore_death {
+                        if char_hp <= 0 && !params.ignore_death {
                             break;
                         }
                     }
                     if monster.poison() > 0 {
                         char_hp -= monster.poison();
-                        if char_hp <= 0 && !ignore_death {
+                        if char_hp <= 0 && !params.ignore_death {
                             break;
                         }
                     }
                 }
-                for h in gear.hits_against(monster, average).iter() {
+                for h in gear.hits_against(monster, params.average).iter() {
                     monster_hp -= h.damage;
                     if h.is_crit {
                         char_hp += h.damage * gear.lifesteal() / 100;
@@ -74,7 +75,7 @@ impl Simulator {
                     monster_hp = monster.health();
                 }
                 if monster_turn % 3 == 0 && monster.healing() > 0 {
-                    monster_hp += monster.healing_provided()
+                    monster_hp += Self::compute_healing(monster.health(), monster.healing());
                 }
                 if char_burn > 0 {
                     Self::decrease_burn(&mut char_burn);
@@ -90,16 +91,28 @@ impl Simulator {
                     }
                 }
                 if char_hp < (base_hp + gear.health()) / 2 {
-                    char_hp += gear.utility1.as_ref().map_or(0, |u| u.restore());
-                    char_hp += gear.utility2.as_ref().map_or(0, |u| u.restore());
+                    if utility1_quantity > 0 {
+                        let restore = gear.utility1.as_ref().map_or(0, |u| u.restore());
+                        if restore > 0 {
+                            char_hp += restore;
+                            utility1_quantity -= 1;
+                        }
+                    }
+                    if utility2_quantity > 0 {
+                        let restore = gear.utility2.as_ref().map_or(0, |u| u.restore());
+                        if restore > 0 {
+                            char_hp += restore;
+                            utility2_quantity -= 1;
+                        }
+                    }
                 }
-                let hits = gear.hits_from(monster, average);
+                let hits = gear.hits_from(monster, params.average);
                 for h in hits.iter() {
                     char_hp -= h.damage;
                     if h.is_crit {
                         monster_hp += h.damage * monster.lifesteal() / 100;
                     }
-                    if char_hp <= 0 && !ignore_death {
+                    if char_hp <= 0 && !params.ignore_death {
                         break;
                     }
                 }
@@ -178,6 +191,30 @@ impl Simulator {
 
     fn decrease_burn(burn: &mut i32) {
         *burn = (*burn as f32 * BURN_MULTIPLIER).round() as i32;
+    }
+
+    fn compute_healing(max_health: i32, healing: i32) -> i32 {
+        (max_health as f32 * healing as f32 * 0.01).round() as i32
+    }
+}
+
+pub struct FightOptionalParams {
+    utility1_quantity: u32,
+    utility2_quantity: u32,
+    missing_hp: i32,
+    average: bool,
+    ignore_death: bool,
+}
+
+impl Default for FightOptionalParams {
+    fn default() -> Self {
+        Self {
+            utility1_quantity: 100,
+            utility2_quantity: 100,
+            missing_hp: 0,
+            average: false,
+            ignore_death: false,
+        }
     }
 }
 
@@ -311,10 +348,6 @@ pub trait HasEffects {
     const RECONSTITUTION: &str = "reconstitution";
     const PROSPECTING: &str = "prospecting";
     const INVENTORY_SPACE: &str = "inventory_space";
-
-    fn healing_provided(&self) -> i32 {
-        (self.health() as f32 * self.healing() as f32 * 0.01).round() as i32
-    }
 
     fn health(&self) -> i32 {
         self.effect_value(Self::HP) + self.effect_value(Self::BOOST_HP)
