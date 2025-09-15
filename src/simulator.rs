@@ -29,67 +29,81 @@ impl Simulator {
     ) -> Fight {
         let base_hp = (BASE_HP + HP_PER_LEVEL * level) as i32;
         let starting_hp = base_hp + gear.health() - missing_hp;
-        let mut hp = starting_hp;
+        let mut char_hp = starting_hp;
         let mut monster_hp = monster.health();
         let mut turn = 1;
-        let mut burn = gear.critless_damage_against(monster) * gear.burn() / 100;
+        let mut char_turn = 1;
+        let mut monster_turn = 1;
+        let mut char_burn = gear.critless_damage_against(monster) * gear.burn() / 100;
         let mut monster_burn = gear.critless_damage_from(monster) * monster.burn() / 100;
 
         loop {
             //character turn
             if turn % 2 == 1 {
+                if (char_turn % 3) == 0 && gear.healing() > 0 {
+                    char_hp += gear.healing_provided()
+                }
                 if turn > 1 {
                     if monster_burn > 0 {
                         Self::decrease_burn(&mut monster_burn);
-                        hp -= monster_burn;
-                        if hp <= 0 && !ignore_death {
+                        char_hp -= monster_burn;
+                        if char_hp <= 0 && !ignore_death {
                             break;
                         }
                     }
-                    hp -= monster.poison();
-                    if hp <= 0 && !ignore_death {
-                        break;
+                    if monster.poison() > 0 {
+                        char_hp -= monster.poison();
+                        if char_hp <= 0 && !ignore_death {
+                            break;
+                        }
                     }
                 }
                 for h in gear.hits_against(monster, average).iter() {
                     monster_hp -= h.damage;
                     if h.is_crit {
-                        hp += h.damage * gear.lifesteal() / 100;
+                        char_hp += h.damage * gear.lifesteal() / 100;
                     }
                     if monster_hp <= 0 {
                         break;
                     }
                 }
+                char_turn += 1;
             //monster turn
             } else {
                 if turn == monster.reconstitution() as u32 {
                     monster_hp = monster.health();
                 }
-                if burn > 0 {
-                    Self::decrease_burn(&mut burn);
-                    monster_hp -= burn;
+                if monster_turn % 3 == 0 && monster.healing() > 0 {
+                    monster_hp += monster.healing_provided()
+                }
+                if char_burn > 0 {
+                    Self::decrease_burn(&mut char_burn);
+                    monster_hp -= char_burn;
                     if monster_hp <= 0 {
                         break;
                     }
                 }
-                monster_hp -= gear.poison();
-                if monster_hp <= 0 {
-                    break;
-                }
-                if hp < (base_hp + gear.health()) / 2 {
-                    hp += gear.utility1.as_ref().map_or(0, |u| u.restore());
-                    hp += gear.utility2.as_ref().map_or(0, |u| u.restore());
-                }
-                let hits = gear.hits_from(monster, average);
-                for h in hits.iter() {
-                    hp -= h.damage;
-                    if h.is_crit {
-                        monster_hp += h.damage * monster.lifesteal() / 100;
-                    }
-                    if hp <= 0 && !ignore_death {
+                if gear.poison() > 0 {
+                    monster_hp -= gear.poison();
+                    if monster_hp <= 0 {
                         break;
                     }
                 }
+                if char_hp < (base_hp + gear.health()) / 2 {
+                    char_hp += gear.utility1.as_ref().map_or(0, |u| u.restore());
+                    char_hp += gear.utility2.as_ref().map_or(0, |u| u.restore());
+                }
+                let hits = gear.hits_from(monster, average);
+                for h in hits.iter() {
+                    char_hp -= h.damage;
+                    if h.is_crit {
+                        monster_hp += h.damage * monster.lifesteal() / 100;
+                    }
+                    if char_hp <= 0 && !ignore_death {
+                        break;
+                    }
+                }
+                monster_turn += 1;
             }
             if turn >= MAX_TURN {
                 break;
@@ -98,10 +112,10 @@ impl Simulator {
         }
         Fight {
             turns: turn,
-            hp,
+            hp: char_hp,
             monster_hp,
-            hp_lost: starting_hp - hp,
-            result: if hp <= 0 || turn > MAX_TURN {
+            hp_lost: starting_hp - char_hp,
+            result: if char_hp <= 0 || turn > MAX_TURN {
                 FightResult::Loss
             } else {
                 FightResult::Win
@@ -285,6 +299,7 @@ pub trait HasEffects {
     const HP: &str = "hp";
     const BOOST_HP: &str = "boost_hp";
     const HEAL: &str = "heal";
+    const HEALING: &str = "healing";
     const RESTORE: &str = "restore";
     const HASTE: &str = "haste";
     const DMG: &str = "dmg";
@@ -297,12 +312,20 @@ pub trait HasEffects {
     const PROSPECTING: &str = "prospecting";
     const INVENTORY_SPACE: &str = "inventory_space";
 
+    fn healing_provided(&self) -> i32 {
+        (self.health() as f32 * self.healing() as f32 * 0.01).round() as i32
+    }
+
     fn health(&self) -> i32 {
         self.effect_value(Self::HP) + self.effect_value(Self::BOOST_HP)
     }
 
     fn heal(&self) -> i32 {
         self.effect_value(Self::HEAL)
+    }
+
+    fn healing(&self) -> i32 {
+        self.effect_value(Self::HEALING)
     }
 
     fn restore(&self) -> i32 {

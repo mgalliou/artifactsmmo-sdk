@@ -64,7 +64,6 @@ impl ItemsClient {
         self.get(code).iter().flat_map(|i| i.mats()).collect_vec()
     }
 
-    /// Takes an item `code` and return the mats required to craft it.
     pub fn mats_for(&self, code: &str, quantity: u32) -> Vec<SimpleItemSchema> {
         self.mats_of(code)
             .into_iter()
