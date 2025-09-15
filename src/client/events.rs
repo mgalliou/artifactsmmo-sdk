@@ -1,51 +1,22 @@
-use crate::{CollectionClient, Data, DataItem, PersistData};
+use crate::{DataItem, PersistData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
 use itertools::Itertools;
 use log::debug;
+use sdk_derive::CollectionClient;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock, RwLockReadGuard},
+    sync::{Arc, RwLock},
 };
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, CollectionClient)]
 pub struct EventsClient {
     data: RwLock<HashMap<String, Arc<EventSchema>>>,
     api: Arc<ArtifactApi>,
     active: RwLock<Vec<Arc<ActiveEventSchema>>>,
     last_refresh: RwLock<DateTime<Utc>>,
 }
-
-impl PersistData<HashMap<String, Arc<EventSchema>>> for EventsClient {
-    const PATH: &'static str = ".cache/events.json";
-
-    fn data_from_api(&self) -> HashMap<String, Arc<EventSchema>> {
-        self.api
-            .events
-            .all()
-            .unwrap()
-            .into_iter()
-            .map(|event| (event.code.clone(), Arc::new(event)))
-            .collect()
-    }
-
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
-    }
-}
-
-impl DataItem for EventsClient {
-    type Item = Arc<EventSchema>;
-}
-
-impl Data for EventsClient {
-    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<EventSchema>>> {
-        self.data.read().unwrap()
-    }
-}
-
-impl CollectionClient for EventsClient {}
 
 impl EventsClient {
     pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
@@ -93,6 +64,43 @@ impl EventsClient {
     }
 }
 
+impl PersistData<HashMap<String, Arc<EventSchema>>> for EventsClient {
+    const PATH: &'static str = ".cache/events.json";
+
+    fn data_from_api(&self) -> HashMap<String, Arc<EventSchema>> {
+        self.api
+            .events
+            .all()
+            .unwrap()
+            .into_iter()
+            .map(|event| (event.code.clone(), Arc::new(event)))
+            .collect()
+    }
+
+    fn refresh_data(&self) {
+        *self.data.write().unwrap() = self.data_from_api();
+    }
+}
+
+impl DataItem for EventsClient {
+    type Item = Arc<EventSchema>;
+}
+
+pub trait EventSchemaExt {
+    fn content_code(&self) -> &String;
+    fn to_string(&self) -> String;
+}
+
+impl EventSchemaExt for EventSchema {
+    fn content_code(&self) -> &String {
+        &self.content.code
+    }
+
+    fn to_string(&self) -> String {
+        format!("{}: '{}'", self.name, self.content_code())
+    }
+}
+
 impl EventSchemaExt for ActiveEventSchema {
     fn content_code(&self) -> &String {
         self.map
@@ -119,20 +127,5 @@ impl EventSchemaExt for ActiveEventSchema {
             self.expiration,
             remaining
         )
-    }
-}
-
-pub trait EventSchemaExt {
-    fn content_code(&self) -> &String;
-    fn to_string(&self) -> String;
-}
-
-impl EventSchemaExt for EventSchema {
-    fn content_code(&self) -> &String {
-        &self.content.code
-    }
-
-    fn to_string(&self) -> String {
-        format!("{}: '{}'", self.name, self.content_code())
     }
 }

@@ -9,12 +9,14 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path, sync::RwLockReadGuard};
 
 pub use artifactsmmo_openapi::models;
+pub use sdk_derive::CollectionClient;
 
 pub use client::*;
 pub use consts::*;
 pub use container::*;
-pub use gear::Gear;
-pub use simulator::Simulator;
+pub use gear::*;
+pub use simulator::*;
+pub use skill::*;
 
 pub mod client;
 pub mod consts;

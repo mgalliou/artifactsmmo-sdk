@@ -1,15 +1,27 @@
-use crate::{CollectionClient, Data, DataItem, PersistData};
+use crate::{DataItem, PersistData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{RewardsSchema, TaskFullSchema};
+use sdk_derive::{CollectionClient};
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock, RwLockReadGuard},
+    sync::{Arc, RwLock},
 };
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, CollectionClient)]
 pub struct TasksClient {
     data: RwLock<HashMap<String, Arc<TaskFullSchema>>>,
     api: Arc<ArtifactApi>,
+}
+
+impl TasksClient {
+    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
+        let tasks = Self {
+            data: Default::default(),
+            api,
+        };
+        *tasks.data.write().unwrap() = tasks.retrieve_data();
+        tasks
+    }
 }
 
 impl PersistData<HashMap<String, Arc<TaskFullSchema>>> for TasksClient {
@@ -32,25 +44,6 @@ impl PersistData<HashMap<String, Arc<TaskFullSchema>>> for TasksClient {
 
 impl DataItem for TasksClient {
     type Item = Arc<TaskFullSchema>;
-}
-
-impl Data for TasksClient {
-    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>> {
-        self.data.read().unwrap()
-    }
-}
-
-impl CollectionClient for TasksClient {}
-
-impl TasksClient {
-    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
-        let tasks = Self {
-            data: Default::default(),
-            api,
-        };
-        *tasks.data.write().unwrap() = tasks.retrieve_data();
-        tasks
-    }
 }
 
 pub trait TaskFullSchemaExt {

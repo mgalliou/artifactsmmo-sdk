@@ -1,15 +1,27 @@
-use crate::{CollectionClient, Data, DataItem, PersistData};
+use crate::{DataItem, PersistData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::NpcItem;
+use sdk_derive::CollectionClient;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock, RwLockReadGuard},
+    sync::{Arc, RwLock},
 };
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, CollectionClient)]
 pub struct NpcsItemsClient {
     data: RwLock<HashMap<String, Arc<NpcItem>>>,
     api: Arc<ArtifactApi>,
+}
+
+impl NpcsItemsClient {
+    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
+        let npcs_items = Self {
+            data: Default::default(),
+            api,
+        };
+        *npcs_items.data.write().unwrap() = npcs_items.retrieve_data();
+        npcs_items
+    }
 }
 
 impl PersistData<HashMap<String, Arc<NpcItem>>> for NpcsItemsClient {
@@ -32,25 +44,6 @@ impl PersistData<HashMap<String, Arc<NpcItem>>> for NpcsItemsClient {
 
 impl DataItem for NpcsItemsClient {
     type Item = Arc<NpcItem>;
-}
-
-impl Data for NpcsItemsClient {
-    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<NpcItem>>> {
-        self.data.read().unwrap()
-    }
-}
-
-impl CollectionClient for NpcsItemsClient {}
-
-impl NpcsItemsClient {
-    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
-        let npcs_items = Self {
-            data: Default::default(),
-            api,
-        };
-        *npcs_items.data.write().unwrap() = npcs_items.retrieve_data();
-        npcs_items
-    }
 }
 
 pub trait NpcItemExt {

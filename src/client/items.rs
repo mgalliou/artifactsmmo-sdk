@@ -1,6 +1,6 @@
 use crate::{
-    CanProvideXp, CollectionClient, Data, DataItem, DropRateSchemaExt, DropsItems, Level,
-    PersistData, Simulator, check_lvl_diff,
+    CanProvideXp, CollectionClient, DataItem, DropRateSchemaExt, DropsItems, Level, PersistData,
+    Simulator, check_lvl_diff,
     client::{
         monsters::{MonsterSchemaExt, MonstersClient},
         npcs::NpcsClient,
@@ -23,13 +23,13 @@ use std::{
     fmt,
     ops::Deref,
     str::FromStr,
-    sync::{Arc, RwLock, RwLockReadGuard},
-    vec::{IntoIter, Vec},
+    sync::{Arc, RwLock},
+    vec::Vec,
 };
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, CollectionClient)]
 pub struct ItemsClient {
     data: RwLock<HashMap<String, Arc<ItemSchema>>>,
     api: Arc<ArtifactApi>,
@@ -38,52 +38,6 @@ pub struct ItemsClient {
     tasks_rewards: Arc<TasksRewardsClient>,
     npcs: Arc<NpcsClient>,
 }
-
-impl PersistData<HashMap<String, Arc<ItemSchema>>> for ItemsClient {
-    const PATH: &'static str = ".cache/items.json";
-
-    fn data_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
-        self.api
-            .items
-            .all()
-            .unwrap()
-            .into_iter()
-            .map(|item| (item.code.clone(), Arc::new(item)))
-            .collect()
-    }
-
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
-    }
-}
-
-impl IntoIterator for ItemsClient {
-    type Item = Arc<ItemSchema>;
-
-    type IntoIter = IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.data
-            .read()
-            .unwrap()
-            .values()
-            .cloned()
-            .collect_vec()
-            .into_iter()
-    }
-}
-
-impl DataItem for ItemsClient {
-    type Item = Arc<ItemSchema>;
-}
-
-impl Data for ItemsClient {
-    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<ItemSchema>>> {
-        self.data.read().unwrap()
-    }
-}
-
-impl CollectionClient for ItemsClient {}
 
 impl ItemsClient {
     pub(crate) fn new(
@@ -369,6 +323,28 @@ impl ItemsClient {
             .get(item)
             .is_some_and(|i| i.sell_price.is_some())
     }
+}
+
+impl PersistData<HashMap<String, Arc<ItemSchema>>> for ItemsClient {
+    const PATH: &'static str = ".cache/items.json";
+
+    fn data_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
+        self.api
+            .items
+            .all()
+            .unwrap()
+            .into_iter()
+            .map(|item| (item.code.clone(), Arc::new(item)))
+            .collect()
+    }
+
+    fn refresh_data(&self) {
+        *self.data.write().unwrap() = self.data_from_api();
+    }
+}
+
+impl DataItem for ItemsClient {
+    type Item = Arc<ItemSchema>;
 }
 
 pub trait ItemSchemaExt {

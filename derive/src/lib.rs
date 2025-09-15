@@ -1,6 +1,27 @@
-// use proc_macro::TokenStream;
-// use quote::quote;
-// use syn::{Data, DeriveInput};
+use proc_macro::TokenStream;
+use quote::quote;
+use syn::{Data, DeriveInput};
+
+#[proc_macro_derive(CollectionClient, attributes(element))]
+pub fn collection_client_derive(input: TokenStream) -> TokenStream {
+    let ast = syn::parse_macro_input!(input as DeriveInput);
+    match ast.data {
+        Data::Struct(_) => {
+            let name = &ast.ident;
+            let expanded = quote! {
+                impl crate::CollectionClient for #name {}
+                impl crate::Data for #name {
+
+                    fn data(&self) -> std::sync::RwLockReadGuard<'_, HashMap<String, Self::Item>> {
+                        self.data.read().unwrap()
+                    }
+                }
+            };
+            expanded.into()
+        }
+        _ => panic!("CollectionClient derive can only be used on struct"),
+    }
+}
 
 // #[proc_macro_derive(FromRequestError)]
 // pub fn from_request_error_derive(input: TokenStream) -> TokenStream {

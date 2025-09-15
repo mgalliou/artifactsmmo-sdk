@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, CollectionClient, Data, DataItem, DropsItems, Level, PersistData, Simulator,
+    CanProvideXp, CollectionClient, DataItem, DropsItems, Level, PersistData, Simulator,
     client::events::EventsClient,
     simulator::{DamageType, HasEffects},
 };
@@ -8,46 +8,16 @@ use artifactsmmo_openapi::models::{DropRateSchema, ItemSchema, MonsterSchema, Si
 use itertools::Itertools;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock, RwLockReadGuard},
+    sync::{Arc, RwLock},
 };
 use strum::IntoEnumIterator;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, CollectionClient)]
 pub struct MonstersClient {
     data: RwLock<HashMap<String, Arc<MonsterSchema>>>,
     api: Arc<ArtifactApi>,
     events: Arc<EventsClient>,
 }
-
-impl PersistData<HashMap<String, Arc<MonsterSchema>>> for MonstersClient {
-    const PATH: &'static str = ".cache/monsters.json";
-
-    fn data_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
-        self.api
-            .monsters
-            .all()
-            .unwrap()
-            .into_iter()
-            .map(|m| (m.code.clone(), Arc::new(m)))
-            .collect()
-    }
-
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
-    }
-}
-
-impl DataItem for MonstersClient {
-    type Item = Arc<MonsterSchema>;
-}
-
-impl Data for MonstersClient {
-    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Arc<MonsterSchema>>> {
-        self.data.read().unwrap()
-    }
-}
-
-impl CollectionClient for MonstersClient {}
 
 impl MonstersClient {
     pub(crate) fn new(api: Arc<ArtifactApi>, events: Arc<EventsClient>) -> Self {
@@ -84,6 +54,28 @@ impl MonstersClient {
     pub fn is_event(&self, code: &str) -> bool {
         self.events.all().iter().any(|e| e.content.code == code)
     }
+}
+
+impl PersistData<HashMap<String, Arc<MonsterSchema>>> for MonstersClient {
+    const PATH: &'static str = ".cache/monsters.json";
+
+    fn data_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
+        self.api
+            .monsters
+            .all()
+            .unwrap()
+            .into_iter()
+            .map(|m| (m.code.clone(), Arc::new(m)))
+            .collect()
+    }
+
+    fn refresh_data(&self) {
+        *self.data.write().unwrap() = self.data_from_api();
+    }
+}
+
+impl DataItem for MonstersClient {
+    type Item = Arc<MonsterSchema>;
 }
 
 impl DropsItems for MonsterSchema {
@@ -130,8 +122,6 @@ impl HasEffects for MonsterSchema {
     }
 }
 
-impl CanProvideXp for MonsterSchema {}
-
 pub trait MonsterSchemaExt {
     fn average_damage(&self) -> f32;
     fn average_damage_against(&self, item: &ItemSchema) -> f32;
@@ -157,3 +147,5 @@ impl MonsterSchemaExt for MonsterSchema {
             .sum::<f32>()
     }
 }
+
+impl CanProvideXp for MonsterSchema {}

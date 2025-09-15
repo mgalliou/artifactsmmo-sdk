@@ -68,6 +68,7 @@ dependencies = [
  "ordered-float",
  "rand",
  "reqwest",
+ "sdk_derive",
  "serde",
  "serde_json",
  "strum",
@@ -1288,6 +1289,14 @@ dependencies = [
  "ref-cast",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "sdk_derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
 ]
 
 [[package]]
