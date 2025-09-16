@@ -1,10 +1,12 @@
-use artifactsmmo_openapi::models::{FightResult, ItemSchema, MonsterSchema, SimpleEffectSchema};
+use artifactsmmo_openapi::models::{
+    CharacterSchema, FightResult, ItemSchema, MonsterSchema, SimpleEffectSchema,
+};
 use itertools::Itertools;
 use std::{cmp::max, sync::Arc};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
-use crate::{Gear, skill::Skill};
+use crate::{CharacterClient, Gear, Slot, character::HasCharacterData, skill::Skill};
 
 const BASE_HP: u32 = 115;
 const HP_PER_LEVEL: u32 = 5;
@@ -21,21 +23,16 @@ const BURN_MULTIPLIER: f32 = 0.90;
 pub struct Simulator {}
 
 impl Simulator {
-    pub fn fight(
-        level: u32,
-        gear: &Gear,
-        monster: &MonsterSchema,
-        params: FightOptionalParams,
-    ) -> Fight {
+    pub fn fight(level: u32, gear: &Gear, monster: &MonsterSchema, params: FightParams) -> Fight {
         let mut char = SimulationCharacter::new(
             level,
             gear,
             params.utility1_quantity,
             params.utility2_quantity,
             params.missing_hp,
-            params.average,
+            params.averaged,
         );
-        let mut monster = SimulationMonster::new(monster, params.average);
+        let mut monster = SimulationMonster::new(monster, params.averaged);
         let mut turn = 1;
 
         loop {
@@ -117,12 +114,47 @@ impl Simulator {
     }
 }
 
-pub struct FightOptionalParams {
+pub struct FightParams {
     utility1_quantity: u32,
     utility2_quantity: u32,
     missing_hp: i32,
-    average: bool,
+    averaged: bool,
     ignore_death: bool,
+}
+
+impl FightParams {
+    pub fn ignore_death(mut self) -> Self {
+        self.ignore_death = true;
+        self
+    }
+
+    pub fn average(mut self) -> Self {
+        self.averaged = true;
+        self
+    }
+}
+
+impl From<CharacterClient> for FightParams {
+    fn from(value: CharacterClient) -> Self {
+        Self {
+            utility1_quantity: value.quantity_in_slot(Slot::Utility1),
+            utility2_quantity: value.quantity_in_slot(Slot::Utility2),
+            missing_hp: value.missing_hp(),
+            ..Default::default()
+        }
+    }
+}
+
+impl Default for FightParams {
+    fn default() -> Self {
+        Self {
+            utility1_quantity: 100,
+            utility2_quantity: 100,
+            missing_hp: 0,
+            averaged: false,
+            ignore_death: false,
+        }
+    }
 }
 
 trait SimulationEntity: HasEffects {
@@ -448,18 +480,6 @@ impl<'a> HasEffects for SimulationMonster<'a> {
 
     fn effects(&self) -> Vec<&SimpleEffectSchema> {
         self.monster.effects()
-    }
-}
-
-impl Default for FightOptionalParams {
-    fn default() -> Self {
-        Self {
-            utility1_quantity: 100,
-            utility2_quantity: 100,
-            missing_hp: 0,
-            average: false,
-            ignore_death: false,
-        }
     }
 }
 
