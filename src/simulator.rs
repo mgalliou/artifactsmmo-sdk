@@ -761,7 +761,7 @@ pub trait HasEffects {
             .unwrap_or(0)
     }
 
-    fn hits_against<H: HasEffects>(&self, enemy: &H, average: bool) -> Vec<Hit> {
+    fn hits_against(&self, enemy: &impl HasEffects, average: bool) -> Vec<Hit> {
         let mut is_crit = false;
         if !average {
             is_crit = rand::random_range(0..=100) <= self.critical_strike();
@@ -790,7 +790,7 @@ pub trait HasEffects {
             .collect_vec()
     }
 
-    fn critless_damage_against<H: HasEffects>(&self, enemy: &H) -> i32 {
+    fn critless_damage_against(&self, enemy: &impl HasEffects) -> i32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
@@ -806,11 +806,15 @@ pub trait HasEffects {
 
     // Returns the damage boost provided by the `boost` entity to the `self` entity against the
     // `target` entity
-    fn average_dmg_boost_against_with<H: HasEffects>(&self, boost: &H, target: &H) -> f32 {
+    fn average_dmg_boost_against_with(
+        &self,
+        boost: &impl HasEffects,
+        target: &impl HasEffects,
+    ) -> f32 {
         self.average_dmg_against_with(boost, target) - self.average_dmg_against(target)
     }
 
-    fn average_dmg_reduction_against<H: HasEffects>(&self, target: &H) -> f32
+    fn average_dmg_reduction_against(&self, target: &impl HasEffects) -> f32
     where
         Self: Sized,
     {
@@ -832,7 +836,7 @@ pub trait HasEffects {
 
     // Returns the average attack damage done by the `self` entity against the `target ` entity with additionnnal effects from the `boost` entity
     // damage `boost`
-    fn average_dmg_against_with<H: HasEffects>(&self, boost: &H, target: &H) -> f32 {
+    fn average_dmg_against_with(&self, boost: &impl HasEffects, target: &impl HasEffects) -> f32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
