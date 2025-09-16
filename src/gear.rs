@@ -1,4 +1,4 @@
-use crate::simulator::{DamageType, HasEffects, Hit, Simulator};
+use crate::simulator::{DamageType, HasEffects, Simulator};
 use artifactsmmo_openapi::models::{
     ItemSchema, ItemSlot, MonsterSchema, SimpleEffectSchema, SimpleItemSchema,
 };
@@ -120,86 +120,6 @@ impl Gear {
             .sum()
     }
 
-    pub fn critless_damage_against(&self, monster: &MonsterSchema) -> i32 {
-        DamageType::iter()
-            .map(|t| {
-                Simulator::average_dmg(
-                    self.attack_damage(t),
-                    self.damage_increase(t),
-                    0,
-                    monster.resistance(t),
-                )
-                .round() as i32
-            })
-            .sum()
-    }
-
-    pub fn critless_damage_from(&self, monster: &MonsterSchema) -> i32 {
-        DamageType::iter()
-            .map(|t| {
-                Simulator::average_dmg(
-                    monster.attack_damage(t),
-                    monster.damage_increase(t),
-                    0,
-                    self.resistance(t),
-                )
-                .round() as i32
-            })
-            .sum()
-    }
-
-    pub fn hits_against(&self, monster: &MonsterSchema, average: bool) -> Vec<Hit> {
-        let is_crit = rand::random_range(0..=100) <= self.critical_strike();
-        DamageType::iter()
-            .map(|t| {
-                if average {
-                    Hit::average(
-                        self.attack_damage(t),
-                        self.damage_increase(t),
-                        self.critical_strike(),
-                        t,
-                        monster.resistance(t),
-                    )
-                } else {
-                    Hit::new(
-                        self.attack_damage(t),
-                        self.damage_increase(t),
-                        t,
-                        monster.resistance(t),
-                        is_crit,
-                    )
-                }
-            })
-            .filter(|h| h.damage > 0)
-            .collect_vec()
-    }
-
-    pub fn hits_from(&self, monster: &MonsterSchema, average: bool) -> Vec<Hit> {
-        let is_crit = rand::random_range(0..=100) <= self.critical_strike();
-        DamageType::iter()
-            .map(|t| {
-                if average {
-                    Hit::average(
-                        monster.attack_damage(t),
-                        monster.damage_increase(t),
-                        monster.critical_strike(),
-                        t,
-                        self.resistance(t),
-                    )
-                } else {
-                    Hit::new(
-                        monster.attack_damage(t),
-                        monster.damage_increase(t),
-                        t,
-                        self.resistance(t),
-                        is_crit,
-                    )
-                }
-            })
-            .filter(|h| h.damage > 0)
-            .collect_vec()
-    }
-
     pub fn align_to(&mut self, other: &Gear) {
         if self.ring1 == other.ring2 || self.ring2 == other.ring1 {
             swap(&mut self.ring1, &mut self.ring2);
@@ -220,11 +140,6 @@ impl Gear {
 }
 
 impl HasEffects for Gear {
-    //TODO: maybe handle all slots, in the future other slots might provide attack damage
-    fn attack_damage(&self, t: DamageType) -> i32 {
-        self.weapon.as_ref().map_or(0, |w| w.attack_damage(t))
-    }
-
     fn effect_value(&self, effect: &str) -> i32 {
         Slot::iter()
             .map(|s| self.item_in(s).map_or(0, |i| i.effect_value(effect)))

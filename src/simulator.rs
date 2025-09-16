@@ -1,5 +1,7 @@
-use artifactsmmo_openapi::models::{FightResult, MonsterSchema, SimpleEffectSchema};
-use std::cmp::max;
+use artifactsmmo_openapi::models::{FightResult, ItemSchema, MonsterSchema, SimpleEffectSchema};
+use itertools::Itertools;
+use std::{cmp::max, sync::Arc};
+use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
 use crate::{Gear, skill::Skill};
@@ -25,110 +27,35 @@ impl Simulator {
         monster: &MonsterSchema,
         params: FightOptionalParams,
     ) -> Fight {
-        let base_hp = (BASE_HP + HP_PER_LEVEL * level) as i32;
-        let max_hp = base_hp + gear.health();
-        let starting_hp = max_hp - params.missing_hp;
-        let mut char_hp = starting_hp;
-        let mut monster_hp = monster.health();
+        let mut char = SimulationCharacter::new(
+            level,
+            gear,
+            params.utility1_quantity,
+            params.utility2_quantity,
+            params.missing_hp,
+            params.average,
+        );
+        let mut monster = SimulationMonster::new(monster, params.average);
         let mut turn = 1;
-        let mut char_turn = 1;
-        let mut monster_turn = 1;
-        let mut char_burn = gear.critless_damage_against(monster) * gear.burn() / 100;
-        let mut monster_burn = gear.critless_damage_from(monster) * monster.burn() / 100;
-        let mut utility1_quantity = params.utility1_quantity;
-        let mut utility2_quantity = params.utility2_quantity;
 
         loop {
-            //character turn
             if turn % 2 == 1 {
-                if (char_turn % 3) == 0 && gear.healing() > 0 {
-                    char_hp += Self::compute_healing(max_hp, gear.healing());
-                }
-                if turn > 1 {
-                    if monster_burn > 0 {
-                        Self::decrease_burn(&mut monster_burn);
-                        char_hp -= monster_burn;
-                        if char_hp <= 0 && !params.ignore_death {
-                            break;
-                        }
-                    }
-                    if monster.poison() > 0 {
-                        char_hp -= monster.poison();
-                        if char_hp <= 0 && !params.ignore_death {
-                            break;
-                        }
-                    }
-                }
-                for h in gear.hits_against(monster, params.average).iter() {
-                    monster_hp -= h.damage;
-                    if h.is_crit {
-                        char_hp += h.damage * gear.lifesteal() / 100;
-                    }
-                    if monster_hp <= 0 {
-                        break;
-                    }
-                }
-                char_turn += 1;
-            //monster turn
+                char.turn_against(&mut monster, turn);
             } else {
-                if turn == monster.reconstitution() as u32 {
-                    monster_hp = monster.health();
-                }
-                if monster_turn % 3 == 0 && monster.healing() > 0 {
-                    monster_hp += Self::compute_healing(monster.health(), monster.healing());
-                }
-                if char_burn > 0 {
-                    Self::decrease_burn(&mut char_burn);
-                    monster_hp -= char_burn;
-                    if monster_hp <= 0 {
-                        break;
-                    }
-                }
-                if gear.poison() > 0 {
-                    monster_hp -= gear.poison();
-                    if monster_hp <= 0 {
-                        break;
-                    }
-                }
-                if char_hp < (base_hp + gear.health()) / 2 {
-                    if utility1_quantity > 0 {
-                        let restore = gear.utility1.as_ref().map_or(0, |u| u.restore());
-                        if restore > 0 {
-                            char_hp += restore;
-                            utility1_quantity -= 1;
-                        }
-                    }
-                    if utility2_quantity > 0 {
-                        let restore = gear.utility2.as_ref().map_or(0, |u| u.restore());
-                        if restore > 0 {
-                            char_hp += restore;
-                            utility2_quantity -= 1;
-                        }
-                    }
-                }
-                let hits = gear.hits_from(monster, params.average);
-                for h in hits.iter() {
-                    char_hp -= h.damage;
-                    if h.is_crit {
-                        monster_hp += h.damage * monster.lifesteal() / 100;
-                    }
-                    if char_hp <= 0 && !params.ignore_death {
-                        break;
-                    }
-                }
-                monster_turn += 1;
+                monster.turn_against(&mut char, turn);
             }
             if turn >= MAX_TURN {
                 break;
             }
             turn += 1;
         }
+
         Fight {
             turns: turn,
-            hp: char_hp,
-            monster_hp,
-            hp_lost: starting_hp - char_hp,
-            result: if char_hp <= 0 || turn > MAX_TURN {
+            hp: char.current_health,
+            monster_hp: monster.current_health,
+            hp_lost: char.current_health - char.starting_hp,
+            result: if char.current_health <= 0 || turn > MAX_TURN {
                 FightResult::Loss
             } else {
                 FightResult::Win
@@ -188,14 +115,6 @@ impl Simulator {
 
         ((30.0 + (level / 2.0)) * (1.0 + reduction * 0.01)).round() as u32
     }
-
-    fn decrease_burn(burn: &mut i32) {
-        *burn = (*burn as f32 * BURN_MULTIPLIER).round() as i32;
-    }
-
-    fn compute_healing(max_health: i32, healing: i32) -> i32 {
-        (max_health as f32 * healing as f32 * 0.01).round() as i32
-    }
 }
 
 pub struct FightOptionalParams {
@@ -204,6 +123,332 @@ pub struct FightOptionalParams {
     missing_hp: i32,
     average: bool,
     ignore_death: bool,
+}
+
+trait SimulationEntity: HasEffects {
+    fn turn_against<S: SimulationEntity>(&mut self, enemy: &mut S, turn: u32) {
+        if self.current_turn() == 1 {
+            self.apply_burn(enemy);
+            self.apply_poison(enemy);
+        }
+        if turn == self.reconstitution() as u32 {
+            self.set_health(self.max_hp());
+        }
+        if self.current_health() < self.max_hp() / 2 {
+            self.consume_restore_utilities();
+        }
+        if self.current_turn() % 3 == 0 {
+            self.apply_healing();
+        }
+        self.suffer_burning();
+        if self.current_health() < 1 {
+            return;
+        }
+        self.suffer_poisoning();
+        if self.current_health() < 1 {
+            return;
+        }
+        for h in self.hits_against(enemy, self.average()).iter() {
+            enemy.dec_health(h.damage);
+            if h.is_crit {
+                self.inc_health(h.damage * self.lifesteal() / 100);
+            }
+            if enemy.current_health() < 1 {
+                return;
+            }
+        }
+        self.inc_turn();
+    }
+
+    fn apply_burn<S: SimulationEntity>(&self, enemy: &mut S) {
+        enemy.set_burning(self.critless_damage_against(enemy) * self.burn() / 100);
+    }
+
+    fn apply_poison<S: SimulationEntity>(&self, enemy: &mut S) {
+        enemy.set_poisoned(self.poison());
+    }
+
+    fn apply_healing(&mut self) {
+        self.inc_health((self.max_hp() as f32 * self.healing() as f32 * 0.01).round() as i32)
+    }
+
+    fn consume_restore_utilities(&mut self) {
+        if let Some(utility1) = self.utility1()
+            && self.utility1_quantity() > 0
+        {
+            let restore = utility1.restore();
+            if restore > 0 {
+                self.inc_health(restore);
+                self.dec_utility1();
+            }
+        }
+        if let Some(utility2) = self.utility2()
+            && self.utility2_quantity() > 0
+        {
+            let restore = utility2.restore();
+            if restore > 0 {
+                self.inc_health(restore);
+                self.dec_utility2();
+            }
+        }
+    }
+
+    fn suffer_burning(&mut self) {
+        self.set_burning((self.burning() as f32 * BURN_MULTIPLIER).round() as i32);
+        self.dec_health(self.burning());
+    }
+
+    fn suffer_poisoning(&mut self) {
+        self.dec_health(self.poisoned());
+    }
+
+    fn average(&self) -> bool;
+    fn current_turn(&self) -> u32;
+    fn inc_turn(&mut self);
+    fn max_hp(&self) -> i32;
+    fn current_health(&self) -> i32;
+    fn set_health(&mut self, value: i32);
+    fn burning(&self) -> i32;
+    fn set_burning(&mut self, value: i32);
+    fn poisoned(&self) -> i32;
+    fn set_poisoned(&mut self, value: i32);
+
+    fn inc_health(&mut self, value: i32) {
+        let missing = self.max_hp() - self.current_health();
+        let value = if value > missing { missing } else { value };
+        self.set_health(self.current_health() + value)
+    }
+
+    fn dec_health(&mut self, value: i32) {
+        self.set_health(self.current_health() - value)
+    }
+
+    fn utility1(&self) -> Option<Arc<ItemSchema>> {
+        None
+    }
+
+    fn utility2(&self) -> Option<Arc<ItemSchema>> {
+        None
+    }
+
+    fn utility1_quantity(&self) -> u32 {
+        0
+    }
+
+    fn utility2_quantity(&self) -> u32 {
+        0
+    }
+
+    fn dec_utility1(&mut self) {}
+    fn dec_utility2(&mut self) {}
+}
+
+pub struct SimulationCharacter<'a> {
+    gear: &'a Gear,
+    max_hp: i32,
+    starting_hp: i32,
+
+    current_health: i32,
+    current_turn: u32,
+
+    utility1_quantity: u32,
+    utility2_quantity: u32,
+
+    burning: i32,
+    poisoned: i32,
+
+    average: bool,
+}
+
+impl<'a> SimulationCharacter<'a> {
+    fn new(
+        level: u32,
+        gear: &'a Gear,
+        utility1_quantity: u32,
+        utility2_quantity: u32,
+        missing_hp: i32,
+        average: bool,
+    ) -> Self {
+        let base_hp = (BASE_HP + HP_PER_LEVEL * level) as i32;
+        let max_hp = base_hp + gear.health();
+        let starting_hp = max_hp - missing_hp;
+        Self {
+            gear,
+            max_hp,
+            starting_hp,
+            current_health: starting_hp,
+            current_turn: 1,
+            utility1_quantity,
+            utility2_quantity,
+            burning: 0,
+            poisoned: 0,
+            average,
+        }
+    }
+}
+
+impl<'a> SimulationEntity for SimulationCharacter<'a> {
+    fn current_turn(&self) -> u32 {
+        self.current_turn
+    }
+
+    fn inc_turn(&mut self) {
+        self.current_turn += 1
+    }
+
+    fn max_hp(&self) -> i32 {
+        self.max_hp
+    }
+
+    fn current_health(&self) -> i32 {
+        self.current_health
+    }
+
+    fn poisoned(&self) -> i32 {
+        self.poisoned
+    }
+
+    fn burning(&self) -> i32 {
+        self.burning
+    }
+
+    fn set_burning(&mut self, value: i32) {
+        self.burning = value;
+    }
+
+    fn set_poisoned(&mut self, value: i32) {
+        self.poisoned = value;
+    }
+
+    fn set_health(&mut self, value: i32) {
+        self.current_health = value;
+    }
+
+    fn average(&self) -> bool {
+        self.average
+    }
+
+    fn utility1(&self) -> Option<Arc<ItemSchema>> {
+        self.gear.utility1.clone()
+    }
+
+    fn utility2(&self) -> Option<Arc<ItemSchema>> {
+        self.gear.utility2.clone()
+    }
+
+    fn utility1_quantity(&self) -> u32 {
+        self.utility1_quantity
+    }
+
+    fn utility2_quantity(&self) -> u32 {
+        self.utility2_quantity
+    }
+
+    fn dec_utility1(&mut self) {
+        self.utility1_quantity = self.utility1_quantity().saturating_sub(1);
+    }
+
+    fn dec_utility2(&mut self) {
+        self.utility2_quantity = self.utility2_quantity().saturating_sub(1);
+    }
+}
+
+impl<'a> HasEffects for SimulationCharacter<'a> {
+    fn effect_value(&self, effect: &str) -> i32 {
+        self.gear.effect_value(effect)
+    }
+
+    fn effects(&self) -> Vec<&SimpleEffectSchema> {
+        self.gear.effects()
+    }
+}
+
+pub struct SimulationMonster<'a> {
+    monster: &'a MonsterSchema,
+    current_health: i32,
+
+    current_turn: u32,
+    burning: i32,
+    poisoned: i32,
+
+    average: bool,
+}
+
+impl<'a> SimulationMonster<'a> {
+    fn new(monster: &'a MonsterSchema, average: bool) -> Self {
+        Self {
+            monster,
+            current_health: monster.health(),
+            current_turn: 1,
+            burning: 0,
+            poisoned: 0,
+            average,
+        }
+    }
+}
+
+impl<'a> SimulationEntity for SimulationMonster<'a> {
+    fn current_turn(&self) -> u32 {
+        self.current_turn
+    }
+
+    fn inc_turn(&mut self) {
+        self.current_turn += 1
+    }
+
+    fn max_hp(&self) -> i32 {
+        self.monster.hp
+    }
+
+    fn current_health(&self) -> i32 {
+        self.current_health
+    }
+
+    fn poisoned(&self) -> i32 {
+        self.poisoned
+    }
+
+    fn burning(&self) -> i32 {
+        self.burning
+    }
+
+    fn set_burning(&mut self, value: i32) {
+        self.burning = value
+    }
+
+    fn set_poisoned(&mut self, value: i32) {
+        self.poisoned = value
+    }
+
+    fn set_health(&mut self, value: i32) {
+        self.current_health = value;
+    }
+
+    fn average(&self) -> bool {
+        self.average
+    }
+}
+
+impl<'a> HasEffects for SimulationMonster<'a> {
+    fn health(&self) -> i32 {
+        self.monster.health()
+    }
+
+    fn attack_damage(&self, r#type: DamageType) -> i32 {
+        self.monster.attack_damage(r#type)
+    }
+
+    fn critical_strike(&self) -> i32 {
+        self.monster.critical_strike()
+    }
+
+    fn resistance(&self, r#type: DamageType) -> i32 {
+        self.monster.resistance(r#type)
+    }
+
+    fn effects(&self) -> Vec<&SimpleEffectSchema> {
+        self.monster.effects()
+    }
 }
 
 impl Default for FightOptionalParams {
@@ -424,6 +669,46 @@ pub trait HasEffects {
             .iter()
             .find_map(|e| (e.code == effect).then_some(e.value))
             .unwrap_or(0)
+    }
+
+    fn hits_against<H: HasEffects>(&self, enemy: &H, average: bool) -> Vec<Hit> {
+        let is_crit = rand::random_range(0..=100) <= self.critical_strike();
+        DamageType::iter()
+            .map(|t| {
+                if average {
+                    Hit::average(
+                        self.attack_damage(t),
+                        self.damage_increase(t),
+                        self.critical_strike(),
+                        t,
+                        enemy.resistance(t),
+                    )
+                } else {
+                    Hit::new(
+                        self.attack_damage(t),
+                        self.damage_increase(t),
+                        t,
+                        enemy.resistance(t),
+                        is_crit,
+                    )
+                }
+            })
+            .filter(|h| h.damage > 0)
+            .collect_vec()
+    }
+
+    fn critless_damage_against<H: HasEffects>(&self, enemy: &H) -> i32 {
+        DamageType::iter()
+            .map(|t| {
+                Simulator::average_dmg(
+                    self.attack_damage(t),
+                    self.damage_increase(t),
+                    0,
+                    enemy.resistance(t),
+                )
+                .round() as i32
+            })
+            .sum()
     }
 
     fn effects(&self) -> Vec<&SimpleEffectSchema>;
