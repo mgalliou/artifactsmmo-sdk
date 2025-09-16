@@ -69,16 +69,6 @@ impl Simulator {
         attack_damage as f32 * multiplier
     }
 
-    fn critless_multiplier(damage_increase: i32, target_resistance: i32) -> f32 {
-        (1.0 + damage_increase as f32 * 0.01) * (1.0 - target_resistance as f32 * 0.01)
-    }
-
-    fn crit_multiplier(damage_increase: i32, target_resistance: i32) -> f32 {
-        (1.0 + damage_increase as f32 * 0.01)
-            * (1.0 - target_resistance as f32 * 0.01)
-            * (1.0 + CRIT_MULTIPLIER)
-    }
-
     fn average_multiplier(
         damage_increase: i32,
         critical_strike: i32,
@@ -86,6 +76,27 @@ impl Simulator {
     ) -> f32 {
         Self::critless_multiplier(damage_increase, target_resistance)
             * (1.0 + critical_strike as f32 * 0.01 * CRIT_MULTIPLIER)
+    }
+
+    fn critless_multiplier(damage_increase: i32, target_resistance: i32) -> f32 {
+        Self::dmg_multiplier(damage_increase) * Self::res_multiplier(target_resistance)
+    }
+
+    fn crit_multiplier(damage_increase: i32, target_resistance: i32) -> f32 {
+        Self::critless_multiplier(damage_increase, target_resistance) * (1.0 + CRIT_MULTIPLIER)
+    }
+
+    fn dmg_multiplier(dmg_increase: i32) -> f32 {
+        1.0 + dmg_increase as f32 * 0.01
+    }
+
+    fn res_multiplier(target_resistance: i32) -> f32 {
+        let resistance = if target_resistance > 100 {
+            100.0
+        } else {
+            target_resistance as f32
+        };
+        1.0 - resistance * 0.01
     }
 
     pub fn time_to_rest(health: u32) -> u32 {
@@ -165,23 +176,30 @@ trait SimulationEntity: HasEffects {
             self.consume_restore_utilities();
         }
         if self.current_turn() % 3 == 0 {
-            self.apply_healing();
+            self.receive_healing();
         }
-        self.suffer_burning();
-        if self.current_health() < 1 {
-            return;
+        if self.burning() > 0 {
+            self.suffer_burning();
+            if self.current_health() < 1 {
+                return;
+            }
         }
-        self.suffer_poisoning();
-        if self.current_health() < 1 {
-            return;
+        if self.poisoned() > 0 {
+            self.suffer_poisoning();
+            if self.current_health() < 1 {
+                return;
+            }
         }
-        for h in self.hits_against(enemy, self.average()).iter() {
-            enemy.dec_health(h.damage);
-            if h.is_crit {
-                self.inc_health(h.damage * self.lifesteal() / 100);
+        for hit in self.hits_against(enemy, self.average()).iter() {
+            enemy.dec_health(hit.damage);
+            if hit.is_crit {
+                self.inc_health(hit.damage * self.lifesteal() / 100);
             }
             if enemy.current_health() < 1 {
                 return;
+            }
+            if enemy.corrupted() > 0 {
+                enemy.suffer_corruption(hit.r#type);
             }
         }
         self.inc_turn();
@@ -195,7 +213,7 @@ trait SimulationEntity: HasEffects {
         enemy.set_poisoned(self.poison());
     }
 
-    fn apply_healing(&mut self) {
+    fn receive_healing(&mut self) {
         self.inc_health((self.max_hp() as f32 * self.healing() as f32 * 0.01).round() as i32)
     }
 
@@ -239,6 +257,7 @@ trait SimulationEntity: HasEffects {
     fn set_burning(&mut self, value: i32);
     fn poisoned(&self) -> i32;
     fn set_poisoned(&mut self, value: i32);
+    fn suffer_corruption(&mut self, r#type: DamageType);
 
     fn inc_health(&mut self, value: i32) {
         let missing = self.max_hp() - self.current_health();
@@ -271,20 +290,24 @@ trait SimulationEntity: HasEffects {
 }
 
 pub struct SimulationCharacter<'a> {
+    average: bool,
     gear: &'a Gear,
-    max_hp: i32,
     starting_hp: i32,
+    max_hp: i32,
 
-    current_health: i32,
     current_turn: u32,
+    current_health: i32,
 
-    utility1_quantity: u32,
-    utility2_quantity: u32,
+    fire_res: i32,
+    earth_res: i32,
+    water_res: i32,
+    air_res: i32,
 
     burning: i32,
     poisoned: i32,
 
-    average: bool,
+    utility1_quantity: u32,
+    utility2_quantity: u32,
 }
 
 impl<'a> SimulationCharacter<'a> {
@@ -305,6 +328,10 @@ impl<'a> SimulationCharacter<'a> {
             starting_hp,
             current_health: starting_hp,
             current_turn: 1,
+            fire_res: gear.resistance(DamageType::Fire),
+            earth_res: gear.resistance(DamageType::Earth),
+            water_res: gear.resistance(DamageType::Water),
+            air_res: gear.resistance(DamageType::Air),
             utility1_quantity,
             utility2_quantity,
             burning: 0,
@@ -378,9 +405,28 @@ impl<'a> SimulationEntity for SimulationCharacter<'a> {
     fn dec_utility2(&mut self) {
         self.utility2_quantity = self.utility2_quantity().saturating_sub(1);
     }
+
+    fn suffer_corruption(&mut self, r#type: DamageType) {
+        let corrupted = self.corrupted();
+        match r#type {
+            DamageType::Fire => self.fire_res -= corrupted,
+            DamageType::Earth => self.earth_res -= corrupted,
+            DamageType::Water => self.water_res -= corrupted,
+            DamageType::Air => self.air_res -= corrupted,
+        }
+    }
 }
 
 impl<'a> HasEffects for SimulationCharacter<'a> {
+    fn resistance(&self, r#type: DamageType) -> i32 {
+        match r#type {
+            DamageType::Fire => self.fire_res,
+            DamageType::Earth => self.earth_res,
+            DamageType::Water => self.water_res,
+            DamageType::Air => self.air_res,
+        }
+    }
+
     fn effect_value(&self, effect: &str) -> i32 {
         self.gear.effect_value(effect)
     }
@@ -391,14 +437,19 @@ impl<'a> HasEffects for SimulationCharacter<'a> {
 }
 
 pub struct SimulationMonster<'a> {
+    average: bool,
     monster: &'a MonsterSchema,
-    current_health: i32,
 
     current_turn: u32,
+    current_health: i32,
+
+    fire_res: i32,
+    earth_res: i32,
+    water_res: i32,
+    air_res: i32,
+
     burning: i32,
     poisoned: i32,
-
-    average: bool,
 }
 
 impl<'a> SimulationMonster<'a> {
@@ -410,6 +461,10 @@ impl<'a> SimulationMonster<'a> {
             burning: 0,
             poisoned: 0,
             average,
+            fire_res: monster.resistance(DamageType::Fire),
+            earth_res: monster.resistance(DamageType::Earth),
+            water_res: monster.resistance(DamageType::Water),
+            air_res: monster.resistance(DamageType::Air),
         }
     }
 }
@@ -454,6 +509,16 @@ impl<'a> SimulationEntity for SimulationMonster<'a> {
     fn average(&self) -> bool {
         self.average
     }
+
+    fn suffer_corruption(&mut self, r#type: DamageType) {
+        let corrupted = self.corrupted();
+        match r#type {
+            DamageType::Fire => self.fire_res -= corrupted,
+            DamageType::Earth => self.earth_res -= corrupted,
+            DamageType::Water => self.water_res -= corrupted,
+            DamageType::Air => self.air_res -= corrupted,
+        }
+    }
 }
 
 impl<'a> HasEffects for SimulationMonster<'a> {
@@ -470,7 +535,12 @@ impl<'a> HasEffects for SimulationMonster<'a> {
     }
 
     fn resistance(&self, r#type: DamageType) -> i32 {
-        self.monster.resistance(r#type)
+        match r#type {
+            DamageType::Fire => self.fire_res,
+            DamageType::Earth => self.earth_res,
+            DamageType::Water => self.water_res,
+            DamageType::Air => self.air_res,
+        }
     }
 
     fn effects(&self) -> Vec<&SimpleEffectSchema> {
@@ -606,6 +676,7 @@ pub trait HasEffects {
     const LIFESTEAL: &str = "lifesteal";
     const BURN: &str = "burn";
     const RECONSTITUTION: &str = "reconstitution";
+    const CORRUPTED: &str = "corrupted";
     const PROSPECTING: &str = "prospecting";
     const INVENTORY_SPACE: &str = "inventory_space";
 
@@ -663,6 +734,10 @@ pub trait HasEffects {
         self.effect_value(Self::RECONSTITUTION)
     }
 
+    fn corrupted(&self) -> i32 {
+        self.effect_value(Self::CORRUPTED)
+    }
+
     fn wisdom(&self) -> i32 {
         self.effect_value(Self::WISDOM)
     }
@@ -687,10 +762,14 @@ pub trait HasEffects {
     }
 
     fn hits_against<H: HasEffects>(&self, enemy: &H, average: bool) -> Vec<Hit> {
-        let is_crit = rand::random_range(0..=100) <= self.critical_strike();
+        let mut is_crit = false;
+        if !average {
+            is_crit = rand::random_range(0..=100) <= self.critical_strike();
+        }
         DamageType::iter()
-            .map(|t| {
-                if average {
+            .filter_map(|t| {
+                let attack_damage = self.attack_damage(t);
+                (attack_damage > 0).then_some(if average {
                     Hit::average(
                         self.attack_damage(t),
                         self.damage_increase(t),
@@ -706,9 +785,8 @@ pub trait HasEffects {
                         enemy.resistance(t),
                         is_crit,
                     )
-                }
+                })
             })
-            .filter(|h| h.damage > 0)
             .collect_vec()
     }
 
