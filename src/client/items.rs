@@ -264,6 +264,9 @@ impl ItemsClient {
     }
 
     pub fn sources_of(&self, code: &str) -> Vec<ItemSource> {
+        if code == TASKS_COIN {
+            return vec![ItemSource::Task];
+        }
         let mut sources = self
             .resources
             .dropping(code)
@@ -277,6 +280,12 @@ impl ItemsClient {
                 .map(ItemSource::Monster)
                 .collect_vec(),
         );
+        if self.get(code).is_some_and(|i| i.is_craftable()) {
+            sources.push(ItemSource::Craft);
+        }
+        if self.tasks_rewards.all().iter().any(|r| r.code == code) {
+            sources.push(ItemSource::TaskReward);
+        }
         sources.extend(
             self.npcs
                 .selling(code)
@@ -284,15 +293,6 @@ impl ItemsClient {
                 .map(ItemSource::Npc)
                 .collect_vec(),
         );
-        if self.get(code).is_some_and(|i| i.is_craftable()) {
-            sources.push(ItemSource::Craft);
-        }
-        if self.tasks_rewards.all().iter().any(|r| r.code == code) {
-            sources.push(ItemSource::TaskReward);
-        }
-        if code == TASKS_COIN {
-            sources.push(ItemSource::Task);
-        }
         sources
     }
 
