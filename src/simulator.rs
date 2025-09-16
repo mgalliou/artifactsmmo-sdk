@@ -1,6 +1,4 @@
-use artifactsmmo_openapi::models::{
-    CharacterSchema, FightResult, ItemSchema, MonsterSchema, SimpleEffectSchema,
-};
+use artifactsmmo_openapi::models::{FightResult, ItemSchema, MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
 use std::{cmp::max, sync::Arc};
 use strum::IntoEnumIterator;
@@ -134,8 +132,8 @@ impl FightParams {
     }
 }
 
-impl From<CharacterClient> for FightParams {
-    fn from(value: CharacterClient) -> Self {
+impl From<&CharacterClient> for FightParams {
+    fn from(value: &CharacterClient) -> Self {
         Self {
             utility1_quantity: value.quantity_in_slot(Slot::Utility1),
             utility2_quantity: value.quantity_in_slot(Slot::Utility2),
