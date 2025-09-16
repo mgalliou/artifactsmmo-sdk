@@ -46,7 +46,7 @@ impl Simulator {
             turns: turn,
             hp: char.current_health,
             monster_hp: monster.current_health,
-            hp_lost: char.current_health - char.starting_hp,
+            hp_lost: char.starting_hp - char.current_health,
             result: if char.current_health <= 0 || turn > MAX_TURN {
                 FightResult::Loss
             } else {
