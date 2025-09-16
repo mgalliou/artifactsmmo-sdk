@@ -1,15 +1,13 @@
 use crate::{
     CanProvideXp, CollectionClient, DataItem, DropRateSchemaExt, DropsItems, Level, PersistData,
-    Simulator, check_lvl_diff,
+    check_lvl_diff,
     client::{
-        monsters::{MonsterSchemaExt, MonstersClient},
-        npcs::NpcsClient,
-        resources::ResourcesClient,
+        monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
     },
     consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
-    simulator::{DamageType, EffectType, HasEffects},
+    simulator::{EffectType, HasEffects},
     skill::Skill,
 };
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
@@ -26,7 +24,6 @@ use std::{
     sync::{Arc, RwLock},
     vec::Vec,
 };
-use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
 #[derive(Default, Debug, CollectionClient)]
@@ -359,11 +356,6 @@ pub trait ItemSchemaExt {
     fn is_recyclable(&self) -> bool;
     fn craft_schema(&self) -> Option<&CraftSchema>;
 
-    fn average_damage(&self, monster: &MonsterSchema) -> f32;
-    fn average_damage_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32;
-    fn damage_boot_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32;
-    fn damage_reduction_against(&self, monster: &MonsterSchema) -> f32;
-
     fn is_gear(&self) -> bool;
     fn is_tool(&self) -> bool;
 
@@ -438,44 +430,6 @@ impl ItemSchemaExt for ItemSchema {
 
     fn craft_schema(&self) -> Option<&CraftSchema> {
         self.craft.iter().flatten().map(|c| c.deref()).next_back()
-    }
-
-    // Returns the average attack damage done by the weapon `self` against `monster`
-    fn average_damage(&self, monster: &MonsterSchema) -> f32 {
-        DamageType::iter()
-            .map(|t| {
-                Simulator::average_dmg(
-                    self.attack_damage(t),
-                    0,
-                    self.critical_strike(),
-                    monster.resistance(t),
-                )
-            })
-            .sum()
-    }
-
-    // Returns the average attack damage done by the weapon `self` against `monster` with the
-    // damage boost from `item`
-    fn average_damage_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32 {
-        DamageType::iter()
-            .map(|t| {
-                Simulator::average_dmg(
-                    self.attack_damage(t),
-                    item.damage_increase(t),
-                    self.critical_strike() + item.critical_strike(),
-                    monster.resistance(t),
-                )
-            })
-            .sum()
-    }
-
-    // Returns the damage boost provided by `item` when using the weapon `self against `monster`
-    fn damage_boot_with(&self, item: &ItemSchema, monster: &MonsterSchema) -> f32 {
-        self.average_damage_with(item, monster) - self.average_damage(monster)
-    }
-
-    fn damage_reduction_against(&self, monster: &MonsterSchema) -> f32 {
-        monster.average_damage() - monster.average_damage_against(self)
     }
 
     fn is_gear(&self) -> bool {

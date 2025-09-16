@@ -1,6 +1,6 @@
 use artifactsmmo_openapi::models::{FightResult, ItemSchema, MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
-use std::{cmp::max, sync::Arc};
+use std::{cmp::max, marker::Sized, sync::Arc};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
@@ -801,6 +801,53 @@ pub trait HasEffects {
                 )
                 .round() as i32
             })
+            .sum()
+    }
+
+    // Returns the damage boost provided by the `boost` entity to the `self` entity against the
+    // `target` entity
+    fn average_dmg_boost_against_with<H: HasEffects>(&self, boost: &H, target: &H) -> f32 {
+        self.average_dmg_against_with(boost, target) - self.average_dmg_against(target)
+    }
+
+    fn average_dmg_reduction_against<H: HasEffects>(&self, target: &H) -> f32
+    where
+        Self: Sized,
+    {
+        target.average_damage() - target.average_dmg_against(self)
+    }
+
+    fn average_dmg_against<H: HasEffects>(&self, target: &H) -> f32 {
+        DamageType::iter()
+            .map(|t| {
+                Simulator::average_dmg(
+                    self.attack_damage(t),
+                    0,
+                    self.critical_strike(),
+                    target.resistance(t),
+                )
+            })
+            .sum()
+    }
+
+    // Returns the average attack damage done by the `self` entity against the `target ` entity with additionnnal effects from the `boost` entity
+    // damage `boost`
+    fn average_dmg_against_with<H: HasEffects>(&self, boost: &H, target: &H) -> f32 {
+        DamageType::iter()
+            .map(|t| {
+                Simulator::average_dmg(
+                    self.attack_damage(t),
+                    boost.damage_increase(t),
+                    self.critical_strike() + boost.critical_strike(),
+                    target.resistance(t),
+                )
+            })
+            .sum()
+    }
+
+    fn average_damage(&self) -> f32 {
+        DamageType::iter()
+            .map(|t| Simulator::average_dmg(self.attack_damage(t), 0, self.critical_strike(), 0))
             .sum()
     }
 
