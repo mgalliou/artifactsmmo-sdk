@@ -33,14 +33,11 @@ impl Simulator {
         let mut monster = SimulationMonster::new(monster, params.averaged);
         let mut turn = 1;
 
-        loop {
+        while turn <= MAX_TURN && char.current_health > 0 && monster.current_health > 0 {
             if turn % 2 == 1 {
                 char.turn_against(&mut monster, turn);
             } else {
                 monster.turn_against(&mut char, turn);
-            }
-            if turn >= MAX_TURN {
-                break;
             }
             turn += 1;
         }
