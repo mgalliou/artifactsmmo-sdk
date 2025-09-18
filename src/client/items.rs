@@ -250,11 +250,11 @@ impl ItemsClient {
         if sources.iter().all(|s| s.is_resource() || s.is_monster()) {
             let bests = sources.into_iter().min_set_by_key(|s| {
                 if let ItemSource::Resource(r) = s
-                    && self.maps.with_content_code(&r.code).is_empty()
+                    && !self.maps.with_content_code(&r.code).is_empty()
                 {
                     r.drop_rate(code)
                 } else if let ItemSource::Monster(m) = s
-                    && self.maps.with_content_code(&m.code).is_empty()
+                    && !self.maps.with_content_code(&m.code).is_empty()
                 {
                     m.drop_rate(code)
                 } else {
