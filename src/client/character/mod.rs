@@ -35,6 +35,7 @@ use chrono::{DateTime, Utc};
 use std::{
     str::FromStr,
     sync::{Arc, RwLock},
+    time::Duration,
 };
 use strum::IntoEnumIterator;
 
@@ -93,6 +94,10 @@ impl CharacterClient {
     pub fn current_map(&self) -> Arc<MapSchema> {
         let (x, y) = self.position();
         self.maps.get(x, y).unwrap()
+    }
+
+    pub fn remaining_cooldown(&self) -> Duration {
+        self.inner.remaining_cooldown()
     }
 
     pub fn fight(&self) -> Result<FightSchema, FightError> {

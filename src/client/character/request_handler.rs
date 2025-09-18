@@ -388,7 +388,7 @@ impl CharacterRequestHandler {
         sleep(s);
     }
 
-    fn remaining_cooldown(&self) -> Duration {
+    pub fn remaining_cooldown(&self) -> Duration {
         if let Some(exp) = self.cooldown_expiration() {
             let synced = Utc::now() - *self.server.server_offset.read().unwrap();
             if synced.cmp(&exp.to_utc()) == Ordering::Less {
