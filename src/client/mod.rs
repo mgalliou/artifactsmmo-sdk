@@ -119,6 +119,7 @@ impl Client {
             monsters.clone(),
             tasks_rewards.clone(),
             npcs.clone(),
+            maps.clone(),
         ));
 
         let characters = api

@@ -1,6 +1,6 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, DropRateSchemaExt, DropsItems, Level, PersistData,
-    check_lvl_diff,
+    CanProvideXp, CollectionClient, DataItem, DropRateSchemaExt, DropsItems, Level, MapsClient,
+    PersistData, check_lvl_diff,
     client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
@@ -34,6 +34,7 @@ pub struct ItemsClient {
     monsters: Arc<MonstersClient>,
     tasks_rewards: Arc<TasksRewardsClient>,
     npcs: Arc<NpcsClient>,
+    maps: Arc<MapsClient>,
 }
 
 impl ItemsClient {
@@ -43,6 +44,7 @@ impl ItemsClient {
         monsters: Arc<MonstersClient>,
         tasks_rewards: Arc<TasksRewardsClient>,
         npcs: Arc<NpcsClient>,
+        maps: Arc<MapsClient>,
     ) -> Self {
         let items = Self {
             data: Default::default(),
@@ -51,6 +53,7 @@ impl ItemsClient {
             monsters,
             tasks_rewards,
             npcs,
+            maps,
         };
         *items.data.write().unwrap() = items.retrieve_data();
         items
@@ -246,9 +249,13 @@ impl ItemsClient {
         let sources = self.sources_of(code);
         if sources.iter().all(|s| s.is_resource() || s.is_monster()) {
             let bests = sources.into_iter().min_set_by_key(|s| {
-                if let ItemSource::Resource(r) = s {
+                if let ItemSource::Resource(r) = s
+                    && self.maps.with_content_code(&r.code).is_empty()
+                {
                     r.drop_rate(code)
-                } else if let ItemSource::Monster(m) = s {
+                } else if let ItemSource::Monster(m) = s
+                    && self.maps.with_content_code(&m.code).is_empty()
+                {
                     m.drop_rate(code)
                 } else {
                     None
