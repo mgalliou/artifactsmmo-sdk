@@ -25,6 +25,8 @@ pub const TASKS_REWARDS_SPECIFICS: [&str; 4] = [
     ENCHANTED_FABRIC,
 ];
 
+pub const PIECE_OF_OBSIDIAN: &str = "piece_of_obsidian";
+
 pub const TASKS_COIN: &str = "tasks_coin";
 
 pub const GOLD: &str = "gold";
@@ -57,3 +59,5 @@ pub const FROZEN_GLOVES: &str = "frozen_gloves";
 pub const FROZEN_AXE: &str = "frozen_axe";
 pub const FROZEN_FISHING_ROD: &str = "frozen_fishing_rod";
 pub const FROZEN_PICKAXE: &str = "frozen_pickaxe";
+
+pub const DEMON: &str = "demon";

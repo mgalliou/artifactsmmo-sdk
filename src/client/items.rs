@@ -1,6 +1,6 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, DropRateSchemaExt, DropsItems, Level, MapsClient,
-    PersistData, check_lvl_diff,
+    CanProvideXp, CollectionClient, DEMON, DataItem, DropRateSchemaExt, DropsItems, Level,
+    MapsClient, PIECE_OF_OBSIDIAN, PersistData, check_lvl_diff,
     client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
@@ -245,6 +245,9 @@ impl ItemsClient {
         }
         if TASKS_REWARDS_SPECIFICS.contains(&code) {
             return Some(ItemSource::TaskReward);
+        }
+        if code == PIECE_OF_OBSIDIAN {
+            return self.monsters.get(DEMON).map(ItemSource::Monster);
         }
         let sources = self.sources_of(code);
         if sources.iter().all(|s| s.is_resource() || s.is_monster()) {
