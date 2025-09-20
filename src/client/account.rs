@@ -2,14 +2,17 @@ use artifactsmmo_api_wrapper::ArtifactApi;
 use std::sync::{Arc, RwLock};
 
 use crate::{
-    character::HasCharacterData, client::{bank::BankClient, character::CharacterClient}, ClientError, ItemsClient, MapsClient, MonstersClient, NpcsClient, ResourcesClient, ServerClient, TasksClient
+    ClientError, ItemsClient, MapsClient, MonstersClient, NpcsClient, ResourcesClient,
+    ServerClient, TasksClient,
+    character::HasCharacterData,
+    client::{bank::BankClient, character::CharacterClient},
 };
 
 #[derive(Default, Debug)]
 pub struct AccountClient {
     pub name: String,
     pub bank: Arc<BankClient>,
-    pub characters: RwLock<Vec<Arc<CharacterClient>>>,
+    characters: RwLock<Vec<Arc<CharacterClient>>>,
 }
 
 impl AccountClient {
@@ -59,6 +62,10 @@ impl AccountClient {
             .map(Arc::new)
             .collect::<Vec<_>>();
         Ok(())
+    }
+
+    pub fn characters(&self) -> Vec<Arc<CharacterClient>> {
+        self.characters.read().unwrap().iter().cloned().collect()
     }
 
     pub fn get_character_by_name(&self, name: &str) -> Option<Arc<CharacterClient>> {
