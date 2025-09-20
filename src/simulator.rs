@@ -165,10 +165,6 @@ impl Default for FightParams {
 
 trait SimulationEntity: HasEffects {
     fn turn_against<S: SimulationEntity>(&mut self, enemy: &mut S, turn: u32) {
-        if self.current_turn() == 1 {
-            self.apply_burn(enemy);
-            self.apply_poison(enemy);
-        }
         if turn == self.reconstitution() as u32 {
             self.set_health(self.max_hp());
         }
@@ -189,6 +185,10 @@ trait SimulationEntity: HasEffects {
             if self.current_health() < 1 {
                 return;
             }
+        }
+        if self.current_turn() == 1 {
+            self.apply_burn(enemy);
+            self.apply_poison(enemy);
         }
         for hit in self.hits_against(enemy, self.average()).iter() {
             enemy.dec_health(hit.damage);
