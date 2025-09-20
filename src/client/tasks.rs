@@ -1,7 +1,7 @@
 use crate::{DataItem, PersistData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{RewardsSchema, TaskFullSchema};
-use sdk_derive::{CollectionClient};
+use sdk_derive::CollectionClient;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},

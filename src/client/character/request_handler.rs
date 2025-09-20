@@ -1,10 +1,9 @@
 use super::CharacterData;
 use crate::{
-    DropSchemas, SimpleItemSchemas,
+    AccountClient, DropSchemas, SimpleItemSchemas,
     client::{
         bank::BankClient,
-        character::error::RequestError,
-        character::{HasCharacterData, action::Action},
+        character::{HasCharacterData, action::Action, error::RequestError},
         maps::MapSchemaExt,
         server::ServerClient,
     },
@@ -16,12 +15,12 @@ use artifactsmmo_openapi::models::{
     ActionType, BankExtensionTransactionResponseSchema, BankGoldTransactionResponseSchema,
     BankItemTransactionResponseSchema, BankSchema, CharacterFightResponseSchema,
     CharacterMovementResponseSchema, CharacterRestResponseSchema, CharacterSchema,
-    DeleteItemResponseSchema, EquipmentResponseSchema, FightResult, FightSchema, MapSchema,
-    NpcItemTransactionSchema, NpcMerchantTransactionResponseSchema, RecyclingItemsSchema,
-    RecyclingResponseSchema, RewardDataResponseSchema, RewardsSchema, SimpleItemSchema,
-    SkillDataSchema, SkillInfoSchema, SkillResponseSchema, TaskCancelledResponseSchema,
-    TaskResponseSchema, TaskSchema, TaskTradeResponseSchema, TaskTradeSchema,
-    UseItemResponseSchema,
+    DeleteItemResponseSchema, EquipmentResponseSchema, FightResult, FightSchema,
+    GiveGoldReponseSchema, GiveItemReponseSchema, MapSchema, NpcItemTransactionSchema,
+    NpcMerchantTransactionResponseSchema, RecyclingItemsSchema, RecyclingResponseSchema,
+    RewardDataResponseSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
+    SkillResponseSchema, TaskCancelledResponseSchema, TaskResponseSchema, TaskSchema,
+    TaskTradeResponseSchema, TaskTradeSchema, UseItemResponseSchema,
 };
 use chrono::Utc;
 use downcast_rs::{Downcast, impl_downcast};
@@ -39,6 +38,7 @@ use std::{
 #[derive(Default, Debug)]
 pub(crate) struct CharacterRequestHandler {
     api: Arc<ArtifactApi>,
+    account: Arc<AccountClient>,
     data: CharacterData,
     bank: Arc<BankClient>,
     server: Arc<ServerClient>,
@@ -48,13 +48,14 @@ impl CharacterRequestHandler {
     pub fn new(
         api: Arc<ArtifactApi>,
         data: CharacterData,
-        bank: Arc<BankClient>,
+        account: Arc<AccountClient>,
         server: Arc<ServerClient>,
     ) -> Self {
         Self {
             api,
             data,
-            bank,
+            bank: account.bank.clone(),
+            account,
             server,
         }
     }
@@ -103,6 +104,20 @@ impl CharacterRequestHandler {
                     new_details.slots += BANK_EXTENSION_SIZE;
                     *details = Arc::new(new_details);
                 };
+                if let Some(s) = res.downcast_ref::<GiveItemReponseSchema>()
+                    && let Some(c) = self
+                        .account
+                        .get_character_by_name(&s.data.receiver_character.name)
+                {
+                    c.update_data(*s.data.receiver_character.clone());
+                }
+                if let Some(s) = res.downcast_ref::<GiveGoldReponseSchema>()
+                    && let Some(c) = self
+                        .account
+                        .get_character_by_name(&s.data.receiver_character.name)
+                {
+                    c.update_data(*s.data.receiver_character.clone());
+                }
                 Ok(res)
             }
             Err(e) => {
@@ -312,6 +327,31 @@ impl CharacterRequestHandler {
                     .map_err(|_| RequestError::DowncastError)
             })
             .map(|s| *s.data.transaction)
+    }
+
+    pub fn request_give_item(
+        &self,
+        items: &[SimpleItemSchema],
+        character: &str,
+    ) -> Result<(), RequestError> {
+        self.request_action(Action::GiveItem { items, character })
+            .and_then(|r| {
+                r.downcast::<GiveItemReponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|_| ())
+    }
+
+    pub fn request_give_gold(&self, quantity: u32, character: &str) -> Result<(), RequestError> {
+        self.request_action(Action::GiveGold {
+            quantity,
+            character,
+        })
+        .and_then(|r| {
+            r.downcast::<GiveGoldReponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|_| ())
     }
 
     //pub fn request_gift_exchange(&self) -> Result<RewardsSchema, RequestError> {
@@ -696,6 +736,38 @@ impl ResponseSchema for NpcMerchantTransactionResponseSchema {
             self.data.transaction.currency,
             self.data.transaction.price,
             self.data.cooldown.remaining_seconds
+        )
+    }
+
+    fn character(&self) -> &CharacterSchema {
+        &self.data.character
+    }
+}
+
+impl ResponseSchema for GiveItemReponseSchema {
+    fn to_string(&self) -> String {
+        format!(
+            "{}: gave '{}' to {}. {}s",
+            self.data.character.name,
+            SimpleItemSchemas(&self.data.items),
+            self.data.receiver_character.name,
+            self.data.cooldown.remaining_seconds,
+        )
+    }
+
+    fn character(&self) -> &CharacterSchema {
+        &self.data.character
+    }
+}
+
+impl ResponseSchema for GiveGoldReponseSchema {
+    fn to_string(&self) -> String {
+        format!(
+            "{}: gave {} gold to {}. {}s",
+            self.data.character.name,
+            self.data.quantity,
+            self.data.receiver_character.name,
+            self.data.cooldown.remaining_seconds,
         )
     }
 

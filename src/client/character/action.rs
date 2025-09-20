@@ -68,6 +68,14 @@ pub enum Action<'a> {
         item: &'a str,
         quantity: u32,
     },
+    GiveItem {
+        items: &'a [SimpleItemSchema],
+        character: &'a str,
+    },
+    GiveGold {
+        quantity: u32,
+        character: &'a str,
+    },
     //ChristmasExchange,
 }
 
@@ -191,6 +199,19 @@ impl Action<'_> {
             Action::NpcSell { item, quantity } => api
                 .my_character
                 .npc_sell(name, item.to_string(), *quantity)
+                .map(|r| r.into())
+                .map_err(|e| e.into()),
+            Action::GiveItem { items, character } => api
+                .my_character
+                .give_item(name, items, character)
+                .map(|r| r.into())
+                .map_err(|e| e.into()),
+            Action::GiveGold {
+                quantity,
+                character,
+            } => api
+                .my_character
+                .give_gold(name, *quantity, character)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
         }

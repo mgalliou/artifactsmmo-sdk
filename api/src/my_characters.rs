@@ -10,7 +10,9 @@ use artifactsmmo_openapi::{
             action_deposit_bank_gold_my_name_action_bank_deposit_gold_post,
             action_deposit_bank_item_my_name_action_bank_deposit_item_post,
             action_equip_item_my_name_action_equip_post, action_fight_my_name_action_fight_post,
-            action_gathering_my_name_action_gathering_post, action_move_my_name_action_move_post,
+            action_gathering_my_name_action_gathering_post,
+            action_give_gold_my_name_action_give_gold_post,
+            action_give_items_my_name_action_give_item_post, action_move_my_name_action_move_post,
             action_npc_buy_item_my_name_action_npc_buy_post,
             action_npc_sell_item_my_name_action_npc_sell_post,
             action_recycling_my_name_action_recycling_post, action_rest_my_name_action_rest_post,
@@ -29,7 +31,9 @@ use artifactsmmo_openapi::{
             ActionDepositBankGoldMyNameActionBankDepositGoldPostError,
             ActionDepositBankItemMyNameActionBankDepositItemPostError,
             ActionEquipItemMyNameActionEquipPostError, ActionFightMyNameActionFightPostError,
-            ActionGatheringMyNameActionGatheringPostError, ActionMoveMyNameActionMovePostError,
+            ActionGatheringMyNameActionGatheringPostError,
+            ActionGiveGoldMyNameActionGiveGoldPostError,
+            ActionGiveItemsMyNameActionGiveItemPostError, ActionMoveMyNameActionMovePostError,
             ActionNpcBuyItemMyNameActionNpcBuyPostError,
             ActionNpcSellItemMyNameActionNpcSellPostError,
             ActionRecyclingMyNameActionRecyclingPostError, ActionRestMyNameActionRestPostError,
@@ -47,11 +51,11 @@ use artifactsmmo_openapi::{
         BankItemTransactionResponseSchema, CharacterFightResponseSchema,
         CharacterMovementResponseSchema, CharacterRestResponseSchema, CraftingSchema,
         DeleteItemResponseSchema, DepositWithdrawGoldSchema, DestinationSchema, EquipSchema,
-        EquipmentResponseSchema, ItemSlot, NpcMerchantBuySchema,
-        NpcMerchantTransactionResponseSchema, RecyclingResponseSchema, RecyclingSchema,
-        RewardDataResponseSchema, SimpleItemSchema, SkillResponseSchema,
-        TaskCancelledResponseSchema, TaskResponseSchema, TaskTradeResponseSchema, UnequipSchema,
-        UseItemResponseSchema,
+        EquipmentResponseSchema, GiveGoldReponseSchema, GiveGoldSchema, GiveItemReponseSchema,
+        GiveItemsSchema, ItemSlot, NpcMerchantBuySchema, NpcMerchantTransactionResponseSchema,
+        RecyclingResponseSchema, RecyclingSchema, RewardDataResponseSchema, SimpleItemSchema,
+        SkillResponseSchema, TaskCancelledResponseSchema, TaskResponseSchema,
+        TaskTradeResponseSchema, UnequipSchema, UseItemResponseSchema,
     },
 };
 use std::sync::Arc;
@@ -308,6 +312,32 @@ impl MyCharacterApi {
     > {
         let schema = NpcMerchantBuySchema::new(code, quantity);
         action_npc_sell_item_my_name_action_npc_sell_post(&self.configuration, name, schema)
+    }
+
+    pub fn give_item(
+        &self,
+        name: &str,
+        items: &[SimpleItemSchema],
+        character: &str,
+    ) -> Result<GiveItemReponseSchema, Error<ActionGiveItemsMyNameActionGiveItemPostError>> {
+        let schema = GiveItemsSchema {
+            items: items.to_vec(),
+            character: character.to_string(),
+        };
+        action_give_items_my_name_action_give_item_post(&self.configuration, name, schema)
+    }
+
+    pub fn give_gold(
+        &self,
+        name: &str,
+        quantity: u32,
+        character: &str,
+    ) -> Result<GiveGoldReponseSchema, Error<ActionGiveGoldMyNameActionGiveGoldPostError>> {
+        let schema = GiveGoldSchema {
+            quantity,
+            character: character.to_string(),
+        };
+        action_give_gold_my_name_action_give_gold_post(&self.configuration, name, schema)
     }
 
     //pub fn christmas_exchange(

@@ -28,7 +28,7 @@ const CHARACTER_GOLD_INSUFFICIENT: isize = 492;
 const SKILL_LEVEL_INSUFFICIENT: isize = 493;
 const CHARACTER_LEVEL_INSUFFICIENT: isize = 496;
 const INVENTORY_FULL: isize = 497;
-//const CHARACTER_NOT_FOUND: isize = 498;
+const CHARACTER_NOT_FOUND: isize = 498;
 //const CHARACTER_ON_COOLDOWN: isize = 499;
 const ENTITY_NOT_FOUND_ON_MAP: isize = 598;
 
@@ -412,13 +412,43 @@ pub enum SellNpcError {
 #[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
-pub enum GiftExchangeError {
-    #[error("Insufficient gift quantity")]
-    InsufficientGiftQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
+pub enum GiveItemError {
+    #[error("Item not found")]
+    ItemNotFound = ENTITY_NOT_FOUND,
+    #[error("Missing item or insufficient quantity")]
+    InsufficientQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
     #[error("Insufficient inventory space")]
     InsufficientInventorySpace = INVENTORY_FULL,
-    #[error("No Santa Claus on map")]
-    NoSantaClausOnMap = ENTITY_NOT_FOUND_ON_MAP,
+    #[error("Character not found")]
+    CharacterNotFound = CHARACTER_NOT_FOUND,
     #[error(transparent)]
     UnhandledError(#[from] RequestError),
 }
+
+#[derive(Debug, Error, TryFrom)]
+#[try_from(repr)]
+#[repr(isize)]
+pub enum GiveGoldError {
+    #[error("Item not found")]
+    ItemNotFound = ENTITY_NOT_FOUND,
+    #[error("Insufficient gold on character")]
+    InsufficientGold = CHARACTER_GOLD_INSUFFICIENT,
+    #[error("Character not found")]
+    CharacterNotFound = CHARACTER_NOT_FOUND,
+    #[error(transparent)]
+    UnhandledError(#[from] RequestError),
+}
+
+// #[derive(Debug, Error, TryFrom)]
+// #[try_from(repr)]
+// #[repr(isize)]
+// pub enum GiftExchangeError {
+//     #[error("Insufficient gift quantity")]
+//     InsufficientGiftQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
+//     #[error("Insufficient inventory space")]
+//     InsufficientInventorySpace = INVENTORY_FULL,
+//     #[error("No Santa Claus on map")]
+//     NoSantaClausOnMap = ENTITY_NOT_FOUND_ON_MAP,
+//     #[error(transparent)]
+//     UnhandledError(#[from] RequestError),
+// }

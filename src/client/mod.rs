@@ -1,8 +1,5 @@
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
-use std::{
-    sync::{Arc, RwLock},
-    thread,
-};
+use std::{sync::Arc, thread};
 
 pub use crate::client::{
     account::AccountClient, bank::BankClient, character::CharacterClient, error::ClientError,
@@ -122,31 +119,17 @@ impl Client {
             maps.clone(),
         ));
 
-        let characters = api
-            .account
-            .characters(&account_name)
-            .map_err(|e| ClientError::Api(Box::new(e)))?
-            .data
-            .into_iter()
-            .enumerate()
-            .map(|(id, data)| {
-                CharacterClient::new(
-                    id,
-                    Arc::new(RwLock::new(Arc::new(data))),
-                    bank.clone(),
-                    items.clone(),
-                    resources.clone(),
-                    monsters.clone(),
-                    maps.clone(),
-                    npcs.clone(),
-                    server.clone(),
-                    api.clone(),
-                )
-            })
-            .map(Arc::new)
-            .collect::<Vec<_>>();
-
-        let account = Arc::new(AccountClient::new(account_name, bank, characters));
+        let account = Arc::new(AccountClient::new(account_name, bank));
+        account.init_characters(
+            account.clone(),
+            items.clone(),
+            resources.clone(),
+            monsters.clone(),
+            maps.clone(),
+            npcs.clone(),
+            server.clone(),
+            api,
+        )?;
 
         Ok(Self {
             account,

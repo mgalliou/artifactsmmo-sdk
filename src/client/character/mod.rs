@@ -1,6 +1,7 @@
 use crate::{
-    CollectionClient, GOLD, Gear, ItemContainer, Level, LimitedContainer, SlotLimited,
-    SpaceLimited,
+    AccountClient, CollectionClient, GOLD, Gear, ItemContainer, Level, LimitedContainer,
+    SlotLimited, SpaceLimited,
+    character::error::{GiveGoldError, GiveItemError},
     client::{
         bank::{Bank, BankClient},
         character::{
@@ -53,6 +54,7 @@ pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 pub struct CharacterClient {
     pub id: usize,
     inner: CharacterRequestHandler,
+    account: Arc<AccountClient>,
     bank: Arc<BankClient>,
     items: Arc<ItemsClient>,
     resources: Arc<ResourcesClient>,
@@ -66,7 +68,7 @@ impl CharacterClient {
     pub(crate) fn new(
         id: usize,
         data: CharacterData,
-        bank: Arc<BankClient>,
+        account: Arc<AccountClient>,
         items: Arc<ItemsClient>,
         resources: Arc<ResourcesClient>,
         monsters: Arc<MonstersClient>,
@@ -77,8 +79,9 @@ impl CharacterClient {
     ) -> Self {
         Self {
             id,
-            inner: CharacterRequestHandler::new(api, data.clone(), bank.clone(), server.clone()),
-            bank,
+            inner: CharacterRequestHandler::new(api, data.clone(), account.clone(), server.clone()),
+            account: account.clone(),
+            bank: account.bank.clone(),
             items,
             resources,
             monsters,
@@ -567,6 +570,58 @@ impl CharacterClient {
         }
         if self.inventory().total_of(item_code) < quantity {
             return Err(SellNpcError::InsufficientQuantity);
+        }
+        Ok(())
+    }
+
+    pub fn give_item(
+        &self,
+        items: &[SimpleItemSchema],
+        character: &str,
+    ) -> Result<(), GiveItemError> {
+        self.can_give_item(items, character)?;
+        Ok(self.inner.request_give_item(items, character)?)
+    }
+
+    pub fn can_give_item(
+        &self,
+        items: &[SimpleItemSchema],
+        character: &str,
+    ) -> Result<(), GiveItemError> {
+        for item in items.iter() {
+            if self.items.get(&item.code).is_none() {
+                return Err(GiveItemError::ItemNotFound);
+            }
+            if self.inventory().total_of(&item.code) < item.quantity {
+                return Err(GiveItemError::InsufficientQuantity);
+            }
+        }
+        let Some(character) = self.account.get_character_by_name(character) else {
+            return Err(GiveItemError::CharacterNotFound);
+        };
+        if character.position() != self.position() {
+            return Err(GiveItemError::CharacterNotFound);
+        }
+        if !character.inventory().has_space_for_multiple(items) {
+            return Err(GiveItemError::InsufficientInventorySpace);
+        }
+        Ok(())
+    }
+
+    pub fn give_gold(&self, quantity: u32, character: &str) -> Result<(), GiveGoldError> {
+        self.can_give_gold(quantity, character)?;
+        Ok(self.inner.request_give_gold(quantity, character)?)
+    }
+
+    pub fn can_give_gold(&self, quantity: u32, character: &str) -> Result<(), GiveGoldError> {
+        if self.gold() < quantity {
+            return Err(GiveGoldError::InsufficientGold);
+        }
+        let Some(character) = self.account.get_character_by_name(character) else {
+            return Err(GiveGoldError::CharacterNotFound);
+        };
+        if character.position() != self.position() {
+            return Err(GiveGoldError::CharacterNotFound);
         }
         Ok(())
     }
