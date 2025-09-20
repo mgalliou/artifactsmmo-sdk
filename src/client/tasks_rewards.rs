@@ -1,7 +1,6 @@
-use crate::{DataItem, PersistData};
+use crate::{CollectionClient, DataItem, PersistData};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::DropRateSchema;
-use sdk_derive::CollectionClient;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
@@ -21,6 +20,13 @@ impl TasksRewardsClient {
         };
         *rewards.data.write().unwrap() = rewards.retrieve_data();
         rewards
+    }
+
+    pub fn max_quantity(&self) -> u32 {
+        self.all()
+            .iter()
+            .max_by_key(|i| i.max_quantity)
+            .map_or(0, |i| i.max_quantity)
     }
 }
 

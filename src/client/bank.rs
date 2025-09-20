@@ -74,7 +74,7 @@ impl LimitedContainer for BankClient {
         self.free_slots() == 0
     }
 
-    fn has_space_for_multiple(&self, items: &[SimpleItemSchema]) -> bool {
+    fn has_room_for_multiple(&self, items: &[SimpleItemSchema]) -> bool {
         let mut free_slot = self.free_slots();
         for item in items.iter() {
             if free_slot < 1 {
@@ -87,7 +87,7 @@ impl LimitedContainer for BankClient {
         true
     }
 
-    fn has_space_for_drops_from<H: crate::DropsItems>(&self, entity: &H) -> bool {
+    fn has_room_for_drops_from<H: crate::DropsItems>(&self, entity: &H) -> bool {
         self.free_slots() >= entity.average_drop_slots()
     }
 }

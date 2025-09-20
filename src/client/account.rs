@@ -2,10 +2,7 @@ use artifactsmmo_api_wrapper::ArtifactApi;
 use std::sync::{Arc, RwLock};
 
 use crate::{
-    ClientError, ItemsClient, MapsClient, MonstersClient, NpcsClient, ResourcesClient,
-    ServerClient,
-    character::HasCharacterData,
-    client::{bank::BankClient, character::CharacterClient},
+    character::HasCharacterData, client::{bank::BankClient, character::CharacterClient}, ClientError, ItemsClient, MapsClient, MonstersClient, NpcsClient, ResourcesClient, ServerClient, TasksClient
 };
 
 #[derive(Default, Debug)]
@@ -33,6 +30,7 @@ impl AccountClient {
         monsters: Arc<MonstersClient>,
         maps: Arc<MapsClient>,
         npcs: Arc<NpcsClient>,
+        tasks: Arc<TasksClient>,
         server: Arc<ServerClient>,
         api: Arc<ArtifactApi>,
     ) -> Result<(), ClientError> {
@@ -53,6 +51,7 @@ impl AccountClient {
                     monsters.clone(),
                     maps.clone(),
                     npcs.clone(),
+                    tasks.clone(),
                     server.clone(),
                     api.clone(),
                 )

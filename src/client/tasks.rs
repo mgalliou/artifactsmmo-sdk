@@ -1,4 +1,4 @@
-use crate::{DataItem, PersistData};
+use crate::{DataItem, PersistData, TasksRewardsClient};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
 use artifactsmmo_openapi::models::{RewardsSchema, TaskFullSchema};
 use sdk_derive::CollectionClient;
@@ -10,13 +10,15 @@ use std::{
 #[derive(Default, Debug, CollectionClient)]
 pub struct TasksClient {
     data: RwLock<HashMap<String, Arc<TaskFullSchema>>>,
+    pub reward: Arc<TasksRewardsClient>,
     api: Arc<ArtifactApi>,
 }
 
 impl TasksClient {
-    pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
+    pub(crate) fn new(api: Arc<ArtifactApi>, reward: Arc<TasksRewardsClient>) -> Self {
         let tasks = Self {
             data: Default::default(),
+            reward,
             api,
         };
         *tasks.data.write().unwrap() = tasks.retrieve_data();

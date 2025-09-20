@@ -1,8 +1,9 @@
 use crate::{
     Code, DropsItems,
     container::{ItemContainer, LimitedContainer, SlotLimited, SpaceLimited},
+    items::ItemSchemaExt,
 };
-use artifactsmmo_openapi::models::{CharacterSchema, InventorySlot, SimpleItemSchema};
+use artifactsmmo_openapi::models::{CharacterSchema, InventorySlot, ItemSchema, SimpleItemSchema};
 use itertools::Itertools;
 use std::sync::Arc;
 
@@ -17,7 +18,27 @@ impl InventoryClient {
     }
 }
 
-pub trait Inventory: LimitedContainer + SlotLimited + SpaceLimited {}
+pub trait Inventory: LimitedContainer + SlotLimited + SpaceLimited {
+    fn has_room_to_craft(&self, item: &ItemSchema) -> bool {
+        let Some(quantity) = item
+            .craft_schema()
+            .and_then(|s| s.quantity.map(|q| q as u32))
+        else {
+            return true;
+        };
+        let extra_quantity = quantity.saturating_sub(item.mats_quantity());
+        if extra_quantity > 0 && self.free_space() < extra_quantity
+            || (self.free_slots() < 1
+                && item
+                    .mats()
+                    .iter()
+                    .all(|i| self.total_of(&i.code) > i.quantity))
+        {
+            return false;
+        }
+        true
+    }
+}
 
 impl Inventory for InventoryClient {}
 
@@ -49,7 +70,7 @@ impl LimitedContainer for InventoryClient {
         self.total_items() >= self.max_items() || self.free_slots() == 0
     }
 
-    fn has_space_for_multiple(&self, items: &[SimpleItemSchema]) -> bool {
+    fn has_room_for_multiple(&self, items: &[SimpleItemSchema]) -> bool {
         let mut free_slot = self.free_slots();
         let mut free_space = self.free_space();
         for item in items.iter() {
@@ -64,7 +85,7 @@ impl LimitedContainer for InventoryClient {
         true
     }
 
-    fn has_space_for_drops_from<H: DropsItems>(&self, entity: &H) -> bool {
+    fn has_room_for_drops_from<H: DropsItems>(&self, entity: &H) -> bool {
         self.free_slots() >= entity.average_drop_slots()
             && self.free_space() >= entity.average_drop_quantity()
     }

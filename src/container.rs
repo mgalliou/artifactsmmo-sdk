@@ -37,11 +37,11 @@ pub trait SpaceLimited: ItemContainer {
 
 pub trait LimitedContainer {
     fn is_full(&self) -> bool;
-    fn has_space_for_multiple(&self, items: &[SimpleItemSchema]) -> bool;
-    fn has_space_for_drops_from<H: DropsItems>(&self, entity: &H) -> bool;
+    fn has_room_for_multiple(&self, items: &[SimpleItemSchema]) -> bool;
+    fn has_room_for_drops_from<H: DropsItems>(&self, entity: &H) -> bool;
 
-    fn has_space_for(&self, item: &str, quantity: u32) -> bool {
-        self.has_space_for_multiple(&[SimpleItemSchema {
+    fn has_room_for(&self, item: &str, quantity: u32) -> bool {
+        self.has_room_for_multiple(&[SimpleItemSchema {
             code: item.to_owned(),
             quantity,
         }])

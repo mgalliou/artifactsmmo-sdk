@@ -32,7 +32,6 @@ pub struct Client {
     pub monsters: Arc<MonstersClient>,
     pub items: Arc<ItemsClient>,
     pub tasks: Arc<TasksClient>,
-    pub tasks_rewards: Arc<TasksRewardsClient>,
     pub maps: Arc<MapsClient>,
     pub npcs: Arc<NpcsClient>,
 }
@@ -41,7 +40,7 @@ impl Client {
     pub fn new(url: String, account_name: String, token: String) -> Result<Self, ClientError> {
         let api = Arc::new(ArtifactApi::new(url, token));
 
-        let (bank_res, events, tasks_rewards, server, tasks, npcs) = thread::scope(|s| {
+        let (bank_res, events, server, tasks, npcs) = thread::scope(|s| {
             let api_clone = api.clone();
             let bank_handle = s.spawn(move || {
                 let bank_details = api_clone
@@ -59,14 +58,15 @@ impl Client {
             let events_handle = s.spawn(move || Arc::new(EventsClient::new(api_clone.clone())));
 
             let api_clone = api.clone();
-            let tasks_rewards_handle =
-                s.spawn(move || Arc::new(TasksRewardsClient::new(api_clone.clone())));
-
-            let api_clone = api.clone();
             let server_handle = s.spawn(move || Arc::new(ServerClient::new(api_clone.clone())));
 
             let api_clone = api.clone();
-            let tasks_handle = s.spawn(move || Arc::new(TasksClient::new(api_clone.clone())));
+            let tasks_handle = s.spawn(move || {
+                Arc::new(TasksClient::new(
+                    api_clone.clone(),
+                    Arc::new(TasksRewardsClient::new(api_clone.clone())),
+                ))
+            });
 
             let api_clone = api.clone();
             let npcs_handle = s.spawn(move || {
@@ -79,7 +79,6 @@ impl Client {
             (
                 bank_handle.join().unwrap(),
                 events_handle.join().unwrap(),
-                tasks_rewards_handle.join().unwrap(),
                 server_handle.join().unwrap(),
                 tasks_handle.join().unwrap(),
                 npcs_handle.join().unwrap(),
@@ -114,7 +113,7 @@ impl Client {
             api.clone(),
             resources.clone(),
             monsters.clone(),
-            tasks_rewards.clone(),
+            tasks.reward.clone(),
             npcs.clone(),
             maps.clone(),
         ));
@@ -127,6 +126,7 @@ impl Client {
             monsters.clone(),
             maps.clone(),
             npcs.clone(),
+            tasks.clone(),
             server.clone(),
             api,
         )?;
@@ -139,7 +139,6 @@ impl Client {
             server,
             events,
             tasks,
-            tasks_rewards,
             maps,
             npcs,
         })

@@ -1,7 +1,10 @@
 use crate::{
     AccountClient, CollectionClient, GOLD, Gear, ItemContainer, Level, LimitedContainer,
-    SlotLimited, SpaceLimited,
-    character::error::{GiveGoldError, GiveItemError},
+    SlotLimited, SpaceLimited, TASK_EXCHANGE_PRICE, TASKS_COIN, TasksClient,
+    character::{
+        error::{GiveGoldError, GiveItemError},
+        inventory::Inventory,
+    },
     client::{
         bank::{Bank, BankClient},
         character::{
@@ -61,6 +64,7 @@ pub struct CharacterClient {
     monsters: Arc<MonstersClient>,
     maps: Arc<MapsClient>,
     npcs: Arc<NpcsClient>,
+    tasks: Arc<TasksClient>,
 }
 
 impl CharacterClient {
@@ -74,6 +78,7 @@ impl CharacterClient {
         monsters: Arc<MonstersClient>,
         maps: Arc<MapsClient>,
         npcs: Arc<NpcsClient>,
+        tasks: Arc<TasksClient>,
         server: Arc<ServerClient>,
         api: Arc<ArtifactApi>,
     ) -> Self {
@@ -87,6 +92,7 @@ impl CharacterClient {
             monsters,
             maps,
             npcs,
+            tasks,
         }
     }
 
@@ -115,7 +121,7 @@ impl CharacterClient {
         let Some(monster) = self.monsters.get(&monster_code) else {
             return Err(FightError::NoMonsterOnMap);
         };
-        if !self.inventory().has_space_for_drops_from(monster.as_ref()) {
+        if !self.inventory().has_room_for_drops_from(monster.as_ref()) {
             return Err(FightError::InsufficientInventorySpace);
         }
         Ok(())
@@ -136,7 +142,7 @@ impl CharacterClient {
         if self.skill_level(resource.skill.into()) < resource.level() {
             return Err(GatherError::SkillLevelInsufficient);
         }
-        if !self.inventory().has_space_for_drops_from(resource.as_ref()) {
+        if !self.inventory().has_room_for_drops_from(resource.as_ref()) {
             return Err(GatherError::InsufficientInventorySpace);
         }
         Ok(())
@@ -203,7 +209,9 @@ impl CharacterClient {
         if !self.inventory().contains_multiple(&item.mats_for(quantity)) {
             return Err(CraftError::InsufficientMaterials);
         }
-        // TODO: check if InssuficientInventorySpace can happen
+        if !self.inventory().has_room_to_craft(&item) {
+            return Err(CraftError::InsufficientInventorySpace);
+        }
         if !self.current_map().content_code_is(skill.as_ref()) {
             return Err(CraftError::NoWorkshopOnMap);
         }
@@ -271,7 +279,7 @@ impl CharacterClient {
         {
             return Err(WithdrawError::InsufficientQuantity);
         };
-        if !self.inventory().has_space_for_multiple(items) {
+        if !self.inventory().has_room_for_multiple(items) {
             return Err(WithdrawError::InsufficientInventorySpace);
         }
         if !self.current_map().content_type_is(MapContentType::Bank) {
@@ -286,21 +294,15 @@ impl CharacterClient {
     }
 
     pub fn can_deposit_items(&self, items: &[SimpleItemSchema]) -> Result<(), DepositError> {
-        //TODO: add check for bank slot availability
         for item in items.iter() {
-            self.can_deposit_item(&item.code, item.quantity)?
+            if self.items.get(&item.code).is_none() {
+                return Err(DepositError::ItemNotFound);
+            };
+            if self.inventory().total_of(&item.code) < item.quantity {
+                return Err(DepositError::InsufficientQuantity);
+            }
         }
-        Ok(())
-    }
-
-    fn can_deposit_item(&self, item_code: &str, quantity: u32) -> Result<(), DepositError> {
-        if self.items.get(item_code).is_none() {
-            return Err(DepositError::ItemNotFound);
-        };
-        if self.inventory().total_of(item_code) < quantity {
-            return Err(DepositError::InsufficientQuantity);
-        }
-        if self.bank.total_of(item_code) == 0 && self.bank.free_slots() == 0 {
+        if !self.bank.has_room_for_multiple(items) {
             return Err(DepositError::InsufficientBankSpace);
         }
         if !self.current_map().content_type_is(MapContentType::Bank) {
@@ -401,7 +403,7 @@ impl CharacterClient {
         if self.quantity_in_slot(slot) < quantity {
             return Err(UnequipError::InsufficientQuantity);
         }
-        if !self.inventory().has_space_for(&equiped.code, quantity) {
+        if !self.inventory().has_room_for(&equiped.code, quantity) {
             return Err(UnequipError::InsufficientInventorySpace);
         }
         Ok(())
@@ -510,8 +512,19 @@ impl CharacterClient {
     }
 
     pub fn can_exchange_tasks_coin(&self) -> Result<(), TasksCoinExchangeError> {
-        if self.inventory().total_of("tasks_coin") < 6 {
+        let coins_in_inv = self.inventory().total_of(TASKS_COIN);
+        if coins_in_inv < TASK_EXCHANGE_PRICE {
             return Err(TasksCoinExchangeError::InsufficientTasksCoinQuantity);
+        }
+        let extra_quantity = self
+            .tasks
+            .reward
+            .max_quantity()
+            .saturating_sub(TASK_EXCHANGE_PRICE);
+        if self.inventory().free_space() < extra_quantity
+            || self.inventory().free_slots() < 1 && coins_in_inv > TASK_EXCHANGE_PRICE
+        {
+            return Err(TasksCoinExchangeError::InsufficientInventorySpace);
         }
         if !self
             .current_map()
@@ -519,7 +532,6 @@ impl CharacterClient {
         {
             return Err(TasksCoinExchangeError::NoTasksMasterOnMap);
         }
-        // TODO: check for conditions when InsufficientInventorySpace can happen
         Ok(())
     }
 
@@ -602,7 +614,7 @@ impl CharacterClient {
         if character.position() != self.position() {
             return Err(GiveItemError::CharacterNotFound);
         }
-        if !character.inventory().has_space_for_multiple(items) {
+        if !character.inventory().has_room_for_multiple(items) {
             return Err(GiveItemError::InsufficientInventorySpace);
         }
         Ok(())
@@ -879,6 +891,7 @@ mod tests {
             Self::new(
                 1,
                 Arc::new(RwLock::new(Arc::new(value))),
+                Default::default(),
                 Default::default(),
                 Default::default(),
                 Default::default(),
