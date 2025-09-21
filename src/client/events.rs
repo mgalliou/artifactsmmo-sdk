@@ -1,5 +1,5 @@
 use crate::{DataItem, PersistData};
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
 use itertools::Itertools;

@@ -1,5 +1,5 @@
 use crate::{DataItem, PersistData, TasksRewardsClient};
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use artifactsmmo_openapi::models::{RewardsSchema, TaskFullSchema};
 use sdk_derive::CollectionClient;
 use std::{

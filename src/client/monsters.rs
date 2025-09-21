@@ -3,7 +3,7 @@ use crate::{
     client::events::EventsClient,
     simulator::{DamageType, HasEffects},
 };
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
 use std::{

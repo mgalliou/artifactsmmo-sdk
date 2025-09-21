@@ -10,7 +10,7 @@ use crate::{
     simulator::{EffectType, HasEffects},
     skill::Skill,
 };
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use artifactsmmo_openapi::models::{
     CraftSchema, ItemSchema, MonsterSchema, NpcSchema, NpcType, ResourceSchema, SimpleEffectSchema,
     SimpleItemSchema,

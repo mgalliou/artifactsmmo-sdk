@@ -2,7 +2,7 @@ use crate::{
     CanProvideXp, CollectionClient, DataItem, DropsItems, Level, PersistData,
     client::events::EventsClient,
 };
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
 use itertools::Itertools;
 use std::{

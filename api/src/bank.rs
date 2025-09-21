@@ -1,4 +1,4 @@
-use crate::{DataPage, PaginatedApi};
+use crate::{DataPage, PaginatedRequest};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -27,7 +27,7 @@ impl BankApi {
     }
 }
 
-impl PaginatedApi<SimpleItemSchema, DataPageSimpleItemSchema, GetBankItemsMyBankItemsGetError>
+impl PaginatedRequest<SimpleItemSchema, DataPageSimpleItemSchema, GetBankItemsMyBankItemsGetError>
     for BankApi
 {
     fn api_call(

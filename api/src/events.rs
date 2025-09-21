@@ -1,4 +1,4 @@
-use crate::{DataPage, PaginatedApi};
+use crate::{DataPage, PaginatedRequest};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -20,7 +20,7 @@ impl EventsApi {
     }
 }
 
-impl PaginatedApi<EventSchema, DataPageEventSchema, GetAllEventsEventsGetError> for EventsApi {
+impl PaginatedRequest<EventSchema, DataPageEventSchema, GetAllEventsEventsGetError> for EventsApi {
     fn api_call(
         &self,
         current_page: u32,

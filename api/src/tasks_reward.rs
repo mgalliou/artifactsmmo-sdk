@@ -1,4 +1,4 @@
-use crate::{DataPage, PaginatedApi};
+use crate::{DataPage, PaginatedRequest};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -22,7 +22,8 @@ impl TasksRewardApi {
     }
 }
 
-impl PaginatedApi<DropRateSchema, DataPageDropRateSchema, GetAllTasksRewardsTasksRewardsGetError>
+impl
+    PaginatedRequest<DropRateSchema, DataPageDropRateSchema, GetAllTasksRewardsTasksRewardsGetError>
     for TasksRewardApi
 {
     fn api_call(

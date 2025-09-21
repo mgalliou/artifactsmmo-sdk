@@ -1,4 +1,4 @@
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use std::{sync::Arc, thread};
 
 pub use crate::client::{
@@ -7,12 +7,14 @@ pub use crate::client::{
     npcs::NpcsClient, npcs_items::NpcsItemsClient, resources::ResourcesClient,
     server::ServerClient, tasks::TasksClient, tasks_rewards::TasksRewardsClient,
 };
+use crate::grand_exchange::GrandExchangeClient;
 
 pub mod account;
 pub mod bank;
 pub mod character;
 pub mod error;
 pub mod events;
+pub mod grand_exchange;
 pub mod items;
 pub mod maps;
 pub mod monsters;
@@ -34,6 +36,7 @@ pub struct Client {
     pub tasks: Arc<TasksClient>,
     pub maps: Arc<MapsClient>,
     pub npcs: Arc<NpcsClient>,
+    pub grand_exchange: Arc<GrandExchangeClient>,
 }
 
 impl Client {
@@ -128,7 +131,7 @@ impl Client {
             npcs.clone(),
             tasks.clone(),
             server.clone(),
-            api,
+            api.clone(),
         )?;
 
         Ok(Self {
@@ -141,6 +144,7 @@ impl Client {
             tasks,
             maps,
             npcs,
+            grand_exchange: Arc::new(GrandExchangeClient::new(api)),
         })
     }
 }

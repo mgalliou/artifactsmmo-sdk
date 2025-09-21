@@ -1,5 +1,5 @@
 use crate::{CollectionClient, DataItem, PersistData};
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use artifactsmmo_openapi::models::DropRateSchema;
 use std::{
     collections::HashMap,

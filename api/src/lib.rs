@@ -15,7 +15,8 @@ pub use server::ServerApi;
 pub use tasks::TasksApi;
 
 use crate::{
-    active_events::ActiveEventsApi, npcs_items::NpcsItemsApi, tasks_reward::TasksRewardApi,
+    active_events::ActiveEventsApi, grand_exchange::GrandExchangeApi, npcs_items::NpcsItemsApi,
+    tasks_reward::TasksRewardApi,
 };
 
 pub mod account;
@@ -23,6 +24,7 @@ pub mod active_events;
 pub mod bank;
 pub mod characters;
 pub mod events;
+pub mod grand_exchange;
 pub mod items;
 pub mod maps;
 pub mod monsters;
@@ -51,6 +53,7 @@ pub struct ArtifactApi {
     pub server: ServerApi,
     pub tasks: TasksApi,
     pub tasks_reward: TasksRewardApi,
+    pub grand_exchange: GrandExchangeApi,
 }
 
 impl ArtifactApi {
@@ -81,11 +84,12 @@ impl ArtifactApi {
             server: ServerApi::new(conf.clone()),
             npcs: NpcsApi::new(conf.clone()),
             npcs_items: NpcsItemsApi::new(conf.clone()),
+            grand_exchange: GrandExchangeApi::new(conf.clone()),
         }
     }
 }
 
-pub trait PaginatedApi<T, P, E>
+pub trait PaginatedRequest<T, P, E>
 where
     P: DataPage<T>,
 {

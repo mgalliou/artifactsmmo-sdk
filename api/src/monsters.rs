@@ -1,4 +1,4 @@
-use crate::{DataPage, PaginatedApi};
+use crate::{DataPage, PaginatedRequest};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -30,7 +30,7 @@ impl MonstersApi {
     }
 }
 
-impl PaginatedApi<MonsterSchema, DataPageMonsterSchema, GetAllMonstersMonstersGetError>
+impl PaginatedRequest<MonsterSchema, DataPageMonsterSchema, GetAllMonstersMonstersGetError>
     for MonstersApi
 {
     fn api_call(

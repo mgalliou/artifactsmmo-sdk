@@ -1,4 +1,4 @@
-use crate::{DataPage, PaginatedApi};
+use crate::{DataPage, PaginatedRequest};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -27,7 +27,7 @@ impl ItemsApi {
     }
 }
 
-impl PaginatedApi<ItemSchema, DataPageItemSchema, GetAllItemsItemsGetError> for ItemsApi {
+impl PaginatedRequest<ItemSchema, DataPageItemSchema, GetAllItemsItemsGetError> for ItemsApi {
     fn api_call(
         &self,
         current_page: u32,

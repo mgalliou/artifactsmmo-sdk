@@ -1,4 +1,4 @@
-use crate::{DataPage, PaginatedApi};
+use crate::{DataPage, PaginatedRequest};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -30,7 +30,7 @@ impl ResourcesApi {
     }
 }
 
-impl PaginatedApi<ResourceSchema, DataPageResourceSchema, GetAllResourcesResourcesGetError>
+impl PaginatedRequest<ResourceSchema, DataPageResourceSchema, GetAllResourcesResourcesGetError>
     for ResourcesApi
 {
     fn api_call(

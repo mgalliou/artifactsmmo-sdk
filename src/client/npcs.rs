@@ -1,5 +1,5 @@
 use crate::{CollectionClient, DataItem, PersistData, client::npcs_items::NpcsItemsClient};
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedApi};
+use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use artifactsmmo_openapi::models::NpcSchema;
 use itertools::Itertools;
 use std::{
