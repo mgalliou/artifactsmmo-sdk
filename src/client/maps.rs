@@ -2,6 +2,7 @@ use crate::{client::events::EventsClient, skill::Skill};
 use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
 use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema, TaskType};
 use chrono::{DateTime, Utc};
+use itertools::Itertools;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
@@ -14,7 +15,7 @@ pub struct MapsClient {
 }
 
 impl MapsClient {
-    pub(crate) fn new(api: &Arc<ArtifactApi>, events: Arc<EventsClient>) -> Self {
+    pub(crate) fn new(api: &ArtifactApi, events: Arc<EventsClient>) -> Self {
         Self {
             data: api
                 .maps
@@ -49,42 +50,39 @@ impl MapsClient {
         });
     }
 
-    pub fn closest_from_amoung(
-        x: i32,
-        y: i32,
-        maps: Vec<Arc<MapSchema>>,
-    ) -> Option<Arc<MapSchema>> {
-        maps.into_iter()
+    pub fn closest_from_amoung(x: i32, y: i32, maps: &[Arc<MapSchema>]) -> Option<Arc<MapSchema>> {
+        maps.iter()
             .min_by_key(|m| i32::abs(x - m.x) + i32::abs(y - m.y))
+            .cloned()
     }
 
     pub fn of_type(&self, r#type: MapContentType) -> Vec<Arc<MapSchema>> {
         self.data
             .values()
-            .filter(|m| {
-                m.read()
-                    .unwrap()
-                    .content
-                    .as_ref()
-                    .is_some_and(|c| c.r#type == r#type)
+            .filter_map(|m| {
+                let map = m.read().unwrap().clone();
+                map.content_type_is(r#type).then_some(map)
             })
-            .map(|m| m.read().unwrap().clone())
-            .collect()
+            .collect_vec()
     }
 
     pub fn with_content_code(&self, code: &str) -> Vec<Arc<MapSchema>> {
         self.data
             .values()
-            .filter(|m| m.read().unwrap().content_code_is(code))
-            .map(|m| m.read().unwrap().clone())
+            .filter_map(|m| {
+                let map = m.read().unwrap().clone();
+                map.content_code_is(code).then_some(map)
+            })
             .collect()
     }
 
-    pub fn with_content_schema(&self, schema: &MapContentSchema) -> Vec<Arc<MapSchema>> {
+    pub fn with_content(&self, content: &MapContentSchema) -> Vec<Arc<MapSchema>> {
         self.data
             .values()
-            .filter(|m| m.read().unwrap().content().is_some_and(|c| c == schema))
-            .map(|m| m.read().unwrap().clone())
+            .filter_map(|m| {
+                let map = m.read().unwrap().clone();
+                map.content_is(content).then_some(map)
+            })
             .collect()
     }
 
@@ -111,19 +109,19 @@ impl MapsClient {
         if maps.is_empty() {
             return None;
         }
-        map.closest_among(maps)
+        map.closest_among(&maps)
     }
 
-    fn closest_with_content_schema_from(
+    fn closest_with_content_from(
         &self,
         map: Arc<MapSchema>,
-        schema: &MapContentSchema,
+        content: &MapContentSchema,
     ) -> Option<Arc<MapSchema>> {
-        let maps = self.with_content_schema(schema);
+        let maps = self.with_content(content);
         if maps.is_empty() {
             return None;
         }
-        map.closest_among(maps)
+        map.closest_among(&maps)
     }
 
     pub fn closest_of_type_from(
@@ -135,7 +133,7 @@ impl MapsClient {
         if maps.is_empty() {
             return None;
         }
-        map.closest_among(maps)
+        map.closest_among(&maps)
     }
 
     pub fn closest_tasksmaster_from(
@@ -144,7 +142,7 @@ impl MapsClient {
         r#type: Option<TaskType>,
     ) -> Option<Arc<MapSchema>> {
         if let Some(r#type) = r#type {
-            self.closest_with_content_schema_from(
+            self.closest_with_content_from(
                 map,
                 &MapContentSchema {
                     r#type: MapContentType::TasksMaster,
@@ -159,13 +157,14 @@ impl MapsClient {
 
 pub trait MapSchemaExt {
     fn content(&self) -> Option<&MapContentSchema>;
+    fn content_is(&self, content: &MapContentSchema) -> bool;
     fn content_code_is(&self, code: &str) -> bool;
     fn content_type_is(&self, r#type: MapContentType) -> bool;
-    fn pretty(&self) -> String;
     fn monster(&self) -> Option<String>;
     fn resource(&self) -> Option<String>;
-    fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>>;
+    fn closest_among(&self, others: &[Arc<MapSchema>]) -> Option<Arc<MapSchema>>;
     fn is_tasksmaster(&self, task_type: Option<TaskType>) -> bool;
+    fn pretty(&self) -> String;
 }
 
 impl MapSchemaExt for MapSchema {
@@ -173,20 +172,16 @@ impl MapSchemaExt for MapSchema {
         self.content.as_ref().map(|c| c.as_ref())
     }
 
+    fn content_is(&self, content: &MapContentSchema) -> bool {
+        self.content().is_some_and(|c| c == content)
+    }
+
     fn content_code_is(&self, code: &str) -> bool {
-        self.content.as_ref().is_some_and(|c| c.code == code)
+        self.content().is_some_and(|c| c.code == code)
     }
 
     fn content_type_is(&self, r#type: MapContentType) -> bool {
-        self.content.as_ref().is_some_and(|c| c.r#type == r#type)
-    }
-
-    fn pretty(&self) -> String {
-        if let Some(content) = self.content() {
-            format!("{} ({},{} [{}])", self.name, self.x, self.y, content.code)
-        } else {
-            format!("{} ({},{})", self.name, self.x, self.y)
-        }
+        self.content().is_some_and(|c| c.r#type == r#type)
     }
 
     fn monster(&self) -> Option<String> {
@@ -197,13 +192,21 @@ impl MapSchemaExt for MapSchema {
         Some(self.content()?.code.clone())
     }
 
-    fn closest_among(&self, others: Vec<Arc<MapSchema>>) -> Option<Arc<MapSchema>> {
+    fn closest_among(&self, others: &[Arc<MapSchema>]) -> Option<Arc<MapSchema>> {
         MapsClient::closest_from_amoung(self.x, self.y, others)
     }
 
     fn is_tasksmaster(&self, task_type: Option<TaskType>) -> bool {
         self.content_type_is(MapContentType::TasksMaster)
             && task_type.is_none_or(|tt| self.content_code_is(&tt.to_string()))
+    }
+
+    fn pretty(&self) -> String {
+        if let Some(content) = self.content() {
+            format!("{} ({},{} [{}])", self.name, self.x, self.y, content.code)
+        } else {
+            format!("{} ({},{})", self.name, self.x, self.y)
+        }
     }
 }
 #[cfg(test)]

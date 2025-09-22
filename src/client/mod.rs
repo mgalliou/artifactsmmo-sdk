@@ -118,7 +118,6 @@ impl Client {
             monsters.clone(),
             tasks.reward.clone(),
             npcs.clone(),
-            maps.clone(),
         ));
 
         let account = Arc::new(AccountClient::new(account_name, bank));

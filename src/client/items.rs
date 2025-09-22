@@ -1,11 +1,11 @@
 use crate::{
-    CanProvideXp, CollectionClient, DEMON, DataItem, DropRateSchemaExt, DropsItems, Level,
-    MapsClient, PIECE_OF_OBSIDIAN, PersistData, check_lvl_diff,
+    CanProvideXp, CollectionClient, DataItem, DropRateSchemaExt, Level,
+    PersistData, check_lvl_diff,
     client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
     },
-    consts::{GEMS, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
+    consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
     simulator::{EffectType, HasEffects},
     skill::Skill,
@@ -34,7 +34,6 @@ pub struct ItemsClient {
     monsters: Arc<MonstersClient>,
     tasks_rewards: Arc<TasksRewardsClient>,
     npcs: Arc<NpcsClient>,
-    maps: Arc<MapsClient>,
 }
 
 impl ItemsClient {
@@ -44,7 +43,6 @@ impl ItemsClient {
         monsters: Arc<MonstersClient>,
         tasks_rewards: Arc<TasksRewardsClient>,
         npcs: Arc<NpcsClient>,
-        maps: Arc<MapsClient>,
     ) -> Self {
         let items = Self {
             data: Default::default(),
@@ -53,7 +51,6 @@ impl ItemsClient {
             monsters,
             tasks_rewards,
             npcs,
-            maps,
         };
         *items.data.write().unwrap() = items.retrieve_data();
         items

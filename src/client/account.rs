@@ -6,6 +6,7 @@ use crate::{
     grand_exchange::GrandExchangeClient,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
+use itertools::Itertools;
 use std::sync::{Arc, RwLock};
 
 #[derive(Default, Debug)]
@@ -62,7 +63,7 @@ impl AccountClient {
                 )
             })
             .map(Arc::new)
-            .collect::<Vec<_>>();
+            .collect_vec();
         Ok(())
     }
 

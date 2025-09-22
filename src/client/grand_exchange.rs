@@ -1,7 +1,7 @@
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{GeOrderHistorySchema, GeOrderSchema};
 use itertools::Itertools;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 #[derive(Default, Debug)]
 pub struct GrandExchangeClient {
