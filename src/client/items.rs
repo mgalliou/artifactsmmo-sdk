@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, DropRateSchemaExt, Level,
+    CanProvideXp, CollectionClient, DataItem, Level,
     PersistData, check_lvl_diff,
     client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
@@ -169,34 +169,6 @@ impl ItemsClient {
     pub fn recycled_quantity_for(&self, code: &str) -> u32 {
         let mats_quantity_for = self.mats_quantity_for(code);
         mats_quantity_for / 5 + if mats_quantity_for % 5 > 0 { 1 } else { 0 }
-    }
-
-    /// Takes an item `code` and returns the best (lowest value) drop rate from
-    /// `Monsters` or `Resources`
-    pub fn drop_rate(&self, code: &str) -> u32 {
-        self.monsters
-            .dropping(code)
-            .iter()
-            .flat_map(|m| &m.drops)
-            .chain(self.resources.dropping(code).iter().flat_map(|m| &m.drops))
-            .find(|d| d.code == code)
-            .map_or(0, |d| (d.rate as f32 * d.average_quantity()).round() as u32)
-    }
-
-    /// Takes an item `code` and aggregate the drop rates of its base materials
-    /// to cumpute an average drop rate.
-    pub fn base_mats_drop_rate(&self, code: &str) -> f32 {
-        let base_mats = self.base_mats_of(code);
-        if base_mats.is_empty() {
-            return 0.0;
-        }
-        let base_mats_quantity: u32 = base_mats.iter().map(|m| m.quantity).sum();
-        let drop_rate_sum: u32 = base_mats
-            .iter()
-            .map(|m| self.drop_rate(&m.code) * m.quantity)
-            .sum();
-        let average: f32 = drop_rate_sum as f32 / base_mats_quantity as f32;
-        average
     }
 
     pub fn restoring_utilities(&self, level: u32) -> Vec<Arc<ItemSchema>> {

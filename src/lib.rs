@@ -179,24 +179,34 @@ impl HasDrops for Vec<DropSchema> {
 }
 
 pub trait DropsItems {
-    fn drop_rate(&self, item: &str) -> Option<u32> {
-        self.drops().iter().find(|i| i.code == item).map(|i| i.rate)
-    }
-
     fn average_drop_quantity(&self) -> u32 {
         self.drops()
             .iter()
-            .map(|i| 1.0 / i.rate as f32 * i.average_quantity())
+            .map(|d| d.effective_rate())
             .sum::<f32>()
             .ceil() as u32
     }
 
-    fn average_drop_slots(&self) -> u32 {
+    fn drop_rate_of(&self, item: &str) -> f32 {
         self.drops()
             .iter()
-            .map(|i| 1.0 / i.rate as f32)
-            .sum::<f32>()
-            .ceil() as u32
+            .find(|d| d.code == item)
+            .map_or(0.0, |d| d.rate())
+    }
+
+    fn effective_drop_rate_of(&self, item: &str) -> f32 {
+        self.drops()
+            .iter()
+            .find(|d| d.code == item)
+            .map_or(0.0, |d| d.effective_rate())
+    }
+
+    fn average_drop_slots(&self) -> u32 {
+        self.drops().iter().map(|d| d.rate()).sum::<f32>().ceil() as u32
+    }
+
+    fn min_drop_quantity(&self) -> u32 {
+        self.drops().iter().map(|i| i.min_quantity).sum()
     }
 
     fn max_drop_quantity(&self) -> u32 {
@@ -218,11 +228,21 @@ pub trait CanProvideXp: Level {
 
 pub trait DropRateSchemaExt {
     fn average_quantity(&self) -> f32;
+    fn rate(&self) -> f32;
+    fn effective_rate(&self) -> f32;
 }
 
 impl DropRateSchemaExt for DropRateSchema {
     fn average_quantity(&self) -> f32 {
         (self.min_quantity + self.max_quantity) as f32 / 2.0
+    }
+
+    fn rate(&self) -> f32 {
+        self.rate as f32 / 100.0
+    }
+
+    fn effective_rate(&self) -> f32 {
+        self.rate() * self.average_quantity()
     }
 }
 

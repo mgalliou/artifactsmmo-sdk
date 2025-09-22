@@ -87,6 +87,6 @@ impl LimitedContainer for InventoryClient {
 
     fn has_room_for_drops_from<H: DropsItems>(&self, entity: &H) -> bool {
         self.free_slots() >= entity.average_drop_slots()
-            && self.free_space() >= entity.average_drop_quantity()
+            && self.free_space() >= entity.min_drop_quantity()
     }
 }
