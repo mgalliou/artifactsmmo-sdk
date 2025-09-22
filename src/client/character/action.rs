@@ -76,6 +76,18 @@ pub enum Action<'a> {
         quantity: u32,
         character: &'a str,
     },
+    GeBuyOrder {
+        id: &'a str,
+        quantity: u32,
+    },
+    GeCancelOrder {
+        id: &'a str,
+    },
+    GeCreateOrder {
+        item: &'a str,
+        quantity: u32,
+        price: u32,
+    },
     //ChristmasExchange,
 }
 
@@ -212,6 +224,25 @@ impl Action<'_> {
             } => api
                 .my_character
                 .give_gold(name, *quantity, character)
+                .map(|r| r.into())
+                .map_err(|e| e.into()),
+            Action::GeBuyOrder { id, quantity } => api
+                .my_character
+                .ge_buy_order(name, id, *quantity)
+                .map(|r| r.into())
+                .map_err(|e| e.into()),
+            Action::GeCancelOrder { id } => api
+                .my_character
+                .ge_cancel_order(name, id)
+                .map(|r| r.into())
+                .map_err(|e| e.into()),
+            Action::GeCreateOrder {
+                item,
+                quantity,
+                price,
+            } => api
+                .my_character
+                .ge_create_order(name, item, *quantity, *price)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
         }

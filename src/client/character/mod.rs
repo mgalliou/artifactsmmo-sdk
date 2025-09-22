@@ -2,7 +2,9 @@ use crate::{
     AccountClient, CollectionClient, GOLD, Gear, ItemContainer, Level, LimitedContainer,
     SlotLimited, SpaceLimited, TASK_EXCHANGE_PRICE, TASKS_COIN, TasksClient,
     character::{
-        error::{GiveGoldError, GiveItemError},
+        error::{
+            GeBuyOrderError, GeCancelOrderError, GeCreateOrderError, GiveGoldError, GiveItemError,
+        },
         inventory::Inventory,
     },
     client::{
@@ -26,14 +28,15 @@ use crate::{
         server::ServerClient,
     },
     gear::Slot,
+    grand_exchange::GrandExchangeClient,
     simulator::HasEffects,
     skill::Skill,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CharacterSchema, ConditionOperator, FightSchema, ItemSchema, MapContentType, MapSchema,
-    NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema, SimpleItemSchema,
-    SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
+    CharacterSchema, ConditionOperator, FightSchema, GeTransactionSchema, ItemSchema,
+    MapContentType, MapSchema, NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema,
+    SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
 };
 use chrono::{DateTime, Utc};
 use std::{
@@ -65,6 +68,7 @@ pub struct CharacterClient {
     maps: Arc<MapsClient>,
     npcs: Arc<NpcsClient>,
     tasks: Arc<TasksClient>,
+    grand_exchange: Arc<GrandExchangeClient>,
 }
 
 impl CharacterClient {
@@ -79,6 +83,7 @@ impl CharacterClient {
         maps: Arc<MapsClient>,
         npcs: Arc<NpcsClient>,
         tasks: Arc<TasksClient>,
+        grand_exchange: Arc<GrandExchangeClient>,
         server: Arc<ServerClient>,
         api: Arc<ArtifactApi>,
     ) -> Self {
@@ -93,6 +98,7 @@ impl CharacterClient {
             maps,
             npcs,
             tasks,
+            grand_exchange,
         }
     }
 
@@ -638,21 +644,92 @@ impl CharacterClient {
         Ok(())
     }
 
-    //pub fn exchange_gift(&self) -> Result<RewardsSchema, GiftExchangeError> {
-    //    self.can_exchange_gift()?;
-    //    Ok(self.inner.request_gift_exchange()?)
-    //}
+    pub fn ge_buy_order(
+        &self,
+        id: &str,
+        quantity: u32,
+    ) -> Result<GeTransactionSchema, GeBuyOrderError> {
+        self.can_ge_buy_order(id, quantity)?;
+        Ok(self.inner.request_ge_buy_order(id, quantity)?)
+    }
 
-    // pub fn can_exchange_gift(&self) -> Result<(), GiftExchangeError> {
-    //     if self.inventory.total_of("tasks_coin") < 1 {
-    //         return Err(GiftExchangeError::InsufficientGiftQuantity);
-    //     }
-    //     if !self.map().content_type_is(MapContentType::SantaClaus) {
-    //         return Err(GiftExchangeError::NoSantaClausOnMap);
-    //     }
-    //     // TODO: check for conditions when InsufficientInventorySpace can happen
-    //     Ok(())
-    // }
+    pub fn can_ge_buy_order(&self, id: &str, quantity: u32) -> Result<(), GeBuyOrderError> {
+        let Some(order) = self.grand_exchange.get_order_by_id(id) else {
+            return Err(GeBuyOrderError::OrderNotFound);
+        };
+        if self.account.name == order.seller {
+            return Err(GeBuyOrderError::CannotTradeWithSelf);
+        }
+        if order.quantity < quantity {
+            return Err(GeBuyOrderError::InsufficientQuantity);
+        }
+        if self.gold() < order.price * quantity {
+            return Err(GeBuyOrderError::InsufficientGold);
+        }
+        if !self.inventory().has_room_for(&order.code, quantity) {
+            return Err(GeBuyOrderError::InsufficientInventorySpace);
+        }
+        if !self.current_map().content_type_is(MapContentType::Bank) {
+            return Err(GeBuyOrderError::NoGrandExchangeOnMap);
+        }
+        Ok(())
+    }
+
+    pub fn ge_create_order(
+        &self,
+
+        item: &str,
+        quantity: u32,
+        price: u32,
+    ) -> Result<(), GeCreateOrderError> {
+        self.can_ge_create_order(item, quantity, price)?;
+        Ok(self.inner.request_ge_create_order(item, quantity, price)?)
+    }
+
+    pub fn can_ge_create_order(
+        &self,
+        item: &str,
+        quantity: u32,
+        price: u32,
+    ) -> Result<(), GeCreateOrderError> {
+        let Some(item) = self.items.get(item) else {
+            return Err(GeCreateOrderError::ItemNotFound);
+        };
+        if !item.tradeable {
+            return Err(GeCreateOrderError::ItemNotSalable);
+        }
+        if self.inventory().total_of(&item.code) < quantity {
+            return Err(GeCreateOrderError::InsufficientQuantity);
+        }
+        if !self.gold() < ((price * quantity) as f32 * 0.03) as u32 {
+            return Err(GeCreateOrderError::InsufficientGold);
+        }
+        if !self.current_map().content_type_is(MapContentType::Bank) {
+            return Err(GeCreateOrderError::NoGrandExchangeOnMap);
+        }
+        Ok(())
+    }
+
+    pub fn ge_cancel_order(&self, id: &str) -> Result<GeTransactionSchema, GeCancelOrderError> {
+        self.can_ge_cancel_order(id)?;
+        Ok(self.inner.request_ge_cancel_order(id)?)
+    }
+
+    pub fn can_ge_cancel_order(&self, id: &str) -> Result<(), GeCancelOrderError> {
+        let Some(order) = self.grand_exchange.get_order_by_id(id) else {
+            return Err(GeCancelOrderError::OrderNotFound);
+        };
+        if self.account.name != order.seller {
+            return Err(GeCancelOrderError::OrderNotOwned);
+        }
+        if !self.inventory().has_room_for(&order.code, order.quantity) {
+            return Err(GeCancelOrderError::InsufficientInventorySpace);
+        }
+        if !self.current_map().content_type_is(MapContentType::Bank) {
+            return Err(GeCancelOrderError::NoGrandExchangeOnMap);
+        }
+        Ok(())
+    }
 
     pub fn gear(&self) -> Gear {
         let d = self.data();
@@ -891,6 +968,7 @@ mod tests {
             Self::new(
                 1,
                 Arc::new(RwLock::new(Arc::new(value))),
+                Default::default(),
                 Default::default(),
                 Default::default(),
                 Default::default(),

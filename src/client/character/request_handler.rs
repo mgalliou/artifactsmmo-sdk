@@ -16,6 +16,7 @@ use artifactsmmo_openapi::models::{
     BankItemTransactionResponseSchema, BankSchema, CharacterFightResponseSchema,
     CharacterMovementResponseSchema, CharacterRestResponseSchema, CharacterSchema,
     DeleteItemResponseSchema, EquipmentResponseSchema, FightResult, FightSchema,
+    GeCreateOrderTransactionResponseSchema, GeTransactionResponseSchema, GeTransactionSchema,
     GiveGoldReponseSchema, GiveItemReponseSchema, MapSchema, NpcItemTransactionSchema,
     NpcMerchantTransactionResponseSchema, RecyclingItemsSchema, RecyclingResponseSchema,
     RewardDataResponseSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
@@ -349,6 +350,46 @@ impl CharacterRequestHandler {
         })
         .and_then(|r| {
             r.downcast::<GiveGoldReponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|_| ())
+    }
+
+    pub fn request_ge_buy_order(
+        &self,
+        id: &str,
+        quantity: u32,
+    ) -> Result<GeTransactionSchema, RequestError> {
+        self.request_action(Action::GeBuyOrder { id, quantity })
+            .and_then(|r| {
+                r.downcast::<GeTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|r| *r.data.order)
+    }
+
+    pub fn request_ge_cancel_order(&self, id: &str) -> Result<GeTransactionSchema, RequestError> {
+        self.request_action(Action::GeCancelOrder { id })
+            .and_then(|r| {
+                r.downcast::<GeTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|r| *r.data.order)
+    }
+
+    pub fn request_ge_create_order(
+        &self,
+        item: &str,
+        quantity: u32,
+        price: u32,
+    ) -> Result<(), RequestError> {
+        self.request_action(Action::GeCreateOrder {
+            item,
+            quantity,
+            price,
+        })
+        .and_then(|r| {
+            r.downcast::<GeCreateOrderTransactionResponseSchema>()
                 .map_err(|_| RequestError::DowncastError)
         })
         .map(|_| ())
@@ -768,6 +809,51 @@ impl ResponseSchema for GiveGoldReponseSchema {
             self.data.quantity,
             self.data.receiver_character.name,
             self.data.cooldown.remaining_seconds,
+        )
+    }
+
+    fn character(&self) -> &CharacterSchema {
+        &self.data.character
+    }
+}
+
+impl ResponseSchema for GeTransactionResponseSchema {
+    fn to_string(&self) -> String {
+        if self.data.cooldown.reason == ActionType::BuyGe {
+            format!(
+                "{}: bought '{}'x{} for {}g from the grand exchange. {}",
+                self.data.character.name,
+                self.data.order.code,
+                self.data.order.quantity,
+                self.data.order.total_price,
+                self.data.cooldown.remaining_seconds
+            )
+        } else {
+            format!(
+                "{}: canceled order '{}'x{} for {}g at the grand exchange. {}",
+                self.data.character.name,
+                self.data.order.code,
+                self.data.order.quantity,
+                self.data.order.total_price,
+                self.data.cooldown.remaining_seconds
+            )
+        }
+    }
+
+    fn character(&self) -> &CharacterSchema {
+        &self.data.character
+    }
+}
+
+impl ResponseSchema for GeCreateOrderTransactionResponseSchema {
+    fn to_string(&self) -> String {
+        format!(
+            "{}: created order '{}'x{} for {}g at the grand exchange. {}s",
+            self.data.character.name,
+            self.data.order.code,
+            self.data.order.quantity,
+            self.data.order.price,
+            self.data.cooldown.remaining_seconds
         )
     }
 

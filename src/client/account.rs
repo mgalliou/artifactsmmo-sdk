@@ -1,12 +1,12 @@
-use artifactsmmo_api_wrapper::ArtifactApi;
-use std::sync::{Arc, RwLock};
-
 use crate::{
     ClientError, ItemsClient, MapsClient, MonstersClient, NpcsClient, ResourcesClient,
     ServerClient, TasksClient,
     character::HasCharacterData,
     client::{bank::BankClient, character::CharacterClient},
+    grand_exchange::GrandExchangeClient,
 };
+use artifactsmmo_api_wrapper::ArtifactApi;
+use std::sync::{Arc, RwLock};
 
 #[derive(Default, Debug)]
 pub struct AccountClient {
@@ -35,6 +35,7 @@ impl AccountClient {
         npcs: Arc<NpcsClient>,
         tasks: Arc<TasksClient>,
         server: Arc<ServerClient>,
+        grand_exchange: Arc<GrandExchangeClient>,
         api: Arc<ArtifactApi>,
     ) -> Result<(), ClientError> {
         *self.characters.write().unwrap() = api
@@ -55,6 +56,7 @@ impl AccountClient {
                     maps.clone(),
                     npcs.clone(),
                     tasks.clone(),
+                    grand_exchange.clone(),
                     server.clone(),
                     api.clone(),
                 )

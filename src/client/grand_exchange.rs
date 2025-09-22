@@ -1,32 +1,47 @@
-use std::sync::{Arc, RwLock};
-
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{GeOrderHistorySchema, GeOrderSchema};
+use itertools::Itertools;
+use std::sync::{Arc, RwLock};
 
 #[derive(Default, Debug)]
 pub struct GrandExchangeClient {
     api: Arc<ArtifactApi>,
-    sell_orders: RwLock<Arc<Vec<GeOrderSchema>>>,
 }
 
 impl GrandExchangeClient {
     pub(crate) fn new(api: Arc<ArtifactApi>) -> Self {
-        Self {
-            api,
-            sell_orders: Default::default(),
-        }
+        Self { api }
     }
 
     pub fn sell_history(&self, code: &str) -> Option<Vec<GeOrderHistorySchema>> {
         self.api.grand_exchange.sell_history(code).ok()
     }
 
-    pub fn sell_orders(&self) -> Arc<Vec<GeOrderSchema>> {
-        self.sell_orders.read().unwrap().clone()
+    pub fn sell_orders(&self) -> Vec<GeOrderSchema> {
+        self.api
+            .grand_exchange
+            .sell_orders()
+            .into_iter()
+            .flatten()
+            .collect_vec()
     }
 
-    pub fn refresh_orders(&self) {
-        *self.sell_orders.write().unwrap() =
-            Arc::new(self.api.grand_exchange.sell_orders().unwrap())
+    pub fn get_order_by_id(&self, id: &str) -> Option<GeOrderSchema> {
+        self.api
+            .grand_exchange
+            .get_sell_order(id)
+            .map(|r| *r.data)
+            .ok()
     }
+
+    // pub fn refresh_orders(&self) {
+    //     *self.sell_orders.write().unwrap() = self
+    //         .api
+    //         .grand_exchange
+    //         .sell_orders()
+    //         .unwrap()
+    //         .into_iter()
+    //         .map(Arc::new)
+    //         .collect_vec()
+    // }
 }

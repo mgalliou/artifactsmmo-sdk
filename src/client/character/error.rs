@@ -5,6 +5,12 @@ use std::fmt::{self, Display, Formatter};
 use thiserror::Error;
 
 const ENTITY_NOT_FOUND: isize = 404;
+const MAXIMUM_ORDERS_CREATED: isize = 433;
+const INSUFFICIENT_ORDER_QUANTITY: isize = 434;
+const CANNOT_TRADE_WITH_SELF: isize = 435;
+const TRANSACTION_ALREADY_IN_PROGRESS: isize = 436;
+const GE_ITEM_NOT_SALABLE: isize = 437;
+const ORDER_NOT_OWNED: isize = 438;
 const ITEM_NOT_BUYABLE: isize = 441;
 const ITEM_NOT_SALABLE: isize = 442;
 const BANK_GOLD_INSUFFICIENT: isize = 460;
@@ -435,6 +441,62 @@ pub enum GiveGoldError {
     InsufficientGold = CHARACTER_GOLD_INSUFFICIENT,
     #[error("Character not found")]
     CharacterNotFound = CHARACTER_NOT_FOUND,
+    #[error(transparent)]
+    UnhandledError(#[from] RequestError),
+}
+
+#[derive(Debug, Error, TryFrom)]
+#[try_from(repr)]
+#[repr(isize)]
+pub enum GeBuyOrderError {
+    #[error("Order not found")]
+    OrderNotFound = ENTITY_NOT_FOUND,
+    #[error("Insufficient order quantity")]
+    InsufficientQuantity = INSUFFICIENT_ORDER_QUANTITY,
+    #[error("Cannot trade with self")]
+    CannotTradeWithSelf = CANNOT_TRADE_WITH_SELF,
+    #[error("Insufficient gold")]
+    InsufficientGold = CHARACTER_GOLD_INSUFFICIENT,
+    #[error("Insufficient inventory spcae")]
+    InsufficientInventorySpace = INVENTORY_FULL,
+    #[error("No grand exchange on map")]
+    NoGrandExchangeOnMap = ENTITY_NOT_FOUND_ON_MAP,
+    #[error(transparent)]
+    UnhandledError(#[from] RequestError),
+}
+
+#[derive(Debug, Error, TryFrom)]
+#[try_from(repr)]
+#[repr(isize)]
+pub enum GeCreateOrderError {
+    #[error("Item not found")]
+    ItemNotFound = ENTITY_NOT_FOUND,
+    #[error("Maximum order created")]
+    MaximumOrdersCreated = MAXIMUM_ORDERS_CREATED,
+    #[error("Item cannot be sold")]
+    ItemNotSalable = GE_ITEM_NOT_SALABLE,
+    #[error("Missing item or insufficient quantity")]
+    InsufficientQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
+    #[error("Insufficient gold")]
+    InsufficientGold = CHARACTER_GOLD_INSUFFICIENT,
+    #[error("No grand exchange on map")]
+    NoGrandExchangeOnMap = ENTITY_NOT_FOUND_ON_MAP,
+    #[error(transparent)]
+    UnhandledError(#[from] RequestError),
+}
+
+#[derive(Debug, Error, TryFrom)]
+#[try_from(repr)]
+#[repr(isize)]
+pub enum GeCancelOrderError {
+    #[error("Order not found")]
+    OrderNotFound = ENTITY_NOT_FOUND,
+    #[error("Order not owned")]
+    OrderNotOwned = ORDER_NOT_OWNED,
+    #[error("Insufficient inventory spcae")]
+    InsufficientInventorySpace = INVENTORY_FULL,
+    #[error("No grand exchange on map")]
+    NoGrandExchangeOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
     UnhandledError(#[from] RequestError),
 }

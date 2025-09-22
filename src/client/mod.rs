@@ -122,6 +122,7 @@ impl Client {
         ));
 
         let account = Arc::new(AccountClient::new(account_name, bank));
+        let grand_exchange = Arc::new(GrandExchangeClient::new(api.clone()));
         account.init_characters(
             account.clone(),
             items.clone(),
@@ -131,6 +132,7 @@ impl Client {
             npcs.clone(),
             tasks.clone(),
             server.clone(),
+            grand_exchange.clone(),
             api.clone(),
         )?;
 
@@ -144,7 +146,7 @@ impl Client {
             tasks,
             maps,
             npcs,
-            grand_exchange: Arc::new(GrandExchangeClient::new(api)),
+            grand_exchange,
         })
     }
 }

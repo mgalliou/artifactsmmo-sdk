@@ -5,7 +5,7 @@ use crate::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
     },
-    consts::{GEMS, GIFT, GINGERBREAD, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
+    consts::{GEMS, TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
     simulator::{EffectType, HasEffects},
     skill::Skill,
@@ -237,9 +237,6 @@ impl ItemsClient {
     /// All this logic should probably be done elsewhere since it can be related to the orderboard
     /// or the character level/skill_level/gear.
     pub fn best_source_of(&self, code: &str) -> Option<ItemSource> {
-        if code == GIFT {
-            return self.monsters.get(GINGERBREAD).map(ItemSource::Monster);
-        }
         if GEMS.contains(&code) {
             return Some(ItemSource::Craft);
         }

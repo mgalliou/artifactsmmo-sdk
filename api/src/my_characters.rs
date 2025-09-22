@@ -11,6 +11,9 @@ use artifactsmmo_openapi::{
             action_deposit_bank_item_my_name_action_bank_deposit_item_post,
             action_equip_item_my_name_action_equip_post, action_fight_my_name_action_fight_post,
             action_gathering_my_name_action_gathering_post,
+            action_ge_buy_item_my_name_action_grandexchange_buy_post,
+            action_ge_cancel_sell_order_my_name_action_grandexchange_cancel_post,
+            action_ge_create_sell_order_my_name_action_grandexchange_sell_post,
             action_give_gold_my_name_action_give_gold_post,
             action_give_items_my_name_action_give_item_post, action_move_my_name_action_move_post,
             action_npc_buy_item_my_name_action_npc_buy_post,
@@ -32,6 +35,9 @@ use artifactsmmo_openapi::{
             ActionDepositBankItemMyNameActionBankDepositItemPostError,
             ActionEquipItemMyNameActionEquipPostError, ActionFightMyNameActionFightPostError,
             ActionGatheringMyNameActionGatheringPostError,
+            ActionGeBuyItemMyNameActionGrandexchangeBuyPostError,
+            ActionGeCancelSellOrderMyNameActionGrandexchangeCancelPostError,
+            ActionGeCreateSellOrderMyNameActionGrandexchangeSellPostError,
             ActionGiveGoldMyNameActionGiveGoldPostError,
             ActionGiveItemsMyNameActionGiveItemPostError, ActionMoveMyNameActionMovePostError,
             ActionNpcBuyItemMyNameActionNpcBuyPostError,
@@ -51,7 +57,9 @@ use artifactsmmo_openapi::{
         BankItemTransactionResponseSchema, CharacterFightResponseSchema,
         CharacterMovementResponseSchema, CharacterRestResponseSchema, CraftingSchema,
         DeleteItemResponseSchema, DepositWithdrawGoldSchema, DestinationSchema, EquipSchema,
-        EquipmentResponseSchema, GiveGoldReponseSchema, GiveGoldSchema, GiveItemReponseSchema,
+        EquipmentResponseSchema, GeBuyOrderSchema, GeCancelOrderSchema,
+        GeCreateOrderTransactionResponseSchema, GeOrderCreationrSchema,
+        GeTransactionResponseSchema, GiveGoldReponseSchema, GiveGoldSchema, GiveItemReponseSchema,
         GiveItemsSchema, ItemSlot, NpcMerchantBuySchema, NpcMerchantTransactionResponseSchema,
         RecyclingResponseSchema, RecyclingSchema, RewardDataResponseSchema, SimpleItemSchema,
         SkillResponseSchema, TaskCancelledResponseSchema, TaskResponseSchema,
@@ -338,6 +346,52 @@ impl MyCharacterApi {
             character: character.to_string(),
         };
         action_give_gold_my_name_action_give_gold_post(&self.configuration, name, schema)
+    }
+
+    pub fn ge_buy_order(
+        &self,
+        name: &str,
+        id: &str,
+        quantity: u32,
+    ) -> Result<
+        GeTransactionResponseSchema,
+        Error<ActionGeBuyItemMyNameActionGrandexchangeBuyPostError>,
+    > {
+        let schema = GeBuyOrderSchema::new(id.to_owned(), quantity);
+        action_ge_buy_item_my_name_action_grandexchange_buy_post(&self.configuration, name, schema)
+    }
+
+    pub fn ge_cancel_order(
+        &self,
+        name: &str,
+        id: &str,
+    ) -> Result<
+        GeTransactionResponseSchema,
+        Error<ActionGeCancelSellOrderMyNameActionGrandexchangeCancelPostError>,
+    > {
+        action_ge_cancel_sell_order_my_name_action_grandexchange_cancel_post(
+            &self.configuration,
+            name,
+            GeCancelOrderSchema::new(id.to_owned()),
+        )
+    }
+
+    pub fn ge_create_order(
+        &self,
+        name: &str,
+        item: &str,
+        quantity: u32,
+        price: u32,
+    ) -> Result<
+        GeCreateOrderTransactionResponseSchema,
+        Error<ActionGeCreateSellOrderMyNameActionGrandexchangeSellPostError>,
+    > {
+        let schema = GeOrderCreationrSchema::new(item.to_owned(), quantity, price);
+        action_ge_create_sell_order_my_name_action_grandexchange_sell_post(
+            &self.configuration,
+            name,
+            schema,
+        )
     }
 
     //pub fn christmas_exchange(
