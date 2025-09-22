@@ -228,45 +228,6 @@ impl ItemsClient {
         })
     }
 
-    /// NOTE: WIP: there is a lot of edge cases here:
-    /// if all sources are resources or monsters, then the lowest drop rate source should be returned,
-    /// if the drop rate sources is the same for all sources (algea), either the sources also
-    /// containing other item ordereds should be returned, otherwise the one with the higest(lowest
-    /// for speed?) level, or time to kill
-    /// (or archivment maybe).
-    /// All this logic should probably be done elsewhere since it can be related to the orderboard
-    /// or the character level/skill_level/gear.
-    pub fn best_source_of(&self, code: &str) -> Option<ItemSource> {
-        if GEMS.contains(&code) {
-            return Some(ItemSource::Craft);
-        }
-        if TASKS_REWARDS_SPECIFICS.contains(&code) {
-            return Some(ItemSource::TaskReward);
-        }
-        if code == PIECE_OF_OBSIDIAN {
-            return self.monsters.get(DEMON).map(ItemSource::Monster);
-        }
-        let sources = self.sources_of(code);
-        if sources.iter().all(|s| s.is_resource() || s.is_monster()) {
-            let bests = sources.into_iter().min_set_by_key(|s| {
-                if let ItemSource::Resource(r) = s
-                    && !self.maps.with_content_code(&r.code).is_empty()
-                {
-                    r.drop_rate(code)
-                } else if let ItemSource::Monster(m) = s
-                    && !self.maps.with_content_code(&m.code).is_empty()
-                {
-                    m.drop_rate(code)
-                } else {
-                    None
-                }
-            });
-            bests.first().cloned()
-        } else {
-            sources.first().cloned()
-        }
-    }
-
     pub fn sources_of(&self, code: &str) -> Vec<ItemSource> {
         if code == TASKS_COIN {
             return vec![ItemSource::Task];
