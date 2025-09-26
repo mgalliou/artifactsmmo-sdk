@@ -102,17 +102,19 @@ impl CharacterClient {
         }
     }
 
-    pub fn inventory(&self) -> InventoryClient {
-        InventoryClient::new(self.data())
+    pub fn r#move(&self, x: i32, y: i32) -> Result<Arc<MapSchema>, MoveError> {
+        self.can_move(x, y)?;
+        Ok(self.inner.request_move(x, y)?)
     }
 
-    pub fn current_map(&self) -> Arc<MapSchema> {
-        let (x, y) = self.position();
-        self.maps.get(x, y).unwrap()
-    }
-
-    pub fn remaining_cooldown(&self) -> Duration {
-        self.inner.remaining_cooldown()
+    pub fn can_move(&self, x: i32, y: i32) -> Result<(), MoveError> {
+        if self.position() == (x, y) {
+            return Err(MoveError::AlreadyOnMap);
+        }
+        if self.maps.get(x, y).is_none() {
+            return Err(MoveError::MapNotFound);
+        }
+        Ok(())
     }
 
     pub fn fight(&self) -> Result<FightSchema, FightError> {
@@ -154,47 +156,11 @@ impl CharacterClient {
         Ok(())
     }
 
-    pub fn r#move(&self, x: i32, y: i32) -> Result<Arc<MapSchema>, MoveError> {
-        self.can_move(x, y)?;
-        Ok(self.inner.request_move(x, y)?)
-    }
-
-    pub fn can_move(&self, x: i32, y: i32) -> Result<(), MoveError> {
-        if self.position() == (x, y) {
-            return Err(MoveError::AlreadyOnMap);
-        }
-        if self.maps.get(x, y).is_none() {
-            return Err(MoveError::MapNotFound);
-        }
-        Ok(())
-    }
-
     pub fn rest(&self) -> Result<u32, RestError> {
         if self.health() < self.max_health() {
             return Ok(self.inner.request_rest()?);
         }
         Ok(0)
-    }
-
-    pub fn r#use(&self, item_code: &str, quantity: u32) -> Result<(), UseError> {
-        self.can_use(item_code, quantity)?;
-        Ok(self.inner.request_use_item(item_code, quantity)?)
-    }
-
-    pub fn can_use(&self, item_code: &str, quantity: u32) -> Result<(), UseError> {
-        let Some(item) = self.items.get(item_code) else {
-            return Err(UseError::ItemNotFound);
-        };
-        if !item.is_consumable() {
-            return Err(UseError::ItemNotConsumable);
-        }
-        if self.inventory().total_of(item_code) < quantity {
-            return Err(UseError::InsufficientQuantity);
-        }
-        if self.level() < item.level {
-            return Err(UseError::InsufficientCharacterLevel);
-        }
-        Ok(())
     }
 
     pub fn craft(&self, item_code: &str, quantity: u32) -> Result<SkillInfoSchema, CraftError> {
@@ -273,27 +239,6 @@ impl CharacterClient {
         Ok(())
     }
 
-    pub fn withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
-        self.can_withdraw_items(items)?;
-        Ok(self.inner.request_withdraw_item(items)?)
-    }
-
-    pub fn can_withdraw_items(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
-        if items
-            .iter()
-            .any(|i| self.bank.total_of(&i.code) < i.quantity)
-        {
-            return Err(WithdrawError::InsufficientQuantity);
-        };
-        if !self.inventory().has_room_for_multiple(items) {
-            return Err(WithdrawError::InsufficientInventorySpace);
-        }
-        if !self.current_map().content_type_is(MapContentType::Bank) {
-            return Err(WithdrawError::NoBankOnMap);
-        }
-        Ok(())
-    }
-
     pub fn deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), DepositError> {
         self.can_deposit_items(items)?;
         Ok(self.inner.request_deposit_item(items)?)
@@ -317,17 +262,23 @@ impl CharacterClient {
         Ok(())
     }
 
-    pub fn withdraw_gold(&self, quantity: u32) -> Result<u32, GoldWithdrawError> {
-        self.can_withdraw_gold(quantity)?;
-        Ok(self.inner.request_withdraw_gold(quantity)?)
+    pub fn withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
+        self.can_withdraw_items(items)?;
+        Ok(self.inner.request_withdraw_item(items)?)
     }
 
-    pub fn can_withdraw_gold(&self, quantity: u32) -> Result<(), GoldWithdrawError> {
-        if self.bank.gold() < quantity {
-            return Err(GoldWithdrawError::InsufficientGold);
+    pub fn can_withdraw_items(&self, items: &[SimpleItemSchema]) -> Result<(), WithdrawError> {
+        if items
+            .iter()
+            .any(|i| self.bank.total_of(&i.code) < i.quantity)
+        {
+            return Err(WithdrawError::InsufficientQuantity);
+        };
+        if !self.inventory().has_room_for_multiple(items) {
+            return Err(WithdrawError::InsufficientInventorySpace);
         }
         if !self.current_map().content_type_is(MapContentType::Bank) {
-            return Err(GoldWithdrawError::NoBankOnMap);
+            return Err(WithdrawError::NoBankOnMap);
         }
         Ok(())
     }
@@ -343,6 +294,21 @@ impl CharacterClient {
         }
         if !self.current_map().content_type_is(MapContentType::Bank) {
             return Err(GoldDepositError::NoBankOnMap);
+        }
+        Ok(())
+    }
+
+    pub fn withdraw_gold(&self, quantity: u32) -> Result<u32, GoldWithdrawError> {
+        self.can_withdraw_gold(quantity)?;
+        Ok(self.inner.request_withdraw_gold(quantity)?)
+    }
+
+    pub fn can_withdraw_gold(&self, quantity: u32) -> Result<(), GoldWithdrawError> {
+        if self.bank.gold() < quantity {
+            return Err(GoldWithdrawError::InsufficientGold);
+        }
+        if !self.current_map().content_type_is(MapContentType::Bank) {
+            return Err(GoldWithdrawError::NoBankOnMap);
         }
         Ok(())
     }
@@ -415,6 +381,27 @@ impl CharacterClient {
         Ok(())
     }
 
+    pub fn use_item(&self, item_code: &str, quantity: u32) -> Result<(), UseError> {
+        self.can_use_item(item_code, quantity)?;
+        Ok(self.inner.request_use_item(item_code, quantity)?)
+    }
+
+    pub fn can_use_item(&self, item_code: &str, quantity: u32) -> Result<(), UseError> {
+        let Some(item) = self.items.get(item_code) else {
+            return Err(UseError::ItemNotFound);
+        };
+        if !item.is_consumable() {
+            return Err(UseError::ItemNotConsumable);
+        }
+        if self.inventory().total_of(item_code) < quantity {
+            return Err(UseError::InsufficientQuantity);
+        }
+        if self.level() < item.level {
+            return Err(UseError::InsufficientCharacterLevel);
+        }
+        Ok(())
+    }
+
     pub fn accept_task(&self) -> Result<TaskSchema, TaskAcceptationError> {
         self.can_accept_task()?;
         Ok(self.inner.request_accept_task()?)
@@ -433,16 +420,42 @@ impl CharacterClient {
         Ok(())
     }
 
-    pub fn task_trade(
+    pub fn cancel_task(&self) -> Result<(), TaskCancellationError> {
+        self.can_cancel_task()?;
+        Ok(self.inner.request_cancel_task()?)
+    }
+
+    pub fn can_cancel_task(&self) -> Result<(), TaskCancellationError> {
+        let Some(task_type) = self.task_type() else {
+            return Err(TaskCancellationError::NoCurrentTask);
+        };
+        if self.inventory().total_of("tasks_coin") < 1 {
+            return Err(TaskCancellationError::InsufficientTasksCoinQuantity);
+        }
+        if !self
+            .current_map()
+            .content_type_is(MapContentType::TasksMaster)
+            || !self.current_map().content_code_is(&task_type.to_string())
+        {
+            return Err(TaskCancellationError::WrongOrNoTasksMasterOnMap);
+        }
+        Ok(())
+    }
+
+    pub fn trade_task_item(
         &self,
         item_code: &str,
         quantity: u32,
     ) -> Result<TaskTradeSchema, TaskTradeError> {
-        self.can_task_trade(item_code, quantity)?;
-        Ok(self.inner.request_task_trade(item_code, quantity)?)
+        self.can_trade_task_item(item_code, quantity)?;
+        Ok(self.inner.request_trade_task_item(item_code, quantity)?)
     }
 
-    pub fn can_task_trade(&self, item_code: &str, quantity: u32) -> Result<(), TaskTradeError> {
+    pub fn can_trade_task_item(
+        &self,
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<(), TaskTradeError> {
         if self.items.get(item_code).is_none() {
             return Err(TaskTradeError::ItemNotFound);
         };
@@ -490,34 +503,12 @@ impl CharacterClient {
         Ok(())
     }
 
-    pub fn cancel_task(&self) -> Result<(), TaskCancellationError> {
-        self.can_cancel_task()?;
-        Ok(self.inner.request_cancel_task()?)
+    pub fn exchange_tasks_coins(&self) -> Result<RewardsSchema, TasksCoinExchangeError> {
+        self.can_exchange_tasks_coins()?;
+        Ok(self.inner.request_exchange_tasks_coin()?)
     }
 
-    pub fn can_cancel_task(&self) -> Result<(), TaskCancellationError> {
-        let Some(task_type) = self.task_type() else {
-            return Err(TaskCancellationError::NoCurrentTask);
-        };
-        if self.inventory().total_of("tasks_coin") < 1 {
-            return Err(TaskCancellationError::InsufficientTasksCoinQuantity);
-        }
-        if !self
-            .current_map()
-            .content_type_is(MapContentType::TasksMaster)
-            || !self.current_map().content_code_is(&task_type.to_string())
-        {
-            return Err(TaskCancellationError::WrongOrNoTasksMasterOnMap);
-        }
-        Ok(())
-    }
-
-    pub fn exchange_tasks_coin(&self) -> Result<RewardsSchema, TasksCoinExchangeError> {
-        self.can_exchange_tasks_coin()?;
-        Ok(self.inner.request_task_exchange()?)
-    }
-
-    pub fn can_exchange_tasks_coin(&self) -> Result<(), TasksCoinExchangeError> {
+    pub fn can_exchange_tasks_coins(&self) -> Result<(), TasksCoinExchangeError> {
         let coins_in_inv = self.inventory().total_of(TASKS_COIN);
         if coins_in_inv < TASK_EXCHANGE_PRICE {
             return Err(TasksCoinExchangeError::InsufficientTasksCoinQuantity);
@@ -677,22 +668,21 @@ impl CharacterClient {
 
     pub fn ge_create_order(
         &self,
-
-        item: &str,
+        item_code: &str,
         quantity: u32,
         price: u32,
     ) -> Result<(), GeCreateOrderError> {
-        self.can_ge_create_order(item, quantity, price)?;
-        Ok(self.inner.request_ge_create_order(item, quantity, price)?)
+        self.can_ge_create_order(item_code, quantity, price)?;
+        Ok(self.inner.request_ge_create_order(item_code, quantity, price)?)
     }
 
     pub fn can_ge_create_order(
         &self,
-        item: &str,
+        item_code: &str,
         quantity: u32,
         price: u32,
     ) -> Result<(), GeCreateOrderError> {
-        let Some(item) = self.items.get(item) else {
+        let Some(item) = self.items.get(item_code) else {
             return Err(GeCreateOrderError::ItemNotFound);
         };
         if !item.tradeable {
@@ -751,6 +741,19 @@ impl CharacterClient {
             rune: self.items.get(&d.rune_slot),
             bag: self.items.get(&d.bag_slot),
         }
+    }
+
+    pub fn inventory(&self) -> InventoryClient {
+        InventoryClient::new(self.data())
+    }
+
+    pub fn remaining_cooldown(&self) -> Duration {
+        self.inner.remaining_cooldown()
+    }
+
+    pub fn current_map(&self) -> Arc<MapSchema> {
+        let (x, y) = self.position();
+        self.maps.get(x, y).unwrap()
     }
 }
 
@@ -849,8 +852,8 @@ pub trait HasCharacterData {
         self.data().gold as u32
     }
 
-    fn quantity_in_slot(&self, s: Slot) -> u32 {
-        match s {
+    fn quantity_in_slot(&self, slot: Slot) -> u32 {
+        match slot {
             Slot::Utility1 => self.data().utility1_slot_quantity,
             Slot::Utility2 => self.data().utility2_slot_quantity,
             Slot::Weapon
@@ -867,7 +870,7 @@ pub trait HasCharacterData {
             | Slot::Artifact3
             | Slot::Bag
             | Slot::Rune => {
-                if self.equiped_in(s).is_empty() {
+                if self.equiped_in(slot).is_empty() {
                     0
                 } else {
                     1
@@ -935,9 +938,9 @@ pub trait HasCharacterData {
         .clone()
     }
 
-    fn has_equiped(&self, item: &str) -> u32 {
+    fn has_equiped(&self, item_code: &str) -> u32 {
         Slot::iter()
-            .filter_map(|s| (self.equiped_in(s) == item).then_some(self.quantity_in_slot(s)))
+            .filter_map(|s| (self.equiped_in(s) == item_code).then_some(self.quantity_in_slot(s)))
             .sum()
     }
 
@@ -1087,22 +1090,22 @@ mod tests {
             ..Default::default()
         });
         assert!(matches!(
-            char.can_use("random_item", 1),
+            char.can_use_item("random_item", 1),
             Err(UseError::ItemNotFound)
         ));
         assert!(matches!(
-            char.can_use("copper", 1),
+            char.can_use_item("copper", 1),
             Err(UseError::ItemNotConsumable)
         ));
         assert!(matches!(
-            char.can_use(item1, 5),
+            char.can_use_item(item1, 5),
             Err(UseError::InsufficientQuantity)
         ));
         assert!(matches!(
-            char.can_use(item2, 1),
+            char.can_use_item(item2, 1),
             Err(UseError::InsufficientCharacterLevel)
         ));
-        assert!(char.can_use(item1, 1).is_ok());
+        assert!(char.can_use_item(item1, 1).is_ok());
     }
 
     #[test]

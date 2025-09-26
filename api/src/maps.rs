@@ -44,7 +44,7 @@ impl<'a> Paginate for MapsRequest<'a> {
     type Error = GetAllMapsMapsGetError;
 
     fn request_page(&self, page: u32) -> Result<Self::Page, Error<Self::Error>> {
-        get_all_maps_maps_get(&self.configuration, None, None, Some(page), Some(100))
+        get_all_maps_maps_get(self.configuration, None, None, Some(page), Some(100))
     }
 }
 

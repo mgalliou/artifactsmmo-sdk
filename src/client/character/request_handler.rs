@@ -129,281 +129,6 @@ impl CharacterRequestHandler {
         }
     }
 
-    pub fn request_move(&self, x: i32, y: i32) -> Result<Arc<MapSchema>, RequestError> {
-        self.request_action(Action::Move { x, y })
-            .and_then(|r| {
-                r.downcast::<CharacterMovementResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| Arc::new(*s.data.destination))
-    }
-
-    pub fn request_fight(&self) -> Result<FightSchema, RequestError> {
-        self.request_action(Action::Fight)
-            .and_then(|r| {
-                r.downcast::<CharacterFightResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.fight)
-    }
-
-    pub fn request_rest(&self) -> Result<u32, RequestError> {
-        self.request_action(Action::Rest)
-            .and_then(|r| {
-                r.downcast::<CharacterRestResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| s.data.hp_restored as u32)
-    }
-
-    pub fn request_use_item(&self, item: &str, quantity: u32) -> Result<(), RequestError> {
-        self.request_action(Action::UseItem { item, quantity })
-            .map(|_| ())
-    }
-
-    pub fn request_gather(&self) -> Result<SkillDataSchema, RequestError> {
-        self.request_action(Action::Gather)
-            .and_then(|r| {
-                r.downcast::<SkillResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data)
-    }
-
-    pub fn request_craft(
-        &self,
-        item: &str,
-        quantity: u32,
-    ) -> Result<SkillInfoSchema, RequestError> {
-        self.request_action(Action::Craft { item, quantity })
-            .and_then(|r| {
-                r.downcast::<SkillResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.details)
-    }
-
-    pub fn request_delete(
-        &self,
-        item: &str,
-        quantity: u32,
-    ) -> Result<SimpleItemSchema, RequestError> {
-        self.request_action(Action::Delete { item, quantity })
-            .and_then(|r| {
-                r.downcast::<DeleteItemResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.item)
-    }
-
-    pub fn request_recycle(
-        &self,
-        item: &str,
-        quantity: u32,
-    ) -> Result<RecyclingItemsSchema, RequestError> {
-        self.request_action(Action::Recycle { item, quantity })
-            .and_then(|r| {
-                r.downcast::<RecyclingResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.details)
-    }
-
-    pub fn request_deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
-        self.request_action(Action::DepositItem { items })
-            .map(|_| ())
-    }
-
-    pub fn request_withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
-        self.request_action(Action::WithdrawItem { items })
-            .map(|_| ())
-    }
-
-    pub fn request_deposit_gold(&self, quantity: u32) -> Result<u32, RequestError> {
-        self.request_action(Action::DepositGold { quantity })
-            .and_then(|r| {
-                r.downcast::<BankGoldTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| s.data.bank.quantity)
-    }
-
-    pub fn request_withdraw_gold(&self, quantity: u32) -> Result<u32, RequestError> {
-        self.request_action(Action::WithdrawGold { quantity })
-            .and_then(|r| {
-                r.downcast::<BankGoldTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| s.data.bank.quantity)
-    }
-
-    pub fn request_expand_bank(&self) -> Result<u32, RequestError> {
-        self.request_action(Action::ExpandBank)
-            .and_then(|r| {
-                r.downcast::<BankExtensionTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| s.data.transaction.price)
-    }
-
-    pub fn request_equip(&self, item: &str, slot: Slot, quantity: u32) -> Result<(), RequestError> {
-        self.request_action(Action::Equip {
-            item,
-            slot,
-            quantity,
-        })
-        .map(|_| ())
-    }
-
-    pub fn request_unequip(&self, slot: Slot, quantity: u32) -> Result<(), RequestError> {
-        self.request_action(Action::Unequip { slot, quantity })
-            .map(|_| ())
-    }
-
-    pub fn request_accept_task(&self) -> Result<TaskSchema, RequestError> {
-        self.request_action(Action::AcceptTask)
-            .and_then(|r| {
-                r.downcast::<TaskResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.task)
-    }
-
-    pub fn request_complete_task(&self) -> Result<RewardsSchema, RequestError> {
-        self.request_action(Action::CompleteTask)
-            .and_then(|r| {
-                r.downcast::<RewardDataResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.rewards)
-    }
-
-    pub fn request_cancel_task(&self) -> Result<(), RequestError> {
-        self.request_action(Action::CancelTask).map(|_| ())
-    }
-
-    pub fn request_task_trade(
-        &self,
-        item: &str,
-        quantity: u32,
-    ) -> Result<TaskTradeSchema, RequestError> {
-        self.request_action(Action::TaskTrade { item, quantity })
-            .and_then(|r| {
-                r.downcast::<TaskTradeResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.trade)
-    }
-
-    pub fn request_task_exchange(&self) -> Result<RewardsSchema, RequestError> {
-        self.request_action(Action::TaskExchange)
-            .and_then(|r| {
-                r.downcast::<RewardDataResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.rewards)
-    }
-
-    pub fn request_npc_buy(
-        &self,
-        item: &str,
-        quantity: u32,
-    ) -> Result<NpcItemTransactionSchema, RequestError> {
-        self.request_action(Action::NpcBuy { item, quantity })
-            .and_then(|r| {
-                r.downcast::<NpcMerchantTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.transaction)
-    }
-
-    pub fn request_npc_sell(
-        &self,
-        item: &str,
-        quantity: u32,
-    ) -> Result<NpcItemTransactionSchema, RequestError> {
-        self.request_action(Action::NpcSell { item, quantity })
-            .and_then(|r| {
-                r.downcast::<NpcMerchantTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.transaction)
-    }
-
-    pub fn request_give_item(
-        &self,
-        items: &[SimpleItemSchema],
-        character: &str,
-    ) -> Result<(), RequestError> {
-        self.request_action(Action::GiveItem { items, character })
-            .and_then(|r| {
-                r.downcast::<GiveItemReponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|_| ())
-    }
-
-    pub fn request_give_gold(&self, quantity: u32, character: &str) -> Result<(), RequestError> {
-        self.request_action(Action::GiveGold {
-            quantity,
-            character,
-        })
-        .and_then(|r| {
-            r.downcast::<GiveGoldReponseSchema>()
-                .map_err(|_| RequestError::DowncastError)
-        })
-        .map(|_| ())
-    }
-
-    pub fn request_ge_buy_order(
-        &self,
-        id: &str,
-        quantity: u32,
-    ) -> Result<GeTransactionSchema, RequestError> {
-        self.request_action(Action::GeBuyOrder { id, quantity })
-            .and_then(|r| {
-                r.downcast::<GeTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|r| *r.data.order)
-    }
-
-    pub fn request_ge_cancel_order(&self, id: &str) -> Result<GeTransactionSchema, RequestError> {
-        self.request_action(Action::GeCancelOrder { id })
-            .and_then(|r| {
-                r.downcast::<GeTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|r| *r.data.order)
-    }
-
-    pub fn request_ge_create_order(
-        &self,
-        item: &str,
-        quantity: u32,
-        price: u32,
-    ) -> Result<(), RequestError> {
-        self.request_action(Action::GeCreateOrder {
-            item,
-            quantity,
-            price,
-        })
-        .and_then(|r| {
-            r.downcast::<GeCreateOrderTransactionResponseSchema>()
-                .map_err(|_| RequestError::DowncastError)
-        })
-        .map(|_| ())
-    }
-
-    //pub fn request_gift_exchange(&self) -> Result<RewardsSchema, RequestError> {
-    //    self.request_action(Action::ChristmasExchange)
-    //        .and_then(|r| {
-    //            r.downcast::<RewardDataResponseSchema>()
-    //                .map_err(|_| RequestError::DowncastError)
-    //        })
-    //        .map(|s| *s.data.rewards)
-    //}
-
     fn handle_request_error(
         &self,
         action: Action,
@@ -477,6 +202,286 @@ impl CharacterRequestHandler {
             }
         }
         Duration::from_secs(0)
+    }
+
+    pub fn request_move(&self, x: i32, y: i32) -> Result<Arc<MapSchema>, RequestError> {
+        self.request_action(Action::Move { x, y })
+            .and_then(|r| {
+                r.downcast::<CharacterMovementResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| Arc::new(*s.data.destination))
+    }
+
+    pub fn request_fight(&self) -> Result<FightSchema, RequestError> {
+        self.request_action(Action::Fight)
+            .and_then(|r| {
+                r.downcast::<CharacterFightResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.fight)
+    }
+
+    pub fn request_rest(&self) -> Result<u32, RequestError> {
+        self.request_action(Action::Rest)
+            .and_then(|r| {
+                r.downcast::<CharacterRestResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| s.data.hp_restored as u32)
+    }
+
+    pub fn request_gather(&self) -> Result<SkillDataSchema, RequestError> {
+        self.request_action(Action::Gather)
+            .and_then(|r| {
+                r.downcast::<SkillResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data)
+    }
+
+    pub fn request_craft(
+        &self,
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<SkillInfoSchema, RequestError> {
+        self.request_action(Action::Craft {
+            item_code,
+            quantity,
+        })
+        .and_then(|r| {
+            r.downcast::<SkillResponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|s| *s.data.details)
+    }
+
+    pub fn request_delete(
+        &self,
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<SimpleItemSchema, RequestError> {
+        self.request_action(Action::Delete {
+            item_code,
+            quantity,
+        })
+        .and_then(|r| {
+            r.downcast::<DeleteItemResponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|s| *s.data.item)
+    }
+
+    pub fn request_recycle(
+        &self,
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<RecyclingItemsSchema, RequestError> {
+        self.request_action(Action::Recycle {
+            item_code,
+            quantity,
+        })
+        .and_then(|r| {
+            r.downcast::<RecyclingResponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|s| *s.data.details)
+    }
+
+    pub fn request_deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
+        self.request_action(Action::DepositItem { items })
+            .map(|_| ())
+    }
+
+    pub fn request_withdraw_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
+        self.request_action(Action::WithdrawItem { items })
+            .map(|_| ())
+    }
+
+    pub fn request_deposit_gold(&self, quantity: u32) -> Result<u32, RequestError> {
+        self.request_action(Action::DepositGold { quantity })
+            .and_then(|r| {
+                r.downcast::<BankGoldTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| s.data.bank.quantity)
+    }
+
+    pub fn request_withdraw_gold(&self, quantity: u32) -> Result<u32, RequestError> {
+        self.request_action(Action::WithdrawGold { quantity })
+            .and_then(|r| {
+                r.downcast::<BankGoldTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| s.data.bank.quantity)
+    }
+
+    pub fn request_expand_bank(&self) -> Result<u32, RequestError> {
+        self.request_action(Action::ExpandBank)
+            .and_then(|r| {
+                r.downcast::<BankExtensionTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| s.data.transaction.price)
+    }
+
+    pub fn request_equip(
+        &self,
+        item_code: &str,
+        slot: Slot,
+        quantity: u32,
+    ) -> Result<(), RequestError> {
+        self.request_action(Action::Equip {
+            item_code,
+            slot,
+            quantity,
+        })
+        .map(|_| ())
+    }
+
+    pub fn request_unequip(&self, slot: Slot, quantity: u32) -> Result<(), RequestError> {
+        self.request_action(Action::Unequip { slot, quantity })
+            .map(|_| ())
+    }
+
+    pub fn request_use_item(&self, item_code: &str, quantity: u32) -> Result<(), RequestError> {
+        self.request_action(Action::UseItem { item_code, quantity })
+            .map(|_| ())
+    }
+
+    pub fn request_accept_task(&self) -> Result<TaskSchema, RequestError> {
+        self.request_action(Action::AcceptTask)
+            .and_then(|r| {
+                r.downcast::<TaskResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.task)
+    }
+
+    pub fn request_complete_task(&self) -> Result<RewardsSchema, RequestError> {
+        self.request_action(Action::CompleteTask)
+            .and_then(|r| {
+                r.downcast::<RewardDataResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.rewards)
+    }
+
+    pub fn request_cancel_task(&self) -> Result<(), RequestError> {
+        self.request_action(Action::CancelTask).map(|_| ())
+    }
+
+    pub fn request_trade_task_item(
+        &self,
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<TaskTradeSchema, RequestError> {
+        self.request_action(Action::TradeTaskItem { item_code, quantity })
+            .and_then(|r| {
+                r.downcast::<TaskTradeResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.trade)
+    }
+
+    pub fn request_exchange_tasks_coin(&self) -> Result<RewardsSchema, RequestError> {
+        self.request_action(Action::ExchangeTasksCoins)
+            .and_then(|r| {
+                r.downcast::<RewardDataResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.rewards)
+    }
+
+    pub fn request_npc_buy(
+        &self,
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<NpcItemTransactionSchema, RequestError> {
+        self.request_action(Action::NpcBuy { item_code, quantity })
+            .and_then(|r| {
+                r.downcast::<NpcMerchantTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.transaction)
+    }
+
+    pub fn request_npc_sell(
+        &self,
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<NpcItemTransactionSchema, RequestError> {
+        self.request_action(Action::NpcSell { item_code, quantity })
+            .and_then(|r| {
+                r.downcast::<NpcMerchantTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| *s.data.transaction)
+    }
+
+    pub fn request_give_item(
+        &self,
+        items: &[SimpleItemSchema],
+        character: &str,
+    ) -> Result<(), RequestError> {
+        self.request_action(Action::GiveItem { items, character })
+            .and_then(|r| {
+                r.downcast::<GiveItemReponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|_| ())
+    }
+
+    pub fn request_give_gold(&self, quantity: u32, character: &str) -> Result<(), RequestError> {
+        self.request_action(Action::GiveGold {
+            quantity,
+            character,
+        })
+        .and_then(|r| {
+            r.downcast::<GiveGoldReponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|_| ())
+    }
+
+    pub fn request_ge_buy_order(
+        &self,
+        id: &str,
+        quantity: u32,
+    ) -> Result<GeTransactionSchema, RequestError> {
+        self.request_action(Action::GeBuyOrder { id, quantity })
+            .and_then(|r| {
+                r.downcast::<GeTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|r| *r.data.order)
+    }
+
+    pub fn request_ge_create_order(
+        &self,
+        item_code: &str,
+        quantity: u32,
+        price: u32,
+    ) -> Result<(), RequestError> {
+        self.request_action(Action::GeCreateOrder {
+            item_code,
+            quantity,
+            price,
+        })
+        .and_then(|r| {
+            r.downcast::<GeCreateOrderTransactionResponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|_| ())
+    }
+
+    pub fn request_ge_cancel_order(&self, id: &str) -> Result<GeTransactionSchema, RequestError> {
+        self.request_action(Action::GeCancelOrder { id })
+            .and_then(|r| {
+                r.downcast::<GeTransactionResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|r| *r.data.order)
     }
 }
 

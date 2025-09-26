@@ -29,10 +29,10 @@ impl MonstersClient {
         monsters
     }
 
-    pub fn dropping(&self, item: &str) -> Vec<Arc<MonsterSchema>> {
+    pub fn dropping(&self, item_code: &str) -> Vec<Arc<MonsterSchema>> {
         self.all()
             .into_iter()
-            .filter(|m| m.drops.iter().any(|d| d.code == item))
+            .filter(|m| m.drops.iter().any(|d| d.code == item_code))
             .collect_vec()
     }
 

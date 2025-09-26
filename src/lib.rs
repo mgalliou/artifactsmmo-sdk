@@ -123,58 +123,58 @@ impl Quantity for SimpleItemSchema {
 }
 
 pub trait HasDrops {
-    fn amount_of(&self, item: &str) -> u32;
+    fn amount_of(&self, item_code: &str) -> u32;
 }
 
 impl HasDrops for FightSchema {
-    fn amount_of(&self, item: &str) -> u32 {
+    fn amount_of(&self, item_code: &str) -> u32 {
         self.drops
             .iter()
-            .find(|i| i.code == item)
+            .find(|i| i.code == item_code)
             .map_or(0, |i| i.quantity())
     }
 }
 
 impl HasDrops for SkillDataSchema {
-    fn amount_of(&self, item: &str) -> u32 {
+    fn amount_of(&self, item_code: &str) -> u32 {
         self.details
             .items
             .iter()
-            .find(|i| i.code == item)
+            .find(|i| i.code == item_code)
             .map_or(0, |i| i.quantity())
     }
 }
 
 impl HasDrops for SkillInfoSchema {
-    fn amount_of(&self, item: &str) -> u32 {
+    fn amount_of(&self, item_code: &str) -> u32 {
         self.items
             .iter()
-            .find(|i| i.code == item)
+            .find(|i| i.code == item_code)
             .map_or(0, |i| i.quantity())
     }
 }
 
 impl HasDrops for RewardsSchema {
-    fn amount_of(&self, item: &str) -> u32 {
+    fn amount_of(&self, item_code: &str) -> u32 {
         self.items
             .iter()
-            .find(|i| i.code == item)
+            .find(|i| i.code == item_code)
             .map_or(0, |i| i.quantity)
     }
 }
 
 impl HasDrops for Vec<SimpleItemSchema> {
-    fn amount_of(&self, item: &str) -> u32 {
+    fn amount_of(&self, item_code: &str) -> u32 {
         self.iter()
-            .find(|i| i.code == item)
+            .find(|i| i.code == item_code)
             .map_or(0, |i| i.quantity)
     }
 }
 
 impl HasDrops for Vec<DropSchema> {
-    fn amount_of(&self, item: &str) -> u32 {
+    fn amount_of(&self, item_code: &str) -> u32 {
         self.iter()
-            .find(|i| i.code == item)
+            .find(|i| i.code == item_code)
             .map_or(0, |i| i.quantity())
     }
 }
@@ -188,17 +188,17 @@ pub trait DropsItems {
             .ceil() as u32
     }
 
-    fn drop_rate_of(&self, item: &str) -> f32 {
+    fn drop_rate_of(&self, item_code: &str) -> f32 {
         self.drops()
             .iter()
-            .find(|d| d.code == item)
+            .find(|d| d.code == item_code)
             .map_or(0.0, |d| d.rate())
     }
 
-    fn effective_drop_rate_of(&self, item: &str) -> f32 {
+    fn effective_drop_rate_of(&self, item_code: &str) -> f32 {
         self.drops()
             .iter()
-            .find(|d| d.code == item)
+            .find(|d| d.code == item_code)
             .map_or(0.0, |d| d.effective_rate())
     }
 

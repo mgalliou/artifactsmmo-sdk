@@ -11,10 +11,10 @@ pub trait ItemContainer {
         self.content().iter().map(|i| i.quantity()).sum()
     }
 
-    fn total_of(&self, item: &str) -> u32 {
+    fn total_of(&self, item_code: &str) -> u32 {
         self.content()
             .iter()
-            .find(|i| i.code() == item)
+            .find(|i| i.code() == item_code)
             .map_or(0, |i| i.quantity())
     }
 
@@ -40,9 +40,9 @@ pub trait LimitedContainer {
     fn has_room_for_multiple(&self, items: &[SimpleItemSchema]) -> bool;
     fn has_room_for_drops_from<H: DropsItems>(&self, entity: &H) -> bool;
 
-    fn has_room_for(&self, item: &str, quantity: u32) -> bool {
+    fn has_room_for(&self, item_code: &str, quantity: u32) -> bool {
         self.has_room_for_multiple(&[SimpleItemSchema {
-            code: item.to_owned(),
+            code: item_code.to_owned(),
             quantity,
         }])
     }

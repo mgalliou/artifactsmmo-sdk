@@ -102,19 +102,6 @@ impl MyCharacterApi {
         action_rest_my_name_action_rest_post(&self.configuration, name)
     }
 
-    pub fn use_item(
-        &self,
-        name: &str,
-        item: &str,
-        quantity: u32,
-    ) -> Result<UseItemResponseSchema, Error<ActionUseItemMyNameActionUsePostError>> {
-        let schema = SimpleItemSchema {
-            code: item.to_owned(),
-            quantity,
-        };
-        action_use_item_my_name_action_use_post(&self.configuration, name, schema)
-    }
-
     pub fn gather(
         &self,
         name: &str,
@@ -125,66 +112,43 @@ impl MyCharacterApi {
     pub fn craft(
         &self,
         name: &str,
-        code: &str,
+        item_code: &str,
         quantity: u32,
     ) -> Result<SkillResponseSchema, Error<ActionCraftingMyNameActionCraftingPostError>> {
         let schema = CraftingSchema {
-            code: code.to_owned(),
+            code: item_code.to_owned(),
             quantity: Some(quantity),
         };
         action_crafting_my_name_action_crafting_post(&self.configuration, name, schema)
     }
 
-    pub fn delete(
-        &self,
-        name: &str,
-        code: &str,
-        quantity: u32,
-    ) -> Result<DeleteItemResponseSchema, Error<ActionDeleteItemMyNameActionDeletePostError>> {
-        let schema = SimpleItemSchema {
-            code: code.to_owned(),
-            quantity,
-        };
-        action_delete_item_my_name_action_delete_post(&self.configuration, name, schema)
-    }
-
     pub fn recycle(
         &self,
         name: &str,
-        code: &str,
+        item_code: &str,
         quantity: u32,
     ) -> Result<RecyclingResponseSchema, Error<ActionRecyclingMyNameActionRecyclingPostError>> {
         let schema = RecyclingSchema {
-            code: code.to_owned(),
+            code: item_code.to_owned(),
             quantity: Some(quantity),
         };
         action_recycling_my_name_action_recycling_post(&self.configuration, name, schema)
     }
 
-    pub fn equip(
+    pub fn delete(
         &self,
         name: &str,
-        code: &str,
-        slot: ItemSlot,
-        quantity: Option<u32>,
-    ) -> Result<EquipmentResponseSchema, Error<ActionEquipItemMyNameActionEquipPostError>> {
-        let mut schema = EquipSchema::new(code.to_string(), slot);
-        schema.quantity = quantity;
-        action_equip_item_my_name_action_equip_post(&self.configuration, name, schema)
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<DeleteItemResponseSchema, Error<ActionDeleteItemMyNameActionDeletePostError>> {
+        let schema = SimpleItemSchema {
+            code: item_code.to_owned(),
+            quantity,
+        };
+        action_delete_item_my_name_action_delete_post(&self.configuration, name, schema)
     }
 
-    pub fn unequip(
-        &self,
-        name: &str,
-        slot: ItemSlot,
-        quantity: Option<u32>,
-    ) -> Result<EquipmentResponseSchema, Error<ActionUnequipItemMyNameActionUnequipPostError>> {
-        let mut schema = UnequipSchema::new(slot);
-        schema.quantity = quantity;
-        action_unequip_item_my_name_action_unequip_post(&self.configuration, name, schema)
-    }
-
-    pub fn deposit(
+    pub fn deposit_item(
         &self,
         name: &str,
         items: &[SimpleItemSchema],
@@ -199,7 +163,7 @@ impl MyCharacterApi {
         )
     }
 
-    pub fn withdraw(
+    pub fn withdraw_item(
         &self,
         name: &str,
         items: &[SimpleItemSchema],
@@ -252,19 +216,47 @@ impl MyCharacterApi {
         action_buy_bank_expansion_my_name_action_bank_buy_expansion_post(&self.configuration, name)
     }
 
+    pub fn equip(
+        &self,
+        name: &str,
+        item_code: &str,
+        slot: ItemSlot,
+        quantity: Option<u32>,
+    ) -> Result<EquipmentResponseSchema, Error<ActionEquipItemMyNameActionEquipPostError>> {
+        let mut schema = EquipSchema::new(item_code.to_string(), slot);
+        schema.quantity = quantity;
+        action_equip_item_my_name_action_equip_post(&self.configuration, name, schema)
+    }
+
+    pub fn unequip(
+        &self,
+        name: &str,
+        slot: ItemSlot,
+        quantity: Option<u32>,
+    ) -> Result<EquipmentResponseSchema, Error<ActionUnequipItemMyNameActionUnequipPostError>> {
+        let mut schema = UnequipSchema::new(slot);
+        schema.quantity = quantity;
+        action_unequip_item_my_name_action_unequip_post(&self.configuration, name, schema)
+    }
+
+    pub fn use_item(
+        &self,
+        name: &str,
+        item_code: &str,
+        quantity: u32,
+    ) -> Result<UseItemResponseSchema, Error<ActionUseItemMyNameActionUsePostError>> {
+        let schema = SimpleItemSchema {
+            code: item_code.to_owned(),
+            quantity,
+        };
+        action_use_item_my_name_action_use_post(&self.configuration, name, schema)
+    }
+
     pub fn accept_task(
         &self,
         name: &str,
     ) -> Result<TaskResponseSchema, Error<ActionAcceptNewTaskMyNameActionTaskNewPostError>> {
         action_accept_new_task_my_name_action_task_new_post(&self.configuration, name)
-    }
-
-    pub fn complete_task(
-        &self,
-        name: &str,
-    ) -> Result<RewardDataResponseSchema, Error<ActionCompleteTaskMyNameActionTaskCompletePostError>>
-    {
-        action_complete_task_my_name_action_task_complete_post(&self.configuration, name)
     }
 
     pub fn cancel_task(
@@ -275,20 +267,28 @@ impl MyCharacterApi {
         action_task_cancel_my_name_action_task_cancel_post(&self.configuration, name)
     }
 
-    pub fn trade_task(
+    pub fn trade_task_item(
         &self,
         name: &str,
-        code: &str,
+        item_code: &str,
         quantity: u32,
     ) -> Result<TaskTradeResponseSchema, Error<ActionTaskTradeMyNameActionTaskTradePostError>> {
         action_task_trade_my_name_action_task_trade_post(
             &self.configuration,
             name,
-            SimpleItemSchema::new(code.to_owned(), quantity),
+            SimpleItemSchema::new(item_code.to_owned(), quantity),
         )
     }
 
-    pub fn task_exchange(
+    pub fn complete_task(
+        &self,
+        name: &str,
+    ) -> Result<RewardDataResponseSchema, Error<ActionCompleteTaskMyNameActionTaskCompletePostError>>
+    {
+        action_complete_task_my_name_action_task_complete_post(&self.configuration, name)
+    }
+
+    pub fn exchange_tasks_coins(
         &self,
         name: &str,
     ) -> Result<RewardDataResponseSchema, Error<ActionTaskExchangeMyNameActionTaskExchangePostError>>
@@ -361,6 +361,24 @@ impl MyCharacterApi {
         action_ge_buy_item_my_name_action_grandexchange_buy_post(&self.configuration, name, schema)
     }
 
+    pub fn ge_create_order(
+        &self,
+        name: &str,
+        item_code: &str,
+        quantity: u32,
+        price: u32,
+    ) -> Result<
+        GeCreateOrderTransactionResponseSchema,
+        Error<ActionGeCreateSellOrderMyNameActionGrandexchangeSellPostError>,
+    > {
+        let schema = GeOrderCreationrSchema::new(item_code.to_owned(), quantity, price);
+        action_ge_create_sell_order_my_name_action_grandexchange_sell_post(
+            &self.configuration,
+            name,
+            schema,
+        )
+    }
+
     pub fn ge_cancel_order(
         &self,
         name: &str,
@@ -373,24 +391,6 @@ impl MyCharacterApi {
             &self.configuration,
             name,
             GeCancelOrderSchema::new(id.to_owned()),
-        )
-    }
-
-    pub fn ge_create_order(
-        &self,
-        name: &str,
-        item: &str,
-        quantity: u32,
-        price: u32,
-    ) -> Result<
-        GeCreateOrderTransactionResponseSchema,
-        Error<ActionGeCreateSellOrderMyNameActionGrandexchangeSellPostError>,
-    > {
-        let schema = GeOrderCreationrSchema::new(item.to_owned(), quantity, price);
-        action_ge_create_sell_order_my_name_action_grandexchange_sell_post(
-            &self.configuration,
-            name,
-            schema,
         )
     }
 

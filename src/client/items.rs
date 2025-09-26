@@ -93,9 +93,9 @@ impl ItemsClient {
 
     /// Takes an `resource` code and returns the items that can be crafted
     /// from the base mats it drops.
-    pub fn crafted_from_resource(&self, resource: &str) -> Vec<Arc<ItemSchema>> {
+    pub fn crafted_from_resource(&self, resource_code: &str) -> Vec<Arc<ItemSchema>> {
         self.resources
-            .get(resource)
+            .get(resource_code)
             .iter()
             .flat_map(|r| {
                 r.drops
@@ -174,8 +174,8 @@ impl ItemsClient {
         self.filtered(|i| i.r#type().is_utility() && i.restore() > 0 && i.level >= level)
     }
 
-    pub fn upgrades_of(&self, item: &str) -> Vec<Arc<ItemSchema>> {
-        let Some(item) = self.get(item) else {
+    pub fn upgrades_of(&self, item_code: &str) -> Vec<Arc<ItemSchema>> {
+        let Some(item) = self.get(item_code) else {
             return vec![];
         };
         self.filtered(|i| {
@@ -242,17 +242,17 @@ impl ItemsClient {
         })
     }
 
-    pub fn is_buyable(&self, item: &str) -> bool {
+    pub fn is_buyable(&self, item_code: &str) -> bool {
         self.npcs
             .items
-            .get(item)
+            .get(item_code)
             .is_some_and(|i| i.buy_price.is_some())
     }
 
-    pub fn is_salable(&self, item: &str) -> bool {
+    pub fn is_salable(&self, item_code: &str) -> bool {
         self.npcs
             .items
-            .get(item)
+            .get(item_code)
             .is_some_and(|i| i.sell_price.is_some())
     }
 }
@@ -280,7 +280,7 @@ impl DataItem for ItemsClient {
 }
 
 pub trait ItemSchemaExt {
-    fn is_crafted_with(&self, item: &str) -> bool;
+    fn is_crafted_with(&self, item_code: &str) -> bool;
     fn mats_quantity(&self) -> u32;
     fn mats(&self) -> Vec<SimpleItemSchema>;
     fn mats_for(&self, quantity: u32) -> Vec<SimpleItemSchema>;
@@ -309,8 +309,8 @@ pub trait ItemSchemaExt {
 }
 
 impl ItemSchemaExt for ItemSchema {
-    fn is_crafted_with(&self, item: &str) -> bool {
-        self.mats().iter().any(|m| m.code == item)
+    fn is_crafted_with(&self, item_code: &str) -> bool {
+        self.mats().iter().any(|m| m.code == item_code)
     }
 
     fn mats_quantity(&self) -> u32 {

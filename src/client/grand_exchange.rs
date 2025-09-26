@@ -13,8 +13,8 @@ impl GrandExchangeClient {
         Self { api }
     }
 
-    pub fn sell_history(&self, code: &str) -> Option<Vec<GeOrderHistorySchema>> {
-        self.api.grand_exchange.sell_history(code).ok()
+    pub fn sell_history(&self, item_code: &str) -> Option<Vec<GeOrderHistorySchema>> {
+        self.api.grand_exchange.sell_history(item_code).ok()
     }
 
     pub fn sell_orders(&self) -> Vec<GeOrderSchema> {

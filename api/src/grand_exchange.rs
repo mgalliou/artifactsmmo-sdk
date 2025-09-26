@@ -32,12 +32,12 @@ impl GrandExchangeApi {
 
     pub fn sell_history(
         &self,
-        code: &str,
+        item_code: &str,
     ) -> Result<Vec<GeOrderHistorySchema>, Error<GetGeSellHistoryGrandexchangeHistoryCodeGetError>>
     {
         SellHistoryRequest {
             configuration: &self.configuration,
-            code,
+            code: item_code,
         }
         .send()
     }
