@@ -7,7 +7,7 @@ use std::{fmt::Display, mem::swap, sync::Arc};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct Gear {
     pub weapon: Option<Arc<ItemSchema>>,
     pub helmet: Option<Arc<ItemSchema>>,
