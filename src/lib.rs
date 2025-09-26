@@ -25,36 +25,37 @@ pub mod gear;
 pub mod simulator;
 pub mod skill;
 
-pub(crate) trait PersistData<D: for<'a> Deserialize<'a> + Serialize> {
+pub(crate) trait Persist<D: for<'a> Deserialize<'a> + Serialize> {
     const PATH: &'static str;
 
-    fn retrieve_data(&self) -> D {
-        if let Ok(data) = self.data_from_file::<D>() {
+    fn load(&self) -> D {
+        if let Ok(data) = self.load_from_file::<D>() {
             data
         } else {
-            let data = self.data_from_api();
-            if let Err(e) = Self::persist_data(&data) {
+            let data = self.load_from_api();
+            if let Err(e) = Self::persist(&data) {
                 error!("failed to persist data: {}", e);
             }
             data
         }
     }
-    fn data_from_api(&self) -> D;
 
-    fn data_from_file<T: for<'a> Deserialize<'a>>(&self) -> Result<T, Box<dyn std::error::Error>> {
+    fn load_from_api(&self) -> D;
+
+    fn load_from_file<T: for<'a> Deserialize<'a>>(&self) -> Result<T, Box<dyn std::error::Error>> {
         Ok(serde_json::from_str(&read_to_string(Path::new(
             Self::PATH,
         ))?)?)
     }
 
-    fn persist_data<T: Serialize>(data: T) -> Result<(), Box<dyn std::error::Error>> {
+    fn persist<T: Serialize>(data: T) -> Result<(), Box<dyn std::error::Error>> {
         Ok(write_all(
             Path::new(Self::PATH),
             &serde_json::to_string_pretty(&data)?,
         )?)
     }
 
-    fn refresh_data(&self);
+    fn refresh(&self);
 }
 
 #[allow(private_bounds)]

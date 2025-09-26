@@ -1,4 +1,4 @@
-use crate::{DataPage, PaginatedRequest};
+use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -22,23 +22,29 @@ impl MapsApi {
         Self { configuration }
     }
 
+    pub fn get_all(&self) -> Result<Vec<MapSchema>, Error<GetAllMapsMapsGetError>> {
+        MapsRequest {
+            configuration: &self.configuration,
+        }
+        .send()
+    }
+
     pub fn get(&self, x: i32, y: i32) -> Result<MapResponseSchema, Error<GetMapMapsXyGetError>> {
         get_map_maps_xy_get(&self.configuration, x, y)
     }
 }
 
-impl PaginatedRequest<MapSchema, DataPageMapSchema, GetAllMapsMapsGetError> for MapsApi {
-    fn api_call(
-        &self,
-        current_page: u32,
-    ) -> Result<DataPageMapSchema, Error<GetAllMapsMapsGetError>> {
-        get_all_maps_maps_get(
-            &self.configuration,
-            None,
-            None,
-            Some(current_page),
-            Some(100),
-        )
+struct MapsRequest<'a> {
+    configuration: &'a Configuration,
+}
+
+impl<'a> Paginate for MapsRequest<'a> {
+    type Data = MapSchema;
+    type Page = DataPageMapSchema;
+    type Error = GetAllMapsMapsGetError;
+
+    fn request_page(&self, page: u32) -> Result<Self::Page, Error<Self::Error>> {
+        get_all_maps_maps_get(&self.configuration, None, None, Some(page), Some(100))
     }
 }
 

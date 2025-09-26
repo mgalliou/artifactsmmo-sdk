@@ -1,4 +1,4 @@
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
+use artifactsmmo_api_wrapper::{ArtifactApi};
 use std::{sync::Arc, thread};
 
 pub use crate::client::{
@@ -48,11 +48,11 @@ impl Client {
             let bank_handle = s.spawn(move || {
                 let bank_details = api_clone
                     .bank
-                    .details()
+                    .get_details()
                     .map_err(|e| ClientError::Api(Box::new(e)))?;
                 let bank_items = api_clone
                     .bank
-                    .all()
+                    .get_items()
                     .map_err(|e| ClientError::Api(Box::new(e)))?;
                 Ok(Arc::new(BankClient::new(*bank_details.data, bank_items)))
             });

@@ -1,9 +1,9 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, DropsItems, Level, PersistData,
+    CanProvideXp, CollectionClient, DataItem, DropsItems, Level, Persist,
     client::events::EventsClient,
     simulator::{DamageType, HasEffects},
 };
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
 use std::{
@@ -25,7 +25,7 @@ impl MonstersClient {
             api,
             events,
         };
-        *monsters.data.write().unwrap() = monsters.retrieve_data();
+        *monsters.data.write().unwrap() = monsters.load();
         monsters
     }
 
@@ -55,21 +55,21 @@ impl MonstersClient {
     }
 }
 
-impl PersistData<HashMap<String, Arc<MonsterSchema>>> for MonstersClient {
+impl Persist<HashMap<String, Arc<MonsterSchema>>> for MonstersClient {
     const PATH: &'static str = ".cache/monsters.json";
 
-    fn data_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
         self.api
             .monsters
-            .all()
+            .get_all()
             .unwrap()
             .into_iter()
             .map(|m| (m.code.clone(), Arc::new(m)))
             .collect()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    fn refresh(&self) {
+        *self.data.write().unwrap() = self.load_from_api();
     }
 }
 

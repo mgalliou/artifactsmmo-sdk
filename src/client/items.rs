@@ -1,6 +1,5 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, Level,
-    PersistData, check_lvl_diff,
+    CanProvideXp, CollectionClient, DataItem, Level, Persist, check_lvl_diff,
     client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
@@ -10,7 +9,7 @@ use crate::{
     simulator::{EffectType, HasEffects},
     skill::Skill,
 };
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
     CraftSchema, ItemSchema, MonsterSchema, NpcSchema, NpcType, ResourceSchema, SimpleEffectSchema,
     SimpleItemSchema,
@@ -52,7 +51,7 @@ impl ItemsClient {
             tasks_rewards,
             npcs,
         };
-        *items.data.write().unwrap() = items.retrieve_data();
+        *items.data.write().unwrap() = items.load();
         items
     }
 
@@ -258,21 +257,21 @@ impl ItemsClient {
     }
 }
 
-impl PersistData<HashMap<String, Arc<ItemSchema>>> for ItemsClient {
+impl Persist<HashMap<String, Arc<ItemSchema>>> for ItemsClient {
     const PATH: &'static str = ".cache/items.json";
 
-    fn data_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
         self.api
             .items
-            .all()
+            .get_all()
             .unwrap()
             .into_iter()
             .map(|item| (item.code.clone(), Arc::new(item)))
             .collect()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    fn refresh(&self) {
+        *self.data.write().unwrap() = self.load_from_api();
     }
 }
 

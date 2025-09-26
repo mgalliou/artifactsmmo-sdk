@@ -1,6 +1,6 @@
 use std::{result::Result, sync::Arc, vec::Vec};
 
-use crate::{DataPage, PaginatedRequest};
+use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -39,7 +39,7 @@ impl GrandExchangeApi {
             configuration: &self.configuration,
             code,
         }
-        .all()
+        .send()
     }
 
     pub fn sell_orders(
@@ -48,7 +48,7 @@ impl GrandExchangeApi {
         SellOrdersRequest {
             configuration: &self.configuration,
         }
-        .all()
+        .send()
     }
 
     pub fn get_sell_order(
@@ -67,19 +67,12 @@ struct SellHistoryRequest<'a> {
 struct SellOrdersRequest<'a> {
     configuration: &'a Configuration,
 }
+impl<'a> Paginate for SellHistoryRequest<'a> {
+    type Data = GeOrderHistorySchema;
+    type Page = DataPageGeOrderHistorySchema;
+    type Error = GetGeSellHistoryGrandexchangeHistoryCodeGetError;
 
-impl<'a>
-    PaginatedRequest<
-        GeOrderHistorySchema,
-        DataPageGeOrderHistorySchema,
-        GetGeSellHistoryGrandexchangeHistoryCodeGetError,
-    > for SellHistoryRequest<'a>
-{
-    fn api_call(
-        &self,
-        current_page: u32,
-    ) -> Result<DataPageGeOrderHistorySchema, Error<GetGeSellHistoryGrandexchangeHistoryCodeGetError>>
-    {
+    fn request_page(&self, current_page: u32) -> Result<Self::Page, Error<Self::Error>> {
         get_ge_sell_history_grandexchange_history_code_get(
             self.configuration,
             self.code,
@@ -101,22 +94,17 @@ impl DataPage<GeOrderHistorySchema> for DataPageGeOrderHistorySchema {
     }
 }
 
-impl<'a>
-    PaginatedRequest<
-        GeOrderSchema,
-        DataPageGeOrderSchema,
-        GetGeSellOrdersGrandexchangeOrdersGetError,
-    > for SellOrdersRequest<'a>
-{
-    fn api_call(
-        &self,
-        current_page: u32,
-    ) -> Result<DataPageGeOrderSchema, Error<GetGeSellOrdersGrandexchangeOrdersGetError>> {
+impl<'a> Paginate for SellOrdersRequest<'a> {
+    type Data = GeOrderSchema;
+    type Page = DataPageGeOrderSchema;
+    type Error = GetGeSellOrdersGrandexchangeOrdersGetError;
+
+    fn request_page(&self, page: u32) -> Result<Self::Page, Error<Self::Error>> {
         get_ge_sell_orders_grandexchange_orders_get(
             self.configuration,
             None,
             None,
-            Some(current_page),
+            Some(page),
             Some(100),
         )
     }

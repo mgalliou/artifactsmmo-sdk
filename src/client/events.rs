@@ -1,5 +1,5 @@
-use crate::{DataItem, PersistData};
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
+use crate::{DataItem, Persist};
+use artifactsmmo_api_wrapper::{ArtifactApi};
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
 use itertools::Itertools;
@@ -26,7 +26,7 @@ impl EventsClient {
             active: RwLock::new(vec![]),
             last_refresh: RwLock::new(DateTime::<Utc>::MIN_UTC),
         };
-        *events.data.write().unwrap() = events.retrieve_data();
+        *events.data.write().unwrap() = events.load();
         events.refresh_active();
         events
     }
@@ -43,7 +43,7 @@ impl EventsClient {
         // NOTE: keep `events` locked before updating last refresh
         let mut events = self.active.write().unwrap();
         self.update_last_refresh(now);
-        if let Ok(new) = self.api.active_events.all() {
+        if let Ok(new) = self.api.events.get_active() {
             *events = new.into_iter().map(Arc::new).collect_vec();
             debug!("events refreshed.");
         }
@@ -64,21 +64,21 @@ impl EventsClient {
     }
 }
 
-impl PersistData<HashMap<String, Arc<EventSchema>>> for EventsClient {
+impl Persist<HashMap<String, Arc<EventSchema>>> for EventsClient {
     const PATH: &'static str = ".cache/events.json";
 
-    fn data_from_api(&self) -> HashMap<String, Arc<EventSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Arc<EventSchema>> {
         self.api
             .events
-            .all()
+            .get_all()
             .unwrap()
             .into_iter()
             .map(|event| (event.code.clone(), Arc::new(event)))
             .collect()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    fn refresh(&self) {
+        *self.data.write().unwrap() = self.load_from_api();
     }
 }
 

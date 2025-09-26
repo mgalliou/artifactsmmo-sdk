@@ -1,5 +1,5 @@
-use crate::{CollectionClient, DataItem, PersistData, client::npcs_items::NpcsItemsClient};
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
+use crate::{CollectionClient, DataItem, Persist, client::npcs_items::NpcsItemsClient};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::NpcSchema;
 use itertools::Itertools;
 use std::{
@@ -21,7 +21,7 @@ impl NpcsClient {
             api,
             items,
         };
-        *npcs.data.write().unwrap() = npcs.retrieve_data();
+        *npcs.data.write().unwrap() = npcs.load();
         npcs
     }
 
@@ -35,21 +35,21 @@ impl NpcsClient {
     }
 }
 
-impl PersistData<HashMap<String, Arc<NpcSchema>>> for NpcsClient {
+impl Persist<HashMap<String, Arc<NpcSchema>>> for NpcsClient {
     const PATH: &'static str = ".cache/npcs.json";
 
-    fn data_from_api(&self) -> HashMap<String, Arc<NpcSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Arc<NpcSchema>> {
         self.api
             .npcs
-            .all()
+            .get_all()
             .unwrap()
             .into_iter()
             .map(|npc| (npc.code.clone(), Arc::new(npc)))
             .collect()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    fn refresh(&self) {
+        *self.data.write().unwrap() = self.load_from_api();
     }
 }
 

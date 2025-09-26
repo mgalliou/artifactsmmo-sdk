@@ -1,11 +1,14 @@
-use crate::{DataPage, PaginatedRequest};
+use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
-        tasks_api::{get_all_tasks_tasks_list_get, GetAllTasksTasksListGetError},
+        tasks_api::{
+            get_all_tasks_rewards_tasks_rewards_get, get_all_tasks_tasks_list_get,
+            GetAllTasksRewardsTasksRewardsGetError, GetAllTasksTasksListGetError,
+        },
         Error,
     },
-    models::{DataPageTaskFullSchema, TaskFullSchema},
+    models::{DataPageDropRateSchema, DataPageTaskFullSchema, DropRateSchema, TaskFullSchema},
 };
 use std::sync::Arc;
 
@@ -18,17 +21,36 @@ impl TasksApi {
     pub(crate) fn new(configuration: Arc<Configuration>) -> Self {
         Self { configuration }
     }
+
+    pub fn get_all(&self) -> Result<Vec<TaskFullSchema>, Error<GetAllTasksTasksListGetError>> {
+        TasksRequest {
+            configuration: &self.configuration,
+        }
+        .send()
+    }
+
+    pub fn get_rewards(
+        &self,
+    ) -> Result<Vec<DropRateSchema>, Error<GetAllTasksRewardsTasksRewardsGetError>> {
+        TasksRewardsRequest {
+            configuration: &self.configuration,
+        }
+        .send()
+    }
 }
 
-impl PaginatedRequest<TaskFullSchema, DataPageTaskFullSchema, GetAllTasksTasksListGetError>
-    for TasksApi
-{
-    fn api_call(
-        &self,
-        current_page: u32,
-    ) -> Result<DataPageTaskFullSchema, Error<GetAllTasksTasksListGetError>> {
+struct TasksRequest<'a> {
+    configuration: &'a Configuration,
+}
+
+impl<'a> Paginate for TasksRequest<'a> {
+    type Data = TaskFullSchema;
+    type Page = DataPageTaskFullSchema;
+    type Error = GetAllTasksTasksListGetError;
+
+    fn request_page(&self, current_page: u32) -> Result<Self::Page, Error<Self::Error>> {
         get_all_tasks_tasks_list_get(
-            &self.configuration,
+            self.configuration,
             None,
             None,
             None,
@@ -41,6 +63,30 @@ impl PaginatedRequest<TaskFullSchema, DataPageTaskFullSchema, GetAllTasksTasksLi
 
 impl DataPage<TaskFullSchema> for DataPageTaskFullSchema {
     fn data(self) -> Vec<TaskFullSchema> {
+        self.data
+    }
+
+    fn pages(&self) -> Option<Option<u32>> {
+        self.pages
+    }
+}
+
+struct TasksRewardsRequest<'a> {
+    configuration: &'a Configuration,
+}
+
+impl<'a> Paginate for TasksRewardsRequest<'a> {
+    type Data = DropRateSchema;
+    type Page = DataPageDropRateSchema;
+    type Error = GetAllTasksRewardsTasksRewardsGetError;
+
+    fn request_page(&self, current_page: u32) -> Result<Self::Page, Error<Self::Error>> {
+        get_all_tasks_rewards_tasks_rewards_get(self.configuration, Some(current_page), Some(100))
+    }
+}
+
+impl DataPage<DropRateSchema> for DataPageDropRateSchema {
+    fn data(self) -> Vec<DropRateSchema> {
         self.data
     }
 

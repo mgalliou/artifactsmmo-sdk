@@ -1,4 +1,4 @@
-use crate::{DataPage, PaginatedRequest};
+use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
@@ -22,19 +22,31 @@ impl BankApi {
         BankApi { configuration }
     }
 
-    pub fn details(&self) -> Result<BankResponseSchema, Error<GetBankDetailsMyBankGetError>> {
+    pub fn get_items(
+        &self,
+    ) -> Result<Vec<SimpleItemSchema>, Error<GetBankItemsMyBankItemsGetError>> {
+        BankItemsRequest {
+            configuration: &self.configuration,
+        }
+        .send()
+    }
+
+    pub fn get_details(&self) -> Result<BankResponseSchema, Error<GetBankDetailsMyBankGetError>> {
         get_bank_details_my_bank_get(&self.configuration)
     }
 }
 
-impl PaginatedRequest<SimpleItemSchema, DataPageSimpleItemSchema, GetBankItemsMyBankItemsGetError>
-    for BankApi
-{
-    fn api_call(
-        &self,
-        current_page: u32,
-    ) -> Result<DataPageSimpleItemSchema, Error<GetBankItemsMyBankItemsGetError>> {
-        get_bank_items_my_bank_items_get(&self.configuration, None, Some(current_page), Some(100))
+struct BankItemsRequest<'a> {
+    configuration: &'a Configuration,
+}
+
+impl<'a> Paginate for BankItemsRequest<'a> {
+    type Data = SimpleItemSchema;
+    type Page = DataPageSimpleItemSchema;
+    type Error = GetBankItemsMyBankItemsGetError;
+
+    fn request_page(&self, current_page: u32) -> Result<Self::Page, Error<Self::Error>> {
+        get_bank_items_my_bank_items_get(self.configuration, None, Some(current_page), Some(100))
     }
 }
 

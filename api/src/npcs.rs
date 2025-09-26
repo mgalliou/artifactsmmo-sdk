@@ -1,11 +1,14 @@
-use crate::{DataPage, PaginatedRequest};
+use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
-        npcs_api::{get_all_npcs_npcs_details_get, GetAllNpcsNpcsDetailsGetError},
+        npcs_api::{
+            get_all_npcs_items_npcs_items_get, get_all_npcs_npcs_details_get,
+            GetAllNpcsItemsNpcsItemsGetError, GetAllNpcsNpcsDetailsGetError,
+        },
         Error,
     },
-    models::{DataPageNpcSchema, NpcSchema},
+    models::{DataPageNpcItem, DataPageNpcSchema, NpcItem, NpcSchema},
 };
 use std::sync::Arc;
 
@@ -18,18 +21,37 @@ impl NpcsApi {
     pub(crate) fn new(configuration: Arc<Configuration>) -> Self {
         Self { configuration }
     }
+
+    pub fn get_all(&self) -> Result<Vec<NpcSchema>, Error<GetAllNpcsNpcsDetailsGetError>> {
+        NpcsRequest {
+            configuration: &self.configuration,
+        }
+        .send()
+    }
+
+    pub fn get_items(&self) -> Result<Vec<NpcItem>, Error<GetAllNpcsItemsNpcsItemsGetError>> {
+        NpcsItemsRequest {
+            configuration: &self.configuration,
+        }
+        .send()
+    }
 }
 
-impl PaginatedRequest<NpcSchema, DataPageNpcSchema, GetAllNpcsNpcsDetailsGetError> for NpcsApi {
-    fn api_call(
-        &self,
-        current_page: u32,
-    ) -> Result<DataPageNpcSchema, Error<GetAllNpcsNpcsDetailsGetError>> {
+struct NpcsRequest<'a> {
+    configuration: &'a Configuration,
+}
+
+impl<'a> Paginate for NpcsRequest<'a> {
+    type Data = NpcSchema;
+    type Page = DataPageNpcSchema;
+    type Error = GetAllNpcsNpcsDetailsGetError;
+
+    fn request_page(&self, page: u32) -> Result<Self::Page, Error<Self::Error>> {
         get_all_npcs_npcs_details_get(
-            &self.configuration,
+            self.configuration,
             None,
             None,
-            Some(current_page),
+            Some(page),
             Some(100),
         )
     }
@@ -37,6 +59,37 @@ impl PaginatedRequest<NpcSchema, DataPageNpcSchema, GetAllNpcsNpcsDetailsGetErro
 
 impl DataPage<NpcSchema> for DataPageNpcSchema {
     fn data(self) -> Vec<NpcSchema> {
+        self.data
+    }
+
+    fn pages(&self) -> Option<Option<u32>> {
+        self.pages
+    }
+}
+
+struct NpcsItemsRequest<'a> {
+    configuration: &'a Configuration,
+}
+
+impl<'a> Paginate for NpcsItemsRequest<'a> {
+    type Data = NpcItem;
+    type Page = DataPageNpcItem;
+    type Error = GetAllNpcsItemsNpcsItemsGetError;
+
+    fn request_page(&self, page: u32) -> Result<Self::Page, Error<Self::Error>> {
+        get_all_npcs_items_npcs_items_get(
+            self.configuration,
+            None,
+            None,
+            None,
+            Some(page),
+            Some(100),
+        )
+    }
+}
+
+impl DataPage<NpcItem> for DataPageNpcItem {
+    fn data(self) -> Vec<NpcItem> {
         self.data
     }
 

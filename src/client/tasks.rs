@@ -1,5 +1,5 @@
-use crate::{DataItem, PersistData, TasksRewardsClient};
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
+use crate::{DataItem, Persist, TasksRewardsClient};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{RewardsSchema, TaskFullSchema};
 use sdk_derive::CollectionClient;
 use std::{
@@ -21,26 +21,26 @@ impl TasksClient {
             reward,
             api,
         };
-        *tasks.data.write().unwrap() = tasks.retrieve_data();
+        *tasks.data.write().unwrap() = tasks.load();
         tasks
     }
 }
 
-impl PersistData<HashMap<String, Arc<TaskFullSchema>>> for TasksClient {
+impl Persist<HashMap<String, Arc<TaskFullSchema>>> for TasksClient {
     const PATH: &'static str = ".cache/tasks.json";
 
-    fn data_from_api(&self) -> HashMap<String, Arc<TaskFullSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Arc<TaskFullSchema>> {
         self.api
             .tasks
-            .all()
+            .get_all()
             .unwrap()
             .into_iter()
             .map(|task| (task.code.clone(), Arc::new(task)))
             .collect()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    fn refresh(&self) {
+        *self.data.write().unwrap() = self.load_from_api();
     }
 }
 

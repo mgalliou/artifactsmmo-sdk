@@ -1,5 +1,5 @@
 use crate::{client::events::EventsClient, skill::Skill};
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
+use artifactsmmo_api_wrapper::{ArtifactApi};
 use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema, TaskType};
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
@@ -19,7 +19,7 @@ impl MapsClient {
         Self {
             data: api
                 .maps
-                .all()
+                .get_all()
                 .unwrap()
                 .into_iter()
                 .map(|m| ((m.x, m.y), RwLock::new(Arc::new(m))))

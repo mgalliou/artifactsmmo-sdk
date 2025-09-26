@@ -1,8 +1,8 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, DropsItems, Level, PersistData,
+    CanProvideXp, CollectionClient, DataItem, DropsItems, Level, Persist,
     client::events::EventsClient,
 };
-use artifactsmmo_api_wrapper::{ArtifactApi, PaginatedRequest};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
 use itertools::Itertools;
 use std::{
@@ -24,7 +24,7 @@ impl ResourcesClient {
             api,
             events,
         };
-        *resources.data.write().unwrap() = resources.retrieve_data();
+        *resources.data.write().unwrap() = resources.load();
         resources
     }
 
@@ -40,21 +40,21 @@ impl ResourcesClient {
     }
 }
 
-impl PersistData<HashMap<String, Arc<ResourceSchema>>> for ResourcesClient {
+impl Persist<HashMap<String, Arc<ResourceSchema>>> for ResourcesClient {
     const PATH: &'static str = ".cache/resources.json";
 
-    fn data_from_api(&self) -> HashMap<String, Arc<ResourceSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Arc<ResourceSchema>> {
         self.api
             .resources
-            .all()
+            .get_all()
             .unwrap()
             .into_iter()
             .map(|r| (r.code.clone(), Arc::new(r)))
             .collect()
     }
 
-    fn refresh_data(&self) {
-        *self.data.write().unwrap() = self.data_from_api();
+    fn refresh(&self) {
+        *self.data.write().unwrap() = self.load_from_api();
     }
 }
 

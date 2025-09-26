@@ -1,14 +1,11 @@
-use crate::{DataPage, PaginatedRequest};
+use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
-        monsters_api::{
-            get_all_monsters_monsters_get, get_monster_monsters_code_get,
-            GetAllMonstersMonstersGetError, GetMonsterMonstersCodeGetError,
-        },
+        monsters_api::{get_all_monsters_monsters_get, GetAllMonstersMonstersGetError},
         Error,
     },
-    models::{DataPageMonsterSchema, MonsterResponseSchema, MonsterSchema},
+    models::{DataPageMonsterSchema, MonsterSchema},
 };
 use std::sync::Arc;
 
@@ -22,28 +19,31 @@ impl MonstersApi {
         Self { configuration }
     }
 
-    pub fn get(
-        &self,
-        code: &str,
-    ) -> Result<MonsterResponseSchema, Error<GetMonsterMonstersCodeGetError>> {
-        get_monster_monsters_code_get(&self.configuration, code)
+    pub fn get_all(&self) -> Result<Vec<MonsterSchema>, Error<GetAllMonstersMonstersGetError>> {
+        MonstersRequest {
+            configuration: &self.configuration,
+        }
+        .send()
     }
 }
 
-impl PaginatedRequest<MonsterSchema, DataPageMonsterSchema, GetAllMonstersMonstersGetError>
-    for MonstersApi
-{
-    fn api_call(
-        &self,
-        current_page: u32,
-    ) -> Result<DataPageMonsterSchema, Error<GetAllMonstersMonstersGetError>> {
+struct MonstersRequest<'a> {
+    configuration: &'a Configuration,
+}
+
+impl<'a> Paginate for MonstersRequest<'a> {
+    type Data = MonsterSchema;
+    type Page = DataPageMonsterSchema;
+    type Error = GetAllMonstersMonstersGetError;
+
+    fn request_page(&self, page: u32) -> Result<Self::Page, Error<Self::Error>> {
         get_all_monsters_monsters_get(
-            &self.configuration,
+            self.configuration,
             None,
             None,
             None,
             None,
-            Some(current_page),
+            Some(page),
             Some(100),
         )
     }
