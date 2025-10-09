@@ -57,13 +57,14 @@ use artifactsmmo_openapi::{
         BankItemTransactionResponseSchema, CharacterFightResponseSchema,
         CharacterMovementResponseSchema, CharacterRestResponseSchema, CraftingSchema,
         DeleteItemResponseSchema, DepositWithdrawGoldSchema, DestinationSchema, EquipSchema,
-        EquipmentResponseSchema, GeBuyOrderSchema, GeCancelOrderSchema,
+        EquipmentResponseSchema, FightRequestSchema, GeBuyOrderSchema, GeCancelOrderSchema,
         GeCreateOrderTransactionResponseSchema, GeOrderCreationrSchema,
-        GeTransactionResponseSchema, GiveGoldReponseSchema, GiveGoldSchema, GiveItemReponseSchema,
-        GiveItemsSchema, ItemSlot, NpcMerchantBuySchema, NpcMerchantTransactionResponseSchema,
-        RecyclingResponseSchema, RecyclingSchema, RewardDataResponseSchema, SimpleItemSchema,
-        SkillResponseSchema, TaskCancelledResponseSchema, TaskResponseSchema,
-        TaskTradeResponseSchema, UnequipSchema, UseItemResponseSchema,
+        GeTransactionResponseSchema, GiveGoldResponseSchema, GiveGoldSchema,
+        GiveItemResponseSchema, GiveItemsSchema, ItemSlot, NpcMerchantBuySchema,
+        NpcMerchantTransactionResponseSchema, RecyclingResponseSchema, RecyclingSchema,
+        RewardDataResponseSchema, SimpleItemSchema, SkillResponseSchema,
+        TaskCancelledResponseSchema, TaskResponseSchema, TaskTradeResponseSchema, UnequipSchema,
+        UseItemResponseSchema,
     },
 };
 use std::sync::Arc;
@@ -84,15 +85,23 @@ impl MyCharacterApi {
         x: i32,
         y: i32,
     ) -> Result<CharacterMovementResponseSchema, Error<ActionMoveMyNameActionMovePostError>> {
-        let dest = DestinationSchema::new(x, y);
+        let dest = DestinationSchema {
+            x: Some(x),
+            y: Some(y),
+            map_id: None,
+        };
         action_move_my_name_action_move_post(&self.configuration, name, dest)
     }
 
     pub fn fight(
         &self,
         name: &str,
+        participants: Option<&[String; 2]>,
     ) -> Result<CharacterFightResponseSchema, Error<ActionFightMyNameActionFightPostError>> {
-        action_fight_my_name_action_fight_post(&self.configuration, name)
+        let schema = FightRequestSchema {
+            participants: participants.map(|p| p.to_vec()),
+        };
+        action_fight_my_name_action_fight_post(&self.configuration, name, Some(schema))
     }
 
     pub fn rest(
@@ -327,7 +336,7 @@ impl MyCharacterApi {
         name: &str,
         items: &[SimpleItemSchema],
         character: &str,
-    ) -> Result<GiveItemReponseSchema, Error<ActionGiveItemsMyNameActionGiveItemPostError>> {
+    ) -> Result<GiveItemResponseSchema, Error<ActionGiveItemsMyNameActionGiveItemPostError>> {
         let schema = GiveItemsSchema {
             items: items.to_vec(),
             character: character.to_string(),
@@ -340,7 +349,7 @@ impl MyCharacterApi {
         name: &str,
         quantity: u32,
         character: &str,
-    ) -> Result<GiveGoldReponseSchema, Error<ActionGiveGoldMyNameActionGiveGoldPostError>> {
+    ) -> Result<GiveGoldResponseSchema, Error<ActionGiveGoldMyNameActionGiveGoldPostError>> {
         let schema = GiveGoldSchema {
             quantity,
             character: character.to_string(),

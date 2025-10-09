@@ -54,7 +54,7 @@ impl DataPage<ResourceSchema> for DataPageResourceSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<u32>> {
+    fn pages(&self) -> Option<u32> {
         self.pages
     }
 }

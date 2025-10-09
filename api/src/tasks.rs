@@ -66,7 +66,7 @@ impl DataPage<TaskFullSchema> for DataPageTaskFullSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<u32>> {
+    fn pages(&self) -> Option<u32> {
         self.pages
     }
 }
@@ -90,7 +90,7 @@ impl DataPage<DropRateSchema> for DataPageDropRateSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<u32>> {
+    fn pages(&self) -> Option<u32> {
         self.pages
     }
 }

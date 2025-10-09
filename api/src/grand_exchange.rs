@@ -16,7 +16,7 @@ use artifactsmmo_openapi::{
     },
     models::{
         DataPageGeOrderHistorySchema, DataPageGeOrderSchema, GeOrderHistorySchema,
-        GeOrderReponseSchema, GeOrderSchema,
+        GeOrderResponseSchema, GeOrderSchema,
     },
 };
 
@@ -54,7 +54,7 @@ impl GrandExchangeApi {
     pub fn get_sell_order(
         &self,
         id: &str,
-    ) -> Result<GeOrderReponseSchema, Error<GetGeSellOrderGrandexchangeOrdersIdGetError>> {
+    ) -> Result<GeOrderResponseSchema, Error<GetGeSellOrderGrandexchangeOrdersIdGetError>> {
         get_ge_sell_order_grandexchange_orders_id_get(&self.configuration, id)
     }
 }
@@ -89,7 +89,7 @@ impl DataPage<GeOrderHistorySchema> for DataPageGeOrderHistorySchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<u32>> {
+    fn pages(&self) -> Option<u32> {
         self.pages
     }
 }
@@ -115,7 +115,7 @@ impl DataPage<GeOrderSchema> for DataPageGeOrderSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<u32>> {
+    fn pages(&self) -> Option<u32> {
         self.pages
     }
 }

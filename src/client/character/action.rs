@@ -11,7 +11,9 @@ pub enum Action<'a> {
         x: i32,
         y: i32,
     },
-    Fight,
+    Fight {
+        participants: Option<&'a [String; 2]>,
+    },
     Rest,
     Gather,
     Craft {
@@ -102,9 +104,9 @@ impl Action<'_> {
                 .r#move(name, *x, *y)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::Fight => api
+            Action::Fight { participants } => api
                 .my_character
-                .fight(name)
+                .fight(name, *participants)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Rest => api
@@ -117,17 +119,26 @@ impl Action<'_> {
                 .gather(name)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::Craft { item_code: item, quantity } => api
+            Action::Craft {
+                item_code: item,
+                quantity,
+            } => api
                 .my_character
                 .craft(name, item, *quantity)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::Recycle { item_code: item, quantity } => api
+            Action::Recycle {
+                item_code: item,
+                quantity,
+            } => api
                 .my_character
                 .recycle(name, item, *quantity)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::Delete { item_code: item, quantity } => api
+            Action::Delete {
+                item_code: item,
+                quantity,
+            } => api
                 .my_character
                 .delete(name, item, *quantity)
                 .map(|r| r.into())
@@ -172,7 +183,10 @@ impl Action<'_> {
             }
             .map(|r| r.into())
             .map_err(|e| e.into()),
-            Action::UseItem { item_code: item, quantity } => api
+            Action::UseItem {
+                item_code: item,
+                quantity,
+            } => api
                 .my_character
                 .use_item(name, item, *quantity)
                 .map(|r| r.into())
@@ -187,7 +201,10 @@ impl Action<'_> {
                 .cancel_task(name)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::TradeTaskItem { item_code: item, quantity } => api
+            Action::TradeTaskItem {
+                item_code: item,
+                quantity,
+            } => api
                 .my_character
                 .trade_task_item(name, item, *quantity)
                 .map(|r| r.into())
@@ -202,12 +219,18 @@ impl Action<'_> {
                 .exchange_tasks_coins(name)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::NpcBuy { item_code: item, quantity } => api
+            Action::NpcBuy {
+                item_code: item,
+                quantity,
+            } => api
                 .my_character
                 .npc_buy(name, item.to_string(), *quantity)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
-            Action::NpcSell { item_code: item, quantity } => api
+            Action::NpcSell {
+                item_code: item,
+                quantity,
+            } => api
                 .my_character
                 .npc_sell(name, item.to_string(), *quantity)
                 .map(|r| r.into())

@@ -76,6 +76,7 @@ impl ArtifactApi {
         }
     }
 }
+
 pub trait Paginate {
     type Data;
     type Page: DataPage<Self::Data>;
@@ -87,7 +88,7 @@ pub trait Paginate {
         let mut finished = false;
         while !finished {
             let resp = self.request_page(current_page)?;
-            if let Some(Some(pages)) = resp.pages() {
+            if let Some(pages) = resp.pages() {
                 if current_page >= pages {
                     finished = true
                 }
@@ -105,5 +106,5 @@ pub trait Paginate {
 
 pub trait DataPage<T> {
     fn data(self) -> Vec<T>;
-    fn pages(&self) -> Option<Option<u32>>;
+    fn pages(&self) -> Option<u32>;
 }

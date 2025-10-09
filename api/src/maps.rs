@@ -3,8 +3,8 @@ use artifactsmmo_openapi::{
     apis::{
         configuration::Configuration,
         maps_api::{
-            get_all_maps_maps_get, get_map_maps_xy_get, GetAllMapsMapsGetError,
-            GetMapMapsXyGetError,
+            get_all_maps_maps_get, get_map_by_id_maps_id_map_id_get, GetAllMapsMapsGetError,
+            GetMapByIdMapsIdMapIdGetError,
         },
         Error,
     },
@@ -29,8 +29,11 @@ impl MapsApi {
         .send()
     }
 
-    pub fn get(&self, x: i32, y: i32) -> Result<MapResponseSchema, Error<GetMapMapsXyGetError>> {
-        get_map_maps_xy_get(&self.configuration, x, y)
+    pub fn get_by_id(
+        &self,
+        id: i32,
+    ) -> Result<MapResponseSchema, Error<GetMapByIdMapsIdMapIdGetError>> {
+        get_map_by_id_maps_id_map_id_get(&self.configuration, id)
     }
 }
 
@@ -44,7 +47,15 @@ impl<'a> Paginate for MapsRequest<'a> {
     type Error = GetAllMapsMapsGetError;
 
     fn request_page(&self, page: u32) -> Result<Self::Page, Error<Self::Error>> {
-        get_all_maps_maps_get(self.configuration, None, None, Some(page), Some(100))
+        get_all_maps_maps_get(
+            self.configuration,
+            None,
+            None,
+            None,
+            None,
+            Some(page),
+            Some(100),
+        )
     }
 }
 
@@ -53,7 +64,7 @@ impl DataPage<MapSchema> for DataPageMapSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<u32>> {
+    fn pages(&self) -> Option<u32> {
         self.pages
     }
 }

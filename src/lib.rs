@@ -1,6 +1,7 @@
 use artifactsmmo_openapi::models::{
-    DropRateSchema, DropSchema, FightSchema, InventorySlot, RewardsSchema, SimpleItemSchema,
-    SkillDataSchema, SkillInfoSchema,
+    AccessSchema, CharacterFightSchema, ConditionSchema, DropRateSchema, DropSchema, InventorySlot,
+    ItemSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
+    TransitionSchema,
 };
 use fs_extra::file::{read_to_string, write_all};
 use itertools::Itertools;
@@ -126,9 +127,13 @@ pub trait HasDrops {
     fn amount_of(&self, item_code: &str) -> u32;
 }
 
-impl HasDrops for FightSchema {
+impl HasDrops for CharacterFightSchema {
     fn amount_of(&self, item_code: &str) -> u32 {
-        self.drops
+        // TODO: handle mutli char
+        self.characters
+            .first()
+            .unwrap()
+            .drops
             .iter()
             .find(|i| i.code == item_code)
             .map_or(0, |i| i.quantity())
@@ -215,6 +220,28 @@ pub trait DropsItems {
     }
 
     fn drops(&self) -> &Vec<DropRateSchema>;
+}
+
+pub trait HasConditions {
+    fn conditions(&self) -> &Option<Vec<ConditionSchema>>;
+}
+
+impl HasConditions for ItemSchema {
+    fn conditions(&self) -> &Option<Vec<ConditionSchema>> {
+        &self.conditions
+    }
+}
+
+impl HasConditions for AccessSchema {
+    fn conditions(&self) -> &Option<Vec<ConditionSchema>> {
+        &self.conditions
+    }
+}
+
+impl HasConditions for TransitionSchema {
+    fn conditions(&self) -> &Option<Vec<ConditionSchema>> {
+        &self.conditions
+    }
 }
 
 pub trait Level {

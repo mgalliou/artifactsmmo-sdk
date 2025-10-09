@@ -100,7 +100,12 @@ impl Simulator {
     }
 
     pub fn time_to_rest(health: u32) -> u32 {
-        health / REST_HP_PER_SEC + if health % REST_HP_PER_SEC > 0 { 1 } else { 0 }
+        health / REST_HP_PER_SEC
+            + if health.is_multiple_of(REST_HP_PER_SEC) {
+                0
+            } else {
+                1
+            }
     }
 
     fn fight_cd(haste: i32, turns: u32) -> u32 {
@@ -171,7 +176,7 @@ trait SimulationEntity: HasEffects {
         if self.current_health() < self.max_hp() / 2 {
             self.consume_restore_utilities();
         }
-        if self.current_turn() % 3 == 0 {
+        if self.current_turn().is_multiple_of(3) {
             self.receive_healing();
         }
         if self.burning() > 0 {

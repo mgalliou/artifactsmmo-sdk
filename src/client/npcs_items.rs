@@ -1,5 +1,5 @@
 use crate::{DataItem, Persist};
-use artifactsmmo_api_wrapper::{ArtifactApi};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::NpcItem;
 use sdk_derive::CollectionClient;
 use std::{

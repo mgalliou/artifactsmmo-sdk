@@ -1,5 +1,5 @@
 use crate::{client::events::EventsClient, skill::Skill};
-use artifactsmmo_api_wrapper::{ArtifactApi};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema, TaskType};
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
@@ -169,7 +169,7 @@ pub trait MapSchemaExt {
 
 impl MapSchemaExt for MapSchema {
     fn content(&self) -> Option<&MapContentSchema> {
-        self.content.as_ref().map(|c| c.as_ref())
+        self.interactions.content.as_ref().map(|c| c.as_ref())
     }
 
     fn content_is(&self, content: &MapContentSchema) -> bool {

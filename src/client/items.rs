@@ -18,7 +18,6 @@ use itertools::Itertools;
 use std::{
     collections::HashMap,
     fmt,
-    ops::Deref,
     str::FromStr,
     sync::{Arc, RwLock},
     vec::Vec,
@@ -167,7 +166,12 @@ impl ItemsClient {
 
     pub fn recycled_quantity_for(&self, code: &str) -> u32 {
         let mats_quantity_for = self.mats_quantity_for(code);
-        mats_quantity_for / 5 + if mats_quantity_for % 5 > 0 { 1 } else { 0 }
+        mats_quantity_for / 5
+            + if mats_quantity_for.is_multiple_of(5) {
+                0
+            } else {
+                1
+            }
     }
 
     pub fn restoring_utilities(&self, level: u32) -> Vec<Arc<ItemSchema>> {
@@ -336,7 +340,7 @@ impl ItemSchemaExt for ItemSchema {
 
     fn recycled_quantity(&self) -> u32 {
         let q = self.mats_quantity();
-        q / 5 + if q % 5 > 0 { 1 } else { 0 }
+        q / 5 + if q.is_multiple_of(5) { 0 } else { 1 }
     }
 
     fn skill_to_craft(&self) -> Option<Skill> {
@@ -365,7 +369,7 @@ impl ItemSchemaExt for ItemSchema {
     }
 
     fn craft_schema(&self) -> Option<&CraftSchema> {
-        self.craft.iter().flatten().map(|c| c.deref()).next_back()
+        self.craft.as_deref()
     }
 
     fn is_gear(&self) -> bool {
@@ -548,9 +552,9 @@ impl fmt::Display for ItemSource {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
+#[derive(Debug, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
 #[strum(serialize_all = "snake_case")]
-pub enum ItemCondition {
+pub enum LevelConditionCode {
     AlchemyLevel,
     MiningLevel,
     WoodcuttingLevel,
@@ -558,20 +562,20 @@ pub enum ItemCondition {
     Level,
 }
 
-impl From<ItemCondition> for Skill {
-    fn from(value: ItemCondition) -> Self {
+impl From<LevelConditionCode> for Skill {
+    fn from(value: LevelConditionCode) -> Self {
         match value {
-            ItemCondition::AlchemyLevel => Skill::Alchemy,
-            ItemCondition::MiningLevel => Skill::Mining,
-            ItemCondition::WoodcuttingLevel => Skill::Woodcutting,
-            ItemCondition::FishingLevel => Skill::Fishing,
-            ItemCondition::Level => Skill::Combat,
+            LevelConditionCode::AlchemyLevel => Skill::Alchemy,
+            LevelConditionCode::MiningLevel => Skill::Mining,
+            LevelConditionCode::WoodcuttingLevel => Skill::Woodcutting,
+            LevelConditionCode::FishingLevel => Skill::Fishing,
+            LevelConditionCode::Level => Skill::Combat,
         }
     }
 }
 
-impl PartialEq<ItemCondition> for String {
-    fn eq(&self, other: &ItemCondition) -> bool {
+impl PartialEq<LevelConditionCode> for String {
+    fn eq(&self, other: &LevelConditionCode) -> bool {
         other.as_ref() == *self
     }
 }

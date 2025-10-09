@@ -14,10 +14,10 @@ use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
     ActionType, BankExtensionTransactionResponseSchema, BankGoldTransactionResponseSchema,
     BankItemTransactionResponseSchema, BankSchema, CharacterFightResponseSchema,
-    CharacterMovementResponseSchema, CharacterRestResponseSchema, CharacterSchema,
-    DeleteItemResponseSchema, EquipmentResponseSchema, FightResult, FightSchema,
+    CharacterFightSchema, CharacterMovementResponseSchema, CharacterRestResponseSchema,
+    CharacterSchema, DeleteItemResponseSchema, EquipmentResponseSchema, FightResult,
     GeCreateOrderTransactionResponseSchema, GeTransactionResponseSchema, GeTransactionSchema,
-    GiveGoldReponseSchema, GiveItemReponseSchema, MapSchema, NpcItemTransactionSchema,
+    GiveGoldResponseSchema, GiveItemResponseSchema, MapSchema, NpcItemTransactionSchema,
     NpcMerchantTransactionResponseSchema, RecyclingItemsSchema, RecyclingResponseSchema,
     RewardDataResponseSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
     SkillResponseSchema, TaskCancelledResponseSchema, TaskResponseSchema, TaskSchema,
@@ -28,6 +28,7 @@ use downcast_rs::{Downcast, impl_downcast};
 use log::{debug, error, info, warn};
 use std::{
     cmp::Ordering,
+    ops::Deref,
     sync::{Arc, RwLockWriteGuard},
     thread::sleep,
     time::Duration,
@@ -86,38 +87,38 @@ impl CharacterRequestHandler {
             Ok(res) => {
                 info!("{}", res.to_string());
                 self.update_data(res.character().clone());
-                if let Some(s) = res.downcast_ref::<BankItemTransactionResponseSchema>()
+                if let Some(res) = res.downcast_ref::<BankItemTransactionResponseSchema>()
                     && let Some(mut content) = bank_content
                 {
-                    *content = s.data.bank.clone().into();
-                } else if let Some(s) = res.downcast_ref::<BankGoldTransactionResponseSchema>()
+                    *content = res.data.bank.clone().into();
+                } else if let Some(res) = res.downcast_ref::<BankGoldTransactionResponseSchema>()
                     && let Some(mut details) = bank_details
                 {
-                    let mut new_details = (*details.clone()).clone();
-                    new_details.gold = s.data.bank.quantity;
+                    let mut new_details = (*(*details)).clone();
+                    new_details.gold = res.data.bank.quantity;
                     *details = Arc::new(new_details);
                 } else if res
                     .downcast_ref::<BankExtensionTransactionResponseSchema>()
                     .is_some()
                     && let Some(mut details) = bank_details
                 {
-                    let mut new_details = (*details.clone()).clone();
+                    let mut new_details = (*(*details)).clone();
                     new_details.slots += BANK_EXTENSION_SIZE;
                     *details = Arc::new(new_details);
                 };
-                if let Some(s) = res.downcast_ref::<GiveItemReponseSchema>()
+                if let Some(res) = res.downcast_ref::<GiveItemResponseSchema>()
                     && let Some(c) = self
                         .account
-                        .get_character_by_name(&s.data.receiver_character.name)
+                        .get_character_by_name(&res.data.receiver_character.name)
                 {
-                    c.update_data(*s.data.receiver_character.clone());
+                    c.update_data(*res.data.receiver_character.clone());
                 }
-                if let Some(s) = res.downcast_ref::<GiveGoldReponseSchema>()
+                if let Some(res) = res.downcast_ref::<GiveGoldResponseSchema>()
                     && let Some(c) = self
                         .account
-                        .get_character_by_name(&s.data.receiver_character.name)
+                        .get_character_by_name(&res.data.receiver_character.name)
                 {
-                    c.update_data(*s.data.receiver_character.clone());
+                    c.update_data(*res.data.receiver_character.clone());
                 }
                 Ok(res)
             }
@@ -132,15 +133,10 @@ impl CharacterRequestHandler {
     fn handle_request_error(
         &self,
         action: Action,
-        e: RequestError,
+        error: RequestError,
     ) -> Result<Box<dyn ResponseSchema>, RequestError> {
-        error!(
-            "{}: request error during action {}: {}",
-            self.name(),
-            action,
-            e
-        );
-        match e {
+        error!("{}: failed to request action '{}': {}", self.name(), action, error);
+        match error {
             RequestError::ResponseError(ref res) => {
                 if res.error.code == 499 {
                     error!(
@@ -171,7 +167,7 @@ impl CharacterRequestHandler {
                 self.refresh_data()
             }
         }
-        Err(e)
+        Err(error)
     }
 
     fn wait_for_cooldown(&self) {
@@ -213,8 +209,11 @@ impl CharacterRequestHandler {
             .map(|s| Arc::new(*s.data.destination))
     }
 
-    pub fn request_fight(&self) -> Result<FightSchema, RequestError> {
-        self.request_action(Action::Fight)
+    pub fn request_fight(
+        &self,
+        participants: Option<&[String; 2]>,
+    ) -> Result<CharacterFightSchema, RequestError> {
+        self.request_action(Action::Fight { participants })
             .and_then(|r| {
                 r.downcast::<CharacterFightResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
@@ -265,11 +264,11 @@ impl CharacterRequestHandler {
             item_code,
             quantity,
         })
-        .and_then(|r| {
-            r.downcast::<DeleteItemResponseSchema>()
+        .and_then(|resp| {
+            resp.downcast::<DeleteItemResponseSchema>()
                 .map_err(|_| RequestError::DowncastError)
         })
-        .map(|s| *s.data.item)
+        .map(|resp| *resp.data.item)
     }
 
     pub fn request_recycle(
@@ -285,7 +284,7 @@ impl CharacterRequestHandler {
             r.downcast::<RecyclingResponseSchema>()
                 .map_err(|_| RequestError::DowncastError)
         })
-        .map(|s| *s.data.details)
+        .map(|r| *r.data.details)
     }
 
     pub fn request_deposit_item(&self, items: &[SimpleItemSchema]) -> Result<(), RequestError> {
@@ -304,7 +303,7 @@ impl CharacterRequestHandler {
                 r.downcast::<BankGoldTransactionResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
-            .map(|s| s.data.bank.quantity)
+            .map(|r| r.data.bank.quantity)
     }
 
     pub fn request_withdraw_gold(&self, quantity: u32) -> Result<u32, RequestError> {
@@ -313,7 +312,7 @@ impl CharacterRequestHandler {
                 r.downcast::<BankGoldTransactionResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
-            .map(|s| s.data.bank.quantity)
+            .map(|r| r.data.bank.quantity)
     }
 
     pub fn request_expand_bank(&self) -> Result<u32, RequestError> {
@@ -322,7 +321,7 @@ impl CharacterRequestHandler {
                 r.downcast::<BankExtensionTransactionResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
-            .map(|s| s.data.transaction.price)
+            .map(|r| r.data.transaction.price)
     }
 
     pub fn request_equip(
@@ -345,8 +344,11 @@ impl CharacterRequestHandler {
     }
 
     pub fn request_use_item(&self, item_code: &str, quantity: u32) -> Result<(), RequestError> {
-        self.request_action(Action::UseItem { item_code, quantity })
-            .map(|_| ())
+        self.request_action(Action::UseItem {
+            item_code,
+            quantity,
+        })
+        .map(|_| ())
     }
 
     pub fn request_accept_task(&self) -> Result<TaskSchema, RequestError> {
@@ -355,7 +357,7 @@ impl CharacterRequestHandler {
                 r.downcast::<TaskResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
-            .map(|s| *s.data.task)
+            .map(|r| *r.data.task)
     }
 
     pub fn request_complete_task(&self) -> Result<RewardsSchema, RequestError> {
@@ -376,12 +378,15 @@ impl CharacterRequestHandler {
         item_code: &str,
         quantity: u32,
     ) -> Result<TaskTradeSchema, RequestError> {
-        self.request_action(Action::TradeTaskItem { item_code, quantity })
-            .and_then(|r| {
-                r.downcast::<TaskTradeResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.trade)
+        self.request_action(Action::TradeTaskItem {
+            item_code,
+            quantity,
+        })
+        .and_then(|r| {
+            r.downcast::<TaskTradeResponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|r| *r.data.trade)
     }
 
     pub fn request_exchange_tasks_coin(&self) -> Result<RewardsSchema, RequestError> {
@@ -390,7 +395,7 @@ impl CharacterRequestHandler {
                 r.downcast::<RewardDataResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
-            .map(|s| *s.data.rewards)
+            .map(|r| *r.data.rewards)
     }
 
     pub fn request_npc_buy(
@@ -398,12 +403,15 @@ impl CharacterRequestHandler {
         item_code: &str,
         quantity: u32,
     ) -> Result<NpcItemTransactionSchema, RequestError> {
-        self.request_action(Action::NpcBuy { item_code, quantity })
-            .and_then(|r| {
-                r.downcast::<NpcMerchantTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.transaction)
+        self.request_action(Action::NpcBuy {
+            item_code,
+            quantity,
+        })
+        .and_then(|r| {
+            r.downcast::<NpcMerchantTransactionResponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|r| *r.data.transaction)
     }
 
     pub fn request_npc_sell(
@@ -411,12 +419,15 @@ impl CharacterRequestHandler {
         item_code: &str,
         quantity: u32,
     ) -> Result<NpcItemTransactionSchema, RequestError> {
-        self.request_action(Action::NpcSell { item_code, quantity })
-            .and_then(|r| {
-                r.downcast::<NpcMerchantTransactionResponseSchema>()
-                    .map_err(|_| RequestError::DowncastError)
-            })
-            .map(|s| *s.data.transaction)
+        self.request_action(Action::NpcSell {
+            item_code,
+            quantity,
+        })
+        .and_then(|r| {
+            r.downcast::<NpcMerchantTransactionResponseSchema>()
+                .map_err(|_| RequestError::DowncastError)
+        })
+        .map(|r| *r.data.transaction)
     }
 
     pub fn request_give_item(
@@ -426,7 +437,7 @@ impl CharacterRequestHandler {
     ) -> Result<(), RequestError> {
         self.request_action(Action::GiveItem { items, character })
             .and_then(|r| {
-                r.downcast::<GiveItemReponseSchema>()
+                r.downcast::<GiveItemResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
             .map(|_| ())
@@ -438,7 +449,7 @@ impl CharacterRequestHandler {
             character,
         })
         .and_then(|r| {
-            r.downcast::<GiveGoldReponseSchema>()
+            r.downcast::<GiveGoldResponseSchema>()
                 .map_err(|_| RequestError::DowncastError)
         })
         .map(|_| ())
@@ -491,10 +502,10 @@ impl HasCharacterData for CharacterRequestHandler {
     }
 
     fn refresh_data(&self) {
-        let Ok(resp) = self.api.character.get(&self.name()) else {
+        let Ok(res) = self.api.character.get(&self.name()) else {
             return;
         };
-        self.update_data(*resp.data)
+        self.update_data(*res.data)
     }
 
     fn update_data(&self, schema: CharacterSchema) {
@@ -528,16 +539,16 @@ impl ResponseSchema for CharacterFightResponseSchema {
         match self.data.fight.result {
             FightResult::Win => format!(
                 "{} won a fight after {} turns ([{}], {}xp, {}g). {}s",
-                self.data.character.name,
+                self.data.characters.first().unwrap().name,
                 self.data.fight.turns,
-                DropSchemas(&self.data.fight.drops),
-                self.data.fight.xp,
-                self.data.fight.gold,
+                DropSchemas(&self.data.fight.characters.first().unwrap().drops),
+                self.data.fight.characters.first().unwrap().xp,
+                self.data.fight.characters.first().unwrap().gold,
                 self.data.cooldown.remaining_seconds
             ),
             FightResult::Loss => format!(
                 "{} lost a fight after {} turns. {}s",
-                self.data.character.name,
+                self.data.characters.first().unwrap().name,
                 self.data.fight.turns,
                 self.data.cooldown.remaining_seconds
             ),
@@ -545,7 +556,7 @@ impl ResponseSchema for CharacterFightResponseSchema {
     }
 
     fn character(&self) -> &CharacterSchema {
-        &self.data.character
+        self.data.characters.first().unwrap()
     }
 }
 
@@ -790,7 +801,7 @@ impl ResponseSchema for NpcMerchantTransactionResponseSchema {
     }
 }
 
-impl ResponseSchema for GiveItemReponseSchema {
+impl ResponseSchema for GiveItemResponseSchema {
     fn to_string(&self) -> String {
         format!(
             "{}: gave '{}' to {}. {}s",
@@ -806,7 +817,7 @@ impl ResponseSchema for GiveItemReponseSchema {
     }
 }
 
-impl ResponseSchema for GiveGoldReponseSchema {
+impl ResponseSchema for GiveGoldResponseSchema {
     fn to_string(&self) -> String {
         format!(
             "{}: gave {} gold to {}. {}s",

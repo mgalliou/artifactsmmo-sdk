@@ -1,6 +1,6 @@
 use crate::{
-    AccountClient, CollectionClient, GOLD, Gear, ItemContainer, Level, LimitedContainer,
-    SlotLimited, SpaceLimited, TASK_EXCHANGE_PRICE, TASKS_COIN, TasksClient,
+    AccountClient, CollectionClient, GOLD, Gear, HasConditions, ItemContainer, Level,
+    LimitedContainer, SlotLimited, SpaceLimited, TASK_EXCHANGE_PRICE, TASKS_COIN, TasksClient,
     character::{
         error::{
             GeBuyOrderError, GeCancelOrderError, GeCreateOrderError, GiveGoldError, GiveItemError,
@@ -19,7 +19,7 @@ use crate::{
             },
             request_handler::CharacterRequestHandler,
         },
-        items::{ItemCondition, ItemSchemaExt, ItemsClient},
+        items::{ItemSchemaExt, ItemsClient, LevelConditionCode},
         maps::{MapSchemaExt, MapsClient},
         monsters::MonstersClient,
         npcs::NpcsClient,
@@ -34,12 +34,14 @@ use crate::{
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CharacterSchema, ConditionOperator, FightSchema, GeTransactionSchema, ItemSchema,
-    MapContentType, MapSchema, NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema,
-    SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
+    CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapContentType,
+    MapSchema, NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema, SimpleItemSchema,
+    SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
 };
 use chrono::{DateTime, Utc};
 use std::{
+    convert::Into,
+    ops::Deref,
     str::FromStr,
     sync::{Arc, RwLock},
     time::Duration,
@@ -117,9 +119,10 @@ impl CharacterClient {
         Ok(())
     }
 
-    pub fn fight(&self) -> Result<FightSchema, FightError> {
+    pub fn fight(&self) -> Result<CharacterFightSchema, FightError> {
         self.can_fight()?;
-        Ok(self.inner.request_fight()?)
+        //TODO: handle multi char
+        Ok(self.inner.request_fight(None)?)
     }
 
     pub fn can_fight(&self) -> Result<(), FightError> {
@@ -351,7 +354,7 @@ impl CharacterClient {
                 return Err(EquipError::SlotNotEmpty);
             }
         }
-        if !self.meets_conditions_for(&item) {
+        if !self.meets_conditions_for(item.deref()) {
             return Err(EquipError::ConditionsNotMet);
         }
         if self.inventory().free_space() as i32 + item.inventory_space() <= 0 {
@@ -673,7 +676,9 @@ impl CharacterClient {
         price: u32,
     ) -> Result<(), GeCreateOrderError> {
         self.can_ge_create_order(item_code, quantity, price)?;
-        Ok(self.inner.request_ge_create_order(item_code, quantity, price)?)
+        Ok(self
+            .inner
+            .request_ge_create_order(item_code, quantity, price)?)
     }
 
     pub fn can_ge_create_order(
@@ -743,10 +748,6 @@ impl CharacterClient {
         }
     }
 
-    pub fn inventory(&self) -> InventoryClient {
-        InventoryClient::new(self.data())
-    }
-
     pub fn remaining_cooldown(&self) -> Duration {
         self.inner.remaining_cooldown()
     }
@@ -775,6 +776,10 @@ pub trait HasCharacterData {
     fn data(&self) -> Arc<CharacterSchema>;
     fn refresh_data(&self);
     fn update_data(&self, schema: CharacterSchema);
+
+    fn inventory(&self) -> InventoryClient {
+        InventoryClient::new(self.data())
+    }
 
     fn name(&self) -> String {
         self.data().name.to_owned()
@@ -944,17 +949,35 @@ pub trait HasCharacterData {
             .sum()
     }
 
-    fn meets_conditions_for(&self, item: &ItemSchema) -> bool {
-        item.conditions.iter().flatten().all(|c| {
-            let Ok(condition) = ItemCondition::from_str(&c.code) else {
-                return false;
-            };
-            let value = self.skill_level(condition.into());
-            match c.operator {
-                ConditionOperator::Eq => (value as i32) == c.value,
-                ConditionOperator::Ne => (value as i32) != c.value,
-                ConditionOperator::Gt => (value as i32) > c.value,
-                ConditionOperator::Lt => (value as i32) < c.value,
+    fn meets_conditions_for(&self, entity: &impl HasConditions) -> bool {
+        entity.conditions().iter().flatten().all(|condition| {
+            // TODO: simplify this
+            match condition.operator {
+                ConditionOperator::Cost => {
+                    if condition.code == "gold" {
+                        self.gold() >= condition.value as u32
+                    } else {
+                        self.inventory().total_of(&condition.code) >= condition.value as u32
+                    }
+                }
+                ConditionOperator::HasItem => {
+                    self.has_equiped(&condition.code) >= condition.value as u32
+                }
+                ConditionOperator::AchievementUnlocked => false,
+                ConditionOperator::Eq => {
+                    LevelConditionCode::from_str(&condition.code).is_ok_and(|code| {
+                        self.skill_level(Skill::from(code)) == condition.value as u32
+                    })
+                }
+                ConditionOperator::Ne => {
+                    LevelConditionCode::from_str(&condition.code).is_ok_and(|code| {
+                        self.skill_level(Skill::from(code)) != condition.value as u32
+                    })
+                }
+                ConditionOperator::Gt => LevelConditionCode::from_str(&condition.code)
+                    .is_ok_and(|code| self.skill_level(Skill::from(code)) > condition.value as u32),
+                ConditionOperator::Lt => LevelConditionCode::from_str(&condition.code)
+                    .is_ok_and(|code| self.skill_level(Skill::from(code)) < condition.value as u32),
             }
         })
     }

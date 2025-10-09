@@ -10,7 +10,7 @@ use artifactsmmo_openapi::{
     },
     models::{ActiveEventSchema, DataPageActiveEventSchema, DataPageEventSchema, EventSchema},
 };
-use std::sync::Arc;
+use std::{option::Option, sync::Arc};
 
 #[derive(Default, Debug)]
 pub struct EventsApi {
@@ -58,7 +58,7 @@ impl DataPage<EventSchema> for DataPageEventSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<u32>> {
+    fn pages(&self) -> Option<u32> {
         self.pages
     }
 }
@@ -82,7 +82,7 @@ impl DataPage<ActiveEventSchema> for DataPageActiveEventSchema {
         self.data
     }
 
-    fn pages(&self) -> Option<Option<u32>> {
+    fn pages(&self) -> Option<u32> {
         self.pages
     }
 }

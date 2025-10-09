@@ -1,4 +1,4 @@
-use artifactsmmo_api_wrapper::{ArtifactApi};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use std::{sync::Arc, thread};
 
 pub use crate::client::{

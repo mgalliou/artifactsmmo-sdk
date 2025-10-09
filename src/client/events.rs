@@ -1,5 +1,5 @@
-use crate::{DataItem, Persist};
-use artifactsmmo_api_wrapper::{ArtifactApi};
+use crate::{DataItem, Persist, maps::MapSchemaExt};
+use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
 use itertools::Itertools;
@@ -104,8 +104,7 @@ impl EventSchemaExt for EventSchema {
 impl EventSchemaExt for ActiveEventSchema {
     fn content_code(&self) -> &String {
         self.map
-            .content
-            .as_ref()
+            .content()
             .map(|c| &c.code)
             .expect("event to have content")
     }
