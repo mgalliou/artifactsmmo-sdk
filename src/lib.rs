@@ -129,14 +129,15 @@ pub trait HasDrops {
 
 impl HasDrops for CharacterFightSchema {
     fn amount_of(&self, item_code: &str) -> u32 {
-        // TODO: handle mutli char
         self.characters
-            .first()
-            .unwrap()
-            .drops
             .iter()
-            .find(|i| i.code == item_code)
-            .map_or(0, |i| i.quantity())
+            .map(|c| {
+                c.drops
+                    .iter()
+                    .find(|i| i.code == item_code)
+                    .map_or(0, |i| i.quantity())
+            })
+            .sum()
     }
 }
 

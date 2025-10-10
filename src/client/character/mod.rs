@@ -119,10 +119,12 @@ impl CharacterClient {
         Ok(())
     }
 
-    pub fn fight(&self) -> Result<CharacterFightSchema, FightError> {
+    pub fn fight(
+        &self,
+        participants: Option<&[String; 2]>,
+    ) -> Result<CharacterFightSchema, FightError> {
         self.can_fight()?;
-        //TODO: handle multi char
-        Ok(self.inner.request_fight(None)?)
+        Ok(self.inner.request_fight(participants)?)
     }
 
     pub fn can_fight(&self) -> Result<(), FightError> {

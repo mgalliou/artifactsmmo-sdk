@@ -296,7 +296,7 @@ pub trait ItemSchemaExt {
     fn is_recyclable(&self) -> bool;
     fn craft_schema(&self) -> Option<&CraftSchema>;
 
-    fn is_gear(&self) -> bool;
+    fn is_equipable(&self) -> bool;
     fn is_tool(&self) -> bool;
 
     fn is_consumable(&self) -> bool;
@@ -372,7 +372,7 @@ impl ItemSchemaExt for ItemSchema {
         self.craft.as_deref()
     }
 
-    fn is_gear(&self) -> bool {
+    fn is_equipable(&self) -> bool {
         match self.r#type() {
             Type::BodyArmor
             | Type::Weapon

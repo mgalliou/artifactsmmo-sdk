@@ -25,10 +25,10 @@ use artifactsmmo_openapi::models::{
 };
 use chrono::Utc;
 use downcast_rs::{Downcast, impl_downcast};
+use itertools::Itertools;
 use log::{debug, error, info, warn};
 use std::{
     cmp::Ordering,
-    ops::Deref,
     sync::{Arc, RwLockWriteGuard},
     thread::sleep,
     time::Duration,
@@ -86,7 +86,15 @@ impl CharacterRequestHandler {
         match action.request(&self.name(), &self.api) {
             Ok(res) => {
                 info!("{}", res.to_string());
-                self.update_data(res.character().clone());
+                if let Some(res) = res.downcast_ref::<CharacterFightResponseSchema>() {
+                    res.data.characters.iter().for_each(|c| {
+                        if let Some(char_client) = self.account.get_character_by_name(&c.name) {
+                            char_client.update_data(c.clone());
+                        }
+                    });
+                } else {
+                    self.update_data(res.character().clone());
+                }
                 if let Some(res) = res.downcast_ref::<BankItemTransactionResponseSchema>()
                     && let Some(mut content) = bank_content
                 {
@@ -135,7 +143,12 @@ impl CharacterRequestHandler {
         action: Action,
         error: RequestError,
     ) -> Result<Box<dyn ResponseSchema>, RequestError> {
-        error!("{}: failed to request action '{}': {}", self.name(), action, error);
+        error!(
+            "{}: failed to request action '{}': {}",
+            self.name(),
+            action,
+            error
+        );
         match error {
             RequestError::ResponseError(ref res) => {
                 if res.error.code == 499 {
@@ -536,14 +549,19 @@ impl ResponseSchema for CharacterMovementResponseSchema {
 
 impl ResponseSchema for CharacterFightResponseSchema {
     fn to_string(&self) -> String {
+        let chars = &self.data.fight.characters;
+        let names = chars.iter().map(|c| c.character_name.to_string()).join(",");
+        let drops = chars.iter().flat_map(|c| c.drops.clone()).collect_vec();
+        let xp = chars.iter().map(|c| c.xp).join("/");
+        let gold = chars.iter().map(|c| c.gold).join("/");
         match self.data.fight.result {
             FightResult::Win => format!(
                 "{} won a fight after {} turns ([{}], {}xp, {}g). {}s",
-                self.data.characters.first().unwrap().name,
+                names,
                 self.data.fight.turns,
-                DropSchemas(&self.data.fight.characters.first().unwrap().drops),
-                self.data.fight.characters.first().unwrap().xp,
-                self.data.fight.characters.first().unwrap().gold,
+                DropSchemas(&drops),
+                xp,
+                gold,
                 self.data.cooldown.remaining_seconds
             ),
             FightResult::Loss => format!(
