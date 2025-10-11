@@ -112,4 +112,8 @@ impl AccountClient {
             .cloned()
             .collect_vec()
     }
+
+    pub fn get_achievement(&self, code: &str) -> Option<Arc<AccountAchievementSchema>> {
+        self.achievements().iter().find(|a| a.code == code).cloned()
+    }
 }

@@ -750,6 +750,39 @@ impl CharacterClient {
         }
     }
 
+    fn meets_conditions_for(&self, entity: &impl HasConditions) -> bool {
+        entity.conditions().iter().flatten().all(|condition| {
+            let value = condition.value as u32;
+            // TODO: simplify this
+            match condition.operator {
+                ConditionOperator::Cost => {
+                    if condition.code == GOLD {
+                        self.gold() >= value
+                    } else {
+                        self.inventory().total_of(&condition.code) >= value
+                    }
+                }
+                ConditionOperator::HasItem => self.has_equiped(&condition.code) >= value,
+                ConditionOperator::AchievementUnlocked => self
+                    .account()
+                    .get_achievement(&condition.code)
+                    .is_some_and(|a| a.completed_at.is_some()),
+                ConditionOperator::Eq => LevelConditionCode::from_str(&condition.code)
+                    .is_ok_and(|code| self.skill_level(Skill::from(code)) == value),
+                ConditionOperator::Ne => LevelConditionCode::from_str(&condition.code)
+                    .is_ok_and(|code| self.skill_level(Skill::from(code)) != value),
+                ConditionOperator::Gt => LevelConditionCode::from_str(&condition.code)
+                    .is_ok_and(|code| self.skill_level(Skill::from(code)) > value),
+                ConditionOperator::Lt => LevelConditionCode::from_str(&condition.code)
+                    .is_ok_and(|code| self.skill_level(Skill::from(code)) < value),
+            }
+        })
+    }
+
+    pub fn account(&self) -> Arc<AccountClient> {
+        self.account.clone()
+    }
+
     pub fn remaining_cooldown(&self) -> Duration {
         self.inner.remaining_cooldown()
     }
@@ -949,39 +982,6 @@ pub trait HasCharacterData {
         Slot::iter()
             .filter_map(|s| (self.equiped_in(s) == item_code).then_some(self.quantity_in_slot(s)))
             .sum()
-    }
-
-    fn meets_conditions_for(&self, entity: &impl HasConditions) -> bool {
-        entity.conditions().iter().flatten().all(|condition| {
-            // TODO: simplify this
-            match condition.operator {
-                ConditionOperator::Cost => {
-                    if condition.code == "gold" {
-                        self.gold() >= condition.value as u32
-                    } else {
-                        self.inventory().total_of(&condition.code) >= condition.value as u32
-                    }
-                }
-                ConditionOperator::HasItem => {
-                    self.has_equiped(&condition.code) >= condition.value as u32
-                }
-                ConditionOperator::AchievementUnlocked => false,
-                ConditionOperator::Eq => {
-                    LevelConditionCode::from_str(&condition.code).is_ok_and(|code| {
-                        self.skill_level(Skill::from(code)) == condition.value as u32
-                    })
-                }
-                ConditionOperator::Ne => {
-                    LevelConditionCode::from_str(&condition.code).is_ok_and(|code| {
-                        self.skill_level(Skill::from(code)) != condition.value as u32
-                    })
-                }
-                ConditionOperator::Gt => LevelConditionCode::from_str(&condition.code)
-                    .is_ok_and(|code| self.skill_level(Skill::from(code)) > condition.value as u32),
-                ConditionOperator::Lt => LevelConditionCode::from_str(&condition.code)
-                    .is_ok_and(|code| self.skill_level(Skill::from(code)) < condition.value as u32),
-            }
-        })
     }
 }
 
