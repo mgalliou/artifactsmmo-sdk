@@ -1,6 +1,8 @@
 use crate::{client::events::EventsClient, skill::Skill};
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{MapContentSchema, MapContentType, MapSchema, TaskType};
+use artifactsmmo_openapi::models::{
+    MapContentSchema, MapContentType, MapLayer, MapSchema, TaskType,
+};
 use chrono::{DateTime, Utc};
 use itertools::Itertools;
 use std::{
@@ -10,7 +12,7 @@ use std::{
 
 #[derive(Default, Debug)]
 pub struct MapsClient {
-    data: HashMap<(i32, i32), RwLock<Arc<MapSchema>>>,
+    data: HashMap<(MapLayer, i32, i32), RwLock<Arc<MapSchema>>>,
     events: Arc<EventsClient>,
 }
 
@@ -22,20 +24,20 @@ impl MapsClient {
                 .get_all()
                 .unwrap()
                 .into_iter()
-                .map(|m| ((m.x, m.y), RwLock::new(Arc::new(m))))
+                .map(|m| ((m.layer, m.x, m.y), RwLock::new(Arc::new(m))))
                 .collect(),
             events,
         }
     }
 
-    pub fn get(&self, x: i32, y: i32) -> Option<Arc<MapSchema>> {
-        Some(self.data.get(&(x, y))?.read().unwrap().clone())
+    pub fn get(&self, layer: MapLayer, x: i32, y: i32) -> Option<Arc<MapSchema>> {
+        Some(self.data.get(&(layer, x, y))?.read().unwrap().clone())
     }
 
     pub fn refresh_from_events(&self) {
         self.events.active().iter().for_each(|e| {
             if DateTime::parse_from_rfc3339(&e.expiration).unwrap() < Utc::now()
-                && let Some(map) = self.data.get(&(e.map.x, e.map.y))
+                && let Some(map) = self.data.get(&(e.map.layer, e.map.x, e.map.y))
             {
                 *map.write().unwrap() = Arc::new(*e.previous_map.clone())
             }
@@ -43,13 +45,14 @@ impl MapsClient {
         self.events.refresh_active();
         self.events.active().iter().for_each(|e| {
             if DateTime::parse_from_rfc3339(&e.expiration).unwrap() > Utc::now()
-                && let Some(map) = self.data.get(&(e.map.x, e.map.y))
+                && let Some(map) = self.data.get(&(e.map.layer, e.map.x, e.map.y))
             {
                 *map.write().unwrap() = Arc::new(*e.map.clone())
             }
         });
     }
 
+    //TODO: handle layer
     pub fn closest_from_amoung(x: i32, y: i32, maps: &[Arc<MapSchema>]) -> Option<Arc<MapSchema>> {
         maps.iter()
             .min_by_key(|m| i32::abs(x - m.x) + i32::abs(y - m.y))

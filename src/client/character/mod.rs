@@ -35,8 +35,9 @@ use crate::{
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
     CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapContentType,
-    MapSchema, MonsterType, NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema,
-    SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
+    MapLayer, MapSchema, MonsterType, NpcItemTransactionSchema, RecyclingItemsSchema,
+    RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema,
+    TaskType,
 };
 use chrono::{DateTime, Utc};
 use std::{
@@ -109,10 +110,10 @@ impl CharacterClient {
     }
 
     pub fn can_move(&self, x: i32, y: i32) -> Result<(), MoveError> {
-        if self.position() == (x, y) {
+        if self.position() == (self.position().0, x, y) {
             return Err(MoveError::AlreadyOnMap);
         }
-        if self.maps.get(x, y).is_none() {
+        if self.maps.get(self.position().0, x, y).is_none() {
             return Err(MoveError::MapNotFound);
         }
         Ok(())
@@ -803,8 +804,8 @@ impl CharacterClient {
     }
 
     pub fn current_map(&self) -> Arc<MapSchema> {
-        let (x, y) = self.position();
-        self.maps.get(x, y).unwrap()
+        let (layer, x, y) = self.position();
+        self.maps.get(layer, x, y).unwrap()
     }
 }
 
@@ -836,9 +837,9 @@ pub trait HasCharacterData {
     }
 
     /// Returns the `Character` position (coordinates).
-    fn position(&self) -> (i32, i32) {
+    fn position(&self) -> (MapLayer, i32, i32) {
         let d = self.data();
-        (d.x, d.y)
+        (d.layer, d.x, d.y)
     }
 
     fn level(&self) -> u32 {
