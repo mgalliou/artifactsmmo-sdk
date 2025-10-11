@@ -32,10 +32,11 @@ const ALREADY_ON_MAP: isize = 490;
 const INVALID_SLOT_STATE: isize = 491;
 const CHARACTER_GOLD_INSUFFICIENT: isize = 492;
 const SKILL_LEVEL_INSUFFICIENT: isize = 493;
-const CHARACTER_LEVEL_INSUFFICIENT: isize = 496;
+const CONDITIONS_NOT_MET: isize = 496;
 const INVENTORY_FULL: isize = 497;
 const CHARACTER_NOT_FOUND: isize = 498;
 //const CHARACTER_ON_COOLDOWN: isize = 499;
+const NO_PATH_AVAILABLE: isize = 595;
 const ENTITY_NOT_FOUND_ON_MAP: isize = 598;
 
 #[derive(Error, Debug)]
@@ -119,6 +120,10 @@ pub enum MoveError {
     MapNotFound = ENTITY_NOT_FOUND,
     #[error("Already on map")]
     AlreadyOnMap = ALREADY_ON_MAP,
+    #[error("Conditions are not met")]
+    ConditionsNotMet = CONDITIONS_NOT_MET,
+    #[error("No path available")]
+    NoPathAvailable = NO_PATH_AVAILABLE,
     #[error(transparent)]
     UnhandledError(#[from] RequestError),
 }
@@ -142,7 +147,7 @@ pub enum UseError {
     #[error("Insufficient quantity")]
     InsufficientQuantity = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
     #[error("Insufficient character level")]
-    InsufficientCharacterLevel = CHARACTER_LEVEL_INSUFFICIENT,
+    InsufficientCharacterLevel = CONDITIONS_NOT_MET,
     #[error(transparent)]
     UnhandledError(#[from] RequestError),
 }
@@ -282,7 +287,7 @@ pub enum EquipError {
     #[error("Slot not empty")]
     SlotNotEmpty = INVALID_SLOT_STATE,
     #[error("Conditions not met")]
-    ConditionsNotMet = CHARACTER_LEVEL_INSUFFICIENT,
+    ConditionsNotMet = CONDITIONS_NOT_MET,
     #[error("Insufficient inventory space")]
     InsufficientInventorySpace = INVENTORY_FULL,
     #[error(transparent)]

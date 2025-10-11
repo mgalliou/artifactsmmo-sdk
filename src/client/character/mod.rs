@@ -34,10 +34,10 @@ use crate::{
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapContentType,
-    MapLayer, MapSchema, MonsterType, NpcItemTransactionSchema, RecyclingItemsSchema,
-    RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema,
-    TaskType,
+    CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapAccessType,
+    MapContentType, MapLayer, MapSchema, MonsterType, NpcItemTransactionSchema,
+    RecyclingItemsSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
+    TaskSchema, TaskTradeSchema, TaskType,
 };
 use chrono::{DateTime, Utc};
 use std::{
@@ -113,8 +113,13 @@ impl CharacterClient {
         if self.position() == (self.position().0, x, y) {
             return Err(MoveError::AlreadyOnMap);
         }
-        if self.maps.get(self.position().0, x, y).is_none() {
+        let Some(map) = self.maps.get(self.position().0, x, y) else {
             return Err(MoveError::MapNotFound);
+        };
+        if map.access.r#type == MapAccessType::Blocked
+            || !self.meets_conditions_for(map.access.as_ref())
+        {
+            return Err(MoveError::ConditionsNotMet);
         }
         Ok(())
     }

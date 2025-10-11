@@ -537,7 +537,7 @@ impl ResponseSchema for CharacterMovementResponseSchema {
         format!(
             "{}: moved to {}. {}s",
             self.data.character.name,
-            self.data.destination.pretty(),
+            self.data.destination.to_string(),
             self.data.cooldown.remaining_seconds
         )
     }
