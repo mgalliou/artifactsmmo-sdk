@@ -6,6 +6,7 @@ use crate::{
     grand_exchange::GrandExchangeClient,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
+use artifactsmmo_openapi::models::AccountAchievementSchema;
 use itertools::Itertools;
 use std::sync::{Arc, RwLock};
 
@@ -14,19 +15,30 @@ pub struct AccountClient {
     pub name: String,
     pub bank: Arc<BankClient>,
     characters: RwLock<Vec<Arc<CharacterClient>>>,
+    achievements: RwLock<Vec<Arc<AccountAchievementSchema>>>,
+    api: Arc<ArtifactApi>,
 }
 
 impl AccountClient {
-    pub(crate) fn new(name: String, bank: Arc<BankClient>) -> Self {
+    pub(crate) fn new(name: String, bank: Arc<BankClient>, api: Arc<ArtifactApi>) -> Self {
         Self {
-            name,
             bank,
-            characters: RwLock::new(vec![]),
+            characters: Default::default(),
+            achievements: RwLock::new(
+                api.account
+                    .achievements(&name)
+                    .unwrap()
+                    .into_iter()
+                    .map(Arc::new)
+                    .collect_vec(),
+            ),
+            name,
+            api,
         }
     }
 
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn init_characters(
+    pub(crate) fn load_characters(
         &self,
         account: Arc<AccountClient>,
         items: Arc<ItemsClient>,
@@ -37,9 +49,9 @@ impl AccountClient {
         tasks: Arc<TasksClient>,
         server: Arc<ServerClient>,
         grand_exchange: Arc<GrandExchangeClient>,
-        api: Arc<ArtifactApi>,
     ) -> Result<(), ClientError> {
-        *self.characters.write().unwrap() = api
+        *self.characters.write().unwrap() = self
+            .api
             .account
             .characters(&account.name)
             .map_err(|e| ClientError::Api(Box::new(e)))?
@@ -59,9 +71,21 @@ impl AccountClient {
                     tasks.clone(),
                     grand_exchange.clone(),
                     server.clone(),
-                    api.clone(),
+                    self.api.clone(),
                 )
             })
+            .map(Arc::new)
+            .collect_vec();
+        Ok(())
+    }
+
+    pub fn load_achievements(&self) -> Result<(), ClientError> {
+        *self.achievements.write().unwrap() = self
+            .api
+            .account
+            .achievements(&self.name)
+            .map_err(|e| ClientError::Api(Box::new(e)))?
+            .into_iter()
             .map(Arc::new)
             .collect_vec();
         Ok(())
@@ -78,5 +102,14 @@ impl AccountClient {
             .iter()
             .find(|c| c.name() == name)
             .cloned()
+    }
+
+    pub fn achievements(&self) -> Vec<Arc<AccountAchievementSchema>> {
+        self.achievements
+            .read()
+            .unwrap()
+            .iter()
+            .cloned()
+            .collect_vec()
     }
 }

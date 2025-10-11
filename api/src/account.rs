@@ -1,13 +1,16 @@
+use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
         accounts_api::{
+            get_account_achievements_accounts_account_achievements_get,
             get_account_characters_accounts_account_characters_get,
+            GetAccountAchievementsAccountsAccountAchievementsGetError,
             GetAccountCharactersAccountsAccountCharactersGetError,
         },
         configuration::Configuration,
         Error,
     },
-    models::CharactersListSchema,
+    models::{AccountAchievementSchema, CharactersListSchema, DataPageAccountAchievementSchema},
 };
 use std::sync::Arc;
 
@@ -27,5 +30,51 @@ impl AccountApi {
     ) -> Result<CharactersListSchema, Error<GetAccountCharactersAccountsAccountCharactersGetError>>
     {
         get_account_characters_accounts_account_characters_get(&self.configuration, account)
+    }
+
+    pub fn achievements(
+        &self,
+        account: &str,
+    ) -> Result<
+        Vec<AccountAchievementSchema>,
+        Error<GetAccountAchievementsAccountsAccountAchievementsGetError>,
+    > {
+        AchievementsRequest {
+            configuration: &self.configuration,
+            account,
+        }
+        .send()
+    }
+}
+
+struct AchievementsRequest<'a> {
+    configuration: &'a Configuration,
+    account: &'a str,
+}
+
+impl<'a> Paginate for AchievementsRequest<'a> {
+    type Data = AccountAchievementSchema;
+    type Page = DataPageAccountAchievementSchema;
+    type Error = GetAccountAchievementsAccountsAccountAchievementsGetError;
+
+    fn request_page(&self, current_page: u32) -> Result<Self::Page, Error<Self::Error>> {
+        get_account_achievements_accounts_account_achievements_get(
+            self.configuration,
+            self.account,
+            None,
+            None,
+            Some(current_page),
+            Some(100),
+        )
+    }
+}
+
+impl DataPage<AccountAchievementSchema> for DataPageAccountAchievementSchema {
+    fn data(self) -> Vec<AccountAchievementSchema> {
+        self.data
+    }
+
+    fn pages(&self) -> Option<u32> {
+        self.pages
     }
 }

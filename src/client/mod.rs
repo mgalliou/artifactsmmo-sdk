@@ -120,9 +120,9 @@ impl Client {
             npcs.clone(),
         ));
 
-        let account = Arc::new(AccountClient::new(account_name, bank));
+        let account = Arc::new(AccountClient::new(account_name, bank, api.clone()));
         let grand_exchange = Arc::new(GrandExchangeClient::new(api.clone()));
-        account.init_characters(
+        account.load_characters(
             account.clone(),
             items.clone(),
             resources.clone(),
@@ -132,7 +132,6 @@ impl Client {
             tasks.clone(),
             server.clone(),
             grand_exchange.clone(),
-            api.clone(),
         )?;
 
         Ok(Self {
