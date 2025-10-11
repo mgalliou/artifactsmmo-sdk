@@ -1,4 +1,4 @@
-use crate::{DataItem, Persist, maps::MapSchemaExt};
+use crate::{DataEntity, Persist, maps::MapSchemaExt};
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
@@ -82,8 +82,8 @@ impl Persist<HashMap<String, Arc<EventSchema>>> for EventsClient {
     }
 }
 
-impl DataItem for EventsClient {
-    type Item = Arc<EventSchema>;
+impl DataEntity for EventsClient {
+    type Entity = Arc<EventSchema>;
 }
 
 pub trait EventSchemaExt {

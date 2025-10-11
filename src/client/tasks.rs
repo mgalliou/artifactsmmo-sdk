@@ -1,4 +1,4 @@
-use crate::{DataItem, Persist, TasksRewardsClient};
+use crate::{DataEntity, Persist, TasksRewardsClient};
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{RewardsSchema, TaskFullSchema};
 use sdk_derive::CollectionClient;
@@ -44,8 +44,8 @@ impl Persist<HashMap<String, Arc<TaskFullSchema>>> for TasksClient {
     }
 }
 
-impl DataItem for TasksClient {
-    type Item = Arc<TaskFullSchema>;
+impl DataEntity for TasksClient {
+    type Entity = Arc<TaskFullSchema>;
 }
 
 pub trait TaskFullSchemaExt {

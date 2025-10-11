@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, DropsItems, Level, Persist,
+    CanProvideXp, CollectionClient, DataEntity, DropsItems, Level, Persist,
     client::events::EventsClient,
     simulator::{DamageType, HasEffects},
 };
@@ -73,8 +73,8 @@ impl Persist<HashMap<String, Arc<MonsterSchema>>> for MonstersClient {
     }
 }
 
-impl DataItem for MonstersClient {
-    type Item = Arc<MonsterSchema>;
+impl DataEntity for MonstersClient {
+    type Entity = Arc<MonsterSchema>;
 }
 
 impl DropsItems for MonsterSchema {

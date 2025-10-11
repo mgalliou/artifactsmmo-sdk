@@ -22,6 +22,7 @@ use artifactsmmo_openapi::{
             action_task_cancel_my_name_action_task_cancel_post,
             action_task_exchange_my_name_action_task_exchange_post,
             action_task_trade_my_name_action_task_trade_post,
+            action_transition_my_name_action_transition_post,
             action_unequip_item_my_name_action_unequip_post,
             action_use_item_my_name_action_use_post,
             action_withdraw_bank_gold_my_name_action_bank_withdraw_gold_post,
@@ -46,6 +47,7 @@ use artifactsmmo_openapi::{
             ActionTaskCancelMyNameActionTaskCancelPostError,
             ActionTaskExchangeMyNameActionTaskExchangePostError,
             ActionTaskTradeMyNameActionTaskTradePostError,
+            ActionTransitionMyNameActionTransitionPostError,
             ActionUnequipItemMyNameActionUnequipPostError, ActionUseItemMyNameActionUsePostError,
             ActionWithdrawBankGoldMyNameActionBankWithdrawGoldPostError,
             ActionWithdrawBankItemMyNameActionBankWithdrawItemPostError,
@@ -55,9 +57,10 @@ use artifactsmmo_openapi::{
     models::{
         BankExtensionTransactionResponseSchema, BankGoldTransactionResponseSchema,
         BankItemTransactionResponseSchema, CharacterFightResponseSchema,
-        CharacterMovementResponseSchema, CharacterRestResponseSchema, CraftingSchema,
-        DeleteItemResponseSchema, DepositWithdrawGoldSchema, DestinationSchema, EquipSchema,
-        EquipmentResponseSchema, FightRequestSchema, GeBuyOrderSchema, GeCancelOrderSchema,
+        CharacterMovementResponseSchema, CharacterRestResponseSchema,
+        CharacterTransitionResponseSchema, CraftingSchema, DeleteItemResponseSchema,
+        DepositWithdrawGoldSchema, DestinationSchema, EquipSchema, EquipmentResponseSchema,
+        FightRequestSchema, GeBuyOrderSchema, GeCancelOrderSchema,
         GeCreateOrderTransactionResponseSchema, GeOrderCreationrSchema,
         GeTransactionResponseSchema, GiveGoldResponseSchema, GiveGoldSchema,
         GiveItemResponseSchema, GiveItemsSchema, ItemSlot, NpcMerchantBuySchema,
@@ -91,6 +94,16 @@ impl MyCharacterApi {
             map_id: None,
         };
         action_move_my_name_action_move_post(&self.configuration, name, dest)
+    }
+
+    pub fn transition(
+        &self,
+        name: &str,
+    ) -> Result<
+        CharacterTransitionResponseSchema,
+        Error<ActionTransitionMyNameActionTransitionPostError>,
+    > {
+        action_transition_my_name_action_transition_post(&self.configuration, name)
     }
 
     pub fn fight(

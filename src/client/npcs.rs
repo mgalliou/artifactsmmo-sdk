@@ -1,4 +1,4 @@
-use crate::{CollectionClient, DataItem, Persist, client::npcs_items::NpcsItemsClient};
+use crate::{CollectionClient, DataEntity, Persist, client::npcs_items::NpcsItemsClient};
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::NpcSchema;
 use itertools::Itertools;
@@ -53,6 +53,6 @@ impl Persist<HashMap<String, Arc<NpcSchema>>> for NpcsClient {
     }
 }
 
-impl DataItem for NpcsClient {
-    type Item = Arc<NpcSchema>;
+impl DataEntity for NpcsClient {
+    type Entity = Arc<NpcSchema>;
 }

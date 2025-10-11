@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, Level, Persist, check_lvl_diff,
+    CanProvideXp, CollectionClient, DataEntity, Level, Persist, check_lvl_diff,
     client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
@@ -279,8 +279,8 @@ impl Persist<HashMap<String, Arc<ItemSchema>>> for ItemsClient {
     }
 }
 
-impl DataItem for ItemsClient {
-    type Item = Arc<ItemSchema>;
+impl DataEntity for ItemsClient {
+    type Entity = Arc<ItemSchema>;
 }
 
 pub trait ItemSchemaExt {

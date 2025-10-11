@@ -4,6 +4,7 @@ use crate::{
     character::{
         error::{
             GeBuyOrderError, GeCancelOrderError, GeCreateOrderError, GiveGoldError, GiveItemError,
+            TransitionError,
         },
         inventory::Inventory,
     },
@@ -124,6 +125,21 @@ impl CharacterClient {
         Ok(())
     }
 
+    pub fn transition(&self) -> Result<Arc<MapSchema>, TransitionError> {
+        self.can_transition()?;
+        Ok(self.inner.request_transition()?)
+    }
+
+    pub fn can_transition(&self) -> Result<(), TransitionError> {
+        let map = self.current_map();
+        let Some(ref transition) = map.interactions.transition else {
+            return Err(TransitionError::TransitionNotFound);
+        };
+        if !self.meets_conditions_for(transition.as_ref()) {
+            return Err(TransitionError::ConditionsNotMet);
+        }
+        Ok(())
+    }
     pub fn fight(
         &self,
         participants: Option<&[String; 2]>,
@@ -771,6 +787,7 @@ impl CharacterClient {
         }
     }
 
+    // TODO: return a result
     pub fn meets_conditions_for(&self, entity: &impl HasConditions) -> bool {
         entity.conditions().iter().flatten().all(|condition| {
             let value = condition.value as u32;

@@ -61,28 +61,28 @@ pub(crate) trait Persist<D: for<'a> Deserialize<'a> + Serialize> {
 
 #[allow(private_bounds)]
 pub trait CollectionClient: Data {
-    fn get(&self, code: &str) -> Option<Self::Item> {
+    fn get(&self, code: &str) -> Option<Self::Entity> {
         self.data().get(code).cloned()
     }
 
-    fn all(&self) -> Vec<Self::Item> {
+    fn all(&self) -> Vec<Self::Entity> {
         self.data().values().cloned().collect_vec()
     }
 
-    fn filtered<F>(&self, f: F) -> Vec<Self::Item>
+    fn filtered<F>(&self, f: F) -> Vec<Self::Entity>
     where
-        F: FnMut(&Self::Item) -> bool,
+        F: FnMut(&Self::Entity) -> bool,
     {
         self.all().into_iter().filter(f).collect_vec()
     }
 }
 
-pub(crate) trait Data: DataItem {
-    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Item>>;
+pub(crate) trait Data: DataEntity {
+    fn data(&self) -> RwLockReadGuard<'_, HashMap<String, Self::Entity>>;
 }
 
-pub trait DataItem {
-    type Item: Clone;
+pub trait DataEntity {
+    type Entity: Clone;
 }
 
 pub trait Code {

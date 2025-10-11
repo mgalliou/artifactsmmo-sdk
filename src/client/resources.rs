@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataItem, DropsItems, Level, Persist,
+    CanProvideXp, CollectionClient, DataEntity, DropsItems, Level, Persist,
     client::events::EventsClient,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
@@ -58,8 +58,8 @@ impl Persist<HashMap<String, Arc<ResourceSchema>>> for ResourcesClient {
     }
 }
 
-impl DataItem for ResourcesClient {
-    type Item = Arc<ResourceSchema>;
+impl DataEntity for ResourcesClient {
+    type Entity = Arc<ResourceSchema>;
 }
 
 impl DropsItems for ResourceSchema {

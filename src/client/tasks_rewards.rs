@@ -1,4 +1,4 @@
-use crate::{CollectionClient, DataItem, Persist};
+use crate::{CollectionClient, DataEntity, Persist};
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::DropRateSchema;
 use std::{
@@ -48,6 +48,6 @@ impl Persist<HashMap<String, Arc<DropRateSchema>>> for TasksRewardsClient {
     }
 }
 
-impl DataItem for TasksRewardsClient {
-    type Item = Arc<DropRateSchema>;
+impl DataEntity for TasksRewardsClient {
+    type Entity = Arc<DropRateSchema>;
 }

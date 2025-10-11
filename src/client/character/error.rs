@@ -131,6 +131,22 @@ pub enum MoveError {
 #[derive(Debug, Error, TryFrom)]
 #[try_from(repr)]
 #[repr(isize)]
+pub enum TransitionError {
+    #[error("Transition not found")]
+    TransitionNotFound = ENTITY_NOT_FOUND,
+    #[error("Missing required item(s)")]
+    MissingItem = MISSING_ITEM_OR_INSUFFICIENT_QUANTITY,
+    #[error("Insufficient gold on character")]
+    InsufficientGold = CHARACTER_GOLD_INSUFFICIENT,
+    #[error("Conditions are not met")]
+    ConditionsNotMet = CONDITIONS_NOT_MET,
+    #[error(transparent)]
+    UnhandledError(#[from] RequestError),
+}
+
+#[derive(Debug, Error, TryFrom)]
+#[try_from(repr)]
+#[repr(isize)]
 pub enum RestError {
     #[error(transparent)]
     UnhandledError(#[from] RequestError),

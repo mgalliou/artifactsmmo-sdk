@@ -1,4 +1,4 @@
-use crate::{DataItem, Persist};
+use crate::{DataEntity, Persist};
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::NpcItem;
 use sdk_derive::CollectionClient;
@@ -42,8 +42,8 @@ impl Persist<HashMap<String, Arc<NpcItem>>> for NpcsItemsClient {
     }
 }
 
-impl DataItem for NpcsItemsClient {
-    type Item = Arc<NpcItem>;
+impl DataEntity for NpcsItemsClient {
+    type Entity = Arc<NpcItem>;
 }
 
 pub trait NpcItemExt {

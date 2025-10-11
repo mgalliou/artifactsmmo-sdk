@@ -11,6 +11,7 @@ pub enum Action<'a> {
         x: i32,
         y: i32,
     },
+    Transition,
     Fight {
         participants: Option<&'a [String; 2]>,
     },
@@ -102,6 +103,11 @@ impl Action<'_> {
             Action::Move { x, y } => api
                 .my_character
                 .r#move(name, *x, *y)
+                .map(|r| r.into())
+                .map_err(|e| e.into()),
+            Action::Transition => api
+                .my_character
+                .transition(name)
                 .map(|r| r.into())
                 .map_err(|e| e.into()),
             Action::Fight { participants } => api

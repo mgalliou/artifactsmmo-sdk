@@ -15,9 +15,10 @@ use artifactsmmo_openapi::models::{
     ActionType, BankExtensionTransactionResponseSchema, BankGoldTransactionResponseSchema,
     BankItemTransactionResponseSchema, BankSchema, CharacterFightResponseSchema,
     CharacterFightSchema, CharacterMovementResponseSchema, CharacterRestResponseSchema,
-    CharacterSchema, DeleteItemResponseSchema, EquipmentResponseSchema, FightResult,
-    GeCreateOrderTransactionResponseSchema, GeTransactionResponseSchema, GeTransactionSchema,
-    GiveGoldResponseSchema, GiveItemResponseSchema, MapSchema, NpcItemTransactionSchema,
+    CharacterSchema, CharacterTransitionResponseSchema, DeleteItemResponseSchema,
+    EquipmentResponseSchema, FightResult, GeCreateOrderTransactionResponseSchema,
+    GeTransactionResponseSchema, GeTransactionSchema, GiveGoldResponseSchema,
+    GiveItemResponseSchema, MapSchema, NpcItemTransactionSchema,
     NpcMerchantTransactionResponseSchema, RecyclingItemsSchema, RecyclingResponseSchema,
     RewardDataResponseSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
     SkillResponseSchema, TaskCancelledResponseSchema, TaskResponseSchema, TaskSchema,
@@ -217,6 +218,15 @@ impl CharacterRequestHandler {
         self.request_action(Action::Move { x, y })
             .and_then(|r| {
                 r.downcast::<CharacterMovementResponseSchema>()
+                    .map_err(|_| RequestError::DowncastError)
+            })
+            .map(|s| Arc::new(*s.data.destination))
+    }
+
+    pub fn request_transition(&self) -> Result<Arc<MapSchema>, RequestError> {
+        self.request_action(Action::Transition)
+            .and_then(|r| {
+                r.downcast::<CharacterTransitionResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
             .map(|s| Arc::new(*s.data.destination))
@@ -537,7 +547,22 @@ impl ResponseSchema for CharacterMovementResponseSchema {
         format!(
             "{}: moved to {}. {}s",
             self.data.character.name,
-            self.data.destination.to_string(),
+            self.data.destination.pretty(),
+            self.data.cooldown.remaining_seconds
+        )
+    }
+
+    fn character(&self) -> &CharacterSchema {
+        &self.data.character
+    }
+}
+
+impl ResponseSchema for CharacterTransitionResponseSchema {
+    fn to_string(&self) -> String {
+        format!(
+            "{}: transitioned to {}. {}s",
+            self.data.character.name,
+            self.data.destination.pretty(),
             self.data.cooldown.remaining_seconds
         )
     }

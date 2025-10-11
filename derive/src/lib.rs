@@ -12,7 +12,7 @@ pub fn collection_client_derive(input: TokenStream) -> TokenStream {
                 impl crate::CollectionClient for #name {}
                 impl crate::Data for #name {
 
-                    fn data(&self) -> std::sync::RwLockReadGuard<'_, HashMap<String, Self::Item>> {
+                    fn data(&self) -> std::sync::RwLockReadGuard<'_, HashMap<String, Self::Entity>> {
                         self.data.read().unwrap()
                     }
                 }
