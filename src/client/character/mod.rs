@@ -35,8 +35,8 @@ use crate::{
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
     CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapContentType,
-    MapSchema, NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema, SimpleItemSchema,
-    SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
+    MapSchema, MonsterType, NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema,
+    SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
 };
 use chrono::{DateTime, Utc};
 use std::{
@@ -50,10 +50,9 @@ use strum::IntoEnumIterator;
 
 pub use inventory::InventoryClient;
 
+pub mod action;
 pub mod error;
 pub mod inventory;
-
-pub mod action;
 mod request_handler;
 
 pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
@@ -123,11 +122,11 @@ impl CharacterClient {
         &self,
         participants: Option<&[String; 2]>,
     ) -> Result<CharacterFightSchema, FightError> {
-        self.can_fight()?;
+        self.can_fight(participants)?;
         Ok(self.inner.request_fight(participants)?)
     }
 
-    pub fn can_fight(&self) -> Result<(), FightError> {
+    pub fn can_fight(&self, participants: Option<&[String; 2]>) -> Result<(), FightError> {
         let Some(monster_code) = self.current_map().monster() else {
             return Err(FightError::NoMonsterOnMap);
         };
@@ -136,6 +135,22 @@ impl CharacterClient {
         };
         if !self.inventory().has_room_for_drops_from(monster.as_ref()) {
             return Err(FightError::InsufficientInventorySpace);
+        }
+        let Some(participants) = participants else {
+            return Ok(());
+        };
+        if !participants.is_empty() && monster.r#type == MonsterType::Boss {
+            return Err(FightError::MonsterIsNotABoss);
+        }
+        for p in participants.iter() {
+            if let Some(p) = self.account.get_character_by_name(p) {
+                if p.position() != self.position() {
+                    return Err(FightError::NoMonsterOnMap);
+                }
+                if !p.inventory().has_room_for_drops_from(monster.as_ref()) {
+                    return Err(FightError::InsufficientInventorySpace);
+                }
+            }
         }
         Ok(())
     }

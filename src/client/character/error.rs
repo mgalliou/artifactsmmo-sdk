@@ -24,7 +24,7 @@ const MISSING_ITEM_OR_INSUFFICIENT_QUANTITY: isize = 478;
 const INSUFFICIENT_HEALTH: isize = 483;
 const SUPERFLOUS_UTILITY_QUANTITY: isize = 484;
 const ITEM_ALREADY_EQUIPED: isize = 485;
-//const ACTION_ALREADY_IN_PROGRESS: isize = 486;
+const ACTION_ALREADY_IN_PROGRESS: isize = 486;
 const NO_TASK: isize = 487;
 const TASK_NOT_COMPLETED: isize = 488;
 const TASK_ALREADY_IN_PROGRESS: isize = 489;
@@ -89,6 +89,8 @@ pub struct ApiErrorSchema {
 pub enum FightError {
     #[error("Insufficient inventory space")]
     InsufficientInventorySpace = INVENTORY_FULL,
+    #[error("Monster is not a boss")]
+    MonsterIsNotABoss = ACTION_ALREADY_IN_PROGRESS,
     #[error("No monster on map")]
     NoMonsterOnMap = ENTITY_NOT_FOUND_ON_MAP,
     #[error(transparent)]
