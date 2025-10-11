@@ -765,7 +765,7 @@ impl CharacterClient {
         }
     }
 
-    fn meets_conditions_for(&self, entity: &impl HasConditions) -> bool {
+    pub fn meets_conditions_for(&self, entity: &impl HasConditions) -> bool {
         entity.conditions().iter().flatten().all(|condition| {
             let value = condition.value as u32;
             // TODO: simplify this
