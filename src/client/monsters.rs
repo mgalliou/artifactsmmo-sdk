@@ -116,6 +116,10 @@ impl HasEffects for MonsterSchema {
         }
     }
 
+    fn initiative(&self) -> i32 {
+        self.initiative
+    }
+
     fn effects(&self) -> Vec<&SimpleEffectSchema> {
         self.effects.iter().flatten().collect_vec()
     }

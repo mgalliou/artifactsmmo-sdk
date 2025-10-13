@@ -1,6 +1,6 @@
 use artifactsmmo_openapi::models::{FightResult, ItemSchema, MonsterSchema, SimpleEffectSchema};
 use itertools::Itertools;
-use std::{cmp::max, marker::Sized, sync::Arc};
+use std::{cell::RefCell, cmp::max, rc::Rc, sync::Arc};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
@@ -8,6 +8,7 @@ use crate::{CharacterClient, Gear, Slot, character::HasCharacterData, skill::Ski
 
 const BASE_HP: u32 = 115;
 const HP_PER_LEVEL: u32 = 5;
+const BASE_INITIATIVE: i32 = 100;
 
 const MAX_TURN: u32 = 100;
 const SECOND_PER_TURN: u32 = 2;
@@ -22,22 +23,35 @@ pub struct Simulator {}
 
 impl Simulator {
     pub fn fight(level: u32, gear: &Gear, monster: &MonsterSchema, params: FightParams) -> Fight {
-        let mut char = SimulationCharacter::new(
+        let char = Rc::new(RefCell::new(SimulationCharacter::new(
             level,
             gear,
             params.utility1_quantity,
             params.utility2_quantity,
             params.missing_hp,
             params.averaged,
-        );
-        let mut monster = SimulationMonster::new(monster, params.averaged);
+        )));
+        let monster = Rc::new(RefCell::new(SimulationMonster::new(
+            monster,
+            params.averaged,
+        )));
+        let mut fighters: Vec<Rc<RefCell<dyn SimulationEntity>>> =
+            vec![char.clone(), monster.clone()];
+        fighters.sort_by_key(|e| e.borrow().initiative());
+        fighters.reverse();
+        let mut char = char.borrow_mut();
+        let mut monster = monster.borrow_mut();
+        let mut fighters_iter = fighters.into_iter().cycle();
         let mut turn = 1;
-
-        while turn <= MAX_TURN && char.current_health > 0 && monster.current_health > 0 {
-            if turn % 2 == 1 {
-                char.turn_against(&mut monster, turn);
+        while turn <= MAX_TURN
+            && char.current_health > 0
+            && monster.current_health > 0
+            && let Some(fighter) = fighters_iter.next()
+        {
+            if fighter.borrow().is_monster() {
+                monster.turn_against(&mut *char, turn);
             } else {
-                monster.turn_against(&mut char, turn);
+                char.turn_against(&mut *monster, turn);
             }
             turn += 1;
         }
@@ -169,7 +183,7 @@ impl Default for FightParams {
 }
 
 trait SimulationEntity: HasEffects {
-    fn turn_against<S: SimulationEntity>(&mut self, enemy: &mut S, turn: u32) {
+    fn turn_against(&mut self, enemy: &mut dyn SimulationEntity, turn: u32) {
         if turn == self.reconstitution() as u32 {
             self.set_health(self.max_hp());
         }
@@ -210,11 +224,11 @@ trait SimulationEntity: HasEffects {
         self.inc_turn();
     }
 
-    fn apply_burn<S: SimulationEntity>(&self, enemy: &mut S) {
+    fn apply_burn(&self, enemy: &mut dyn SimulationEntity) {
         enemy.set_burning(self.critless_damage_against(enemy) * self.burn() / 100);
     }
 
-    fn apply_poison<S: SimulationEntity>(&self, enemy: &mut S) {
+    fn apply_poison(&self, enemy: &mut dyn SimulationEntity) {
         enemy.set_poisoned(self.poison());
     }
 
@@ -292,6 +306,7 @@ trait SimulationEntity: HasEffects {
 
     fn dec_utility1(&mut self) {}
     fn dec_utility2(&mut self) {}
+    fn is_monster(&self) -> bool;
 }
 
 pub struct SimulationCharacter<'a> {
@@ -299,6 +314,7 @@ pub struct SimulationCharacter<'a> {
     gear: &'a Gear,
     starting_hp: i32,
     max_hp: i32,
+    inititive: i32,
 
     current_turn: u32,
     current_health: i32,
@@ -331,6 +347,7 @@ impl<'a> SimulationCharacter<'a> {
             gear,
             max_hp,
             starting_hp,
+            inititive: BASE_INITIATIVE + gear.initiative(),
             current_health: starting_hp,
             current_turn: 1,
             fire_res: gear.resistance(DamageType::Fire),
@@ -420,6 +437,10 @@ impl<'a> SimulationEntity for SimulationCharacter<'a> {
             DamageType::Air => self.air_res -= corrupted,
         }
     }
+
+    fn is_monster(&self) -> bool {
+        false
+    }
 }
 
 impl<'a> HasEffects for SimulationCharacter<'a> {
@@ -430,6 +451,10 @@ impl<'a> HasEffects for SimulationCharacter<'a> {
             DamageType::Water => self.water_res,
             DamageType::Air => self.air_res,
         }
+    }
+
+    fn initiative(&self) -> i32 {
+        self.inititive
     }
 
     fn effect_value(&self, effect: &str) -> i32 {
@@ -523,6 +548,10 @@ impl<'a> SimulationEntity for SimulationMonster<'a> {
             DamageType::Water => self.water_res -= corrupted,
             DamageType::Air => self.air_res -= corrupted,
         }
+    }
+
+    fn is_monster(&self) -> bool {
+        true
     }
 }
 
@@ -667,42 +696,52 @@ impl DamageType {
     }
 }
 
-pub trait HasEffects {
-    const HP: &str = "hp";
-    const BOOST_HP: &str = "boost_hp";
-    const HEAL: &str = "heal";
-    const HEALING: &str = "healing";
-    const RESTORE: &str = "restore";
-    const HASTE: &str = "haste";
-    const DMG: &str = "dmg";
-    const CRITICAL_STRIKE: &str = "critical_strike";
-    const POISON: &str = "poison";
-    const WISDOM: &str = "wisdom";
-    const LIFESTEAL: &str = "lifesteal";
-    const BURN: &str = "burn";
-    const RECONSTITUTION: &str = "reconstitution";
-    const CORRUPTED: &str = "corrupted";
-    const PROSPECTING: &str = "prospecting";
-    const INVENTORY_SPACE: &str = "inventory_space";
+const HP: &str = "hp";
+const BOOST_HP: &str = "boost_hp";
+const HEAL: &str = "heal";
+const HEALING: &str = "healing";
+const RESTORE: &str = "restore";
+const HASTE: &str = "haste";
+const DMG: &str = "dmg";
+const CRITICAL_STRIKE: &str = "critical_strike";
+const POISON: &str = "poison";
+const WISDOM: &str = "wisdom";
+const LIFESTEAL: &str = "lifesteal";
+const BURN: &str = "burn";
+const RECONSTITUTION: &str = "reconstitution";
+const CORRUPTED: &str = "corrupted";
+const PROSPECTING: &str = "prospecting";
+const INVENTORY_SPACE: &str = "inventory_space";
+const INITIATIVE: &str = "initiative";
+const THREAT: &str = "threat";
 
+pub trait HasEffects {
     fn health(&self) -> i32 {
-        self.effect_value(Self::HP) + self.effect_value(Self::BOOST_HP)
+        self.effect_value(HP) + self.effect_value(BOOST_HP)
     }
 
     fn heal(&self) -> i32 {
-        self.effect_value(Self::HEAL)
+        self.effect_value(HEAL)
     }
 
     fn healing(&self) -> i32 {
-        self.effect_value(Self::HEALING)
+        self.effect_value(HEALING)
     }
 
     fn restore(&self) -> i32 {
-        self.effect_value(Self::RESTORE)
+        self.effect_value(RESTORE)
     }
 
     fn haste(&self) -> i32 {
-        self.effect_value(Self::HASTE)
+        self.effect_value(HASTE)
+    }
+
+    fn initiative(&self) -> i32 {
+        self.effect_value(INITIATIVE)
+    }
+
+    fn threat(&self) -> i32 {
+        self.effect_value(THREAT)
     }
 
     fn attack_damage(&self, r#type: DamageType) -> i32 {
@@ -710,7 +749,7 @@ pub trait HasEffects {
     }
 
     fn damage_increase(&self, r#type: DamageType) -> i32 {
-        self.effect_value(Self::DMG)
+        self.effect_value(DMG)
             + self.effect_value(r#type.into_damage())
             + self.effect_value(r#type.into_boost_damage())
     }
@@ -720,35 +759,35 @@ pub trait HasEffects {
     }
 
     fn critical_strike(&self) -> i32 {
-        self.effect_value(Self::CRITICAL_STRIKE)
+        self.effect_value(CRITICAL_STRIKE)
     }
 
     fn poison(&self) -> i32 {
-        self.effect_value(Self::POISON)
+        self.effect_value(POISON)
     }
 
     fn lifesteal(&self) -> i32 {
-        self.effect_value(Self::LIFESTEAL)
+        self.effect_value(LIFESTEAL)
     }
 
     fn burn(&self) -> i32 {
-        self.effect_value(Self::BURN)
+        self.effect_value(BURN)
     }
 
     fn reconstitution(&self) -> i32 {
-        self.effect_value(Self::RECONSTITUTION)
+        self.effect_value(RECONSTITUTION)
     }
 
     fn corrupted(&self) -> i32 {
-        self.effect_value(Self::CORRUPTED)
+        self.effect_value(CORRUPTED)
     }
 
     fn wisdom(&self) -> i32 {
-        self.effect_value(Self::WISDOM)
+        self.effect_value(WISDOM)
     }
 
     fn prospecting(&self) -> i32 {
-        self.effect_value(Self::PROSPECTING)
+        self.effect_value(PROSPECTING)
     }
 
     fn skill_cooldown_reduction(&self, skill: Skill) -> i32 {
@@ -756,7 +795,7 @@ pub trait HasEffects {
     }
 
     fn inventory_space(&self) -> i32 {
-        self.effect_value(Self::INVENTORY_SPACE)
+        self.effect_value(INVENTORY_SPACE)
     }
 
     fn effect_value(&self, effect: &str) -> i32 {
@@ -766,7 +805,7 @@ pub trait HasEffects {
             .unwrap_or(0)
     }
 
-    fn hits_against(&self, enemy: &impl HasEffects, average: bool) -> Vec<Hit> {
+    fn hits_against(&self, enemy: &dyn HasEffects, average: bool) -> Vec<Hit> {
         let mut is_crit = false;
         if !average {
             is_crit = rand::random_range(0..=100) <= self.critical_strike();
@@ -795,7 +834,7 @@ pub trait HasEffects {
             .collect_vec()
     }
 
-    fn critless_damage_against(&self, enemy: &impl HasEffects) -> i32 {
+    fn critless_damage_against(&self, enemy: &dyn HasEffects) -> i32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
@@ -813,20 +852,20 @@ pub trait HasEffects {
     // `target` entity
     fn average_dmg_boost_against_with(
         &self,
-        boost: &impl HasEffects,
-        target: &impl HasEffects,
+        boost: &dyn HasEffects,
+        target: &dyn HasEffects,
     ) -> f32 {
         self.average_dmg_against_with(boost, target) - self.average_dmg_against(target)
     }
 
-    fn average_dmg_reduction_against(&self, target: &impl HasEffects) -> f32
+    fn average_dmg_reduction_against(&self, target: &dyn HasEffects) -> f32
     where
         Self: Sized,
     {
         target.average_damage() - target.average_dmg_against(self)
     }
 
-    fn average_dmg_against<H: HasEffects>(&self, target: &H) -> f32 {
+    fn average_dmg_against(&self, target: &dyn HasEffects) -> f32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
@@ -841,7 +880,7 @@ pub trait HasEffects {
 
     // Returns the average attack damage done by the `self` entity against the `target ` entity with additionnnal effects from the `boost` entity
     // damage `boost`
-    fn average_dmg_against_with(&self, boost: &impl HasEffects, target: &impl HasEffects) -> f32 {
+    fn average_dmg_against_with(&self, boost: &dyn HasEffects, target: &dyn HasEffects) -> f32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
