@@ -39,23 +39,25 @@ impl Simulator {
             vec![char.clone(), monster.clone()];
         fighters.sort_by_key(|e| e.borrow().initiative());
         fighters.reverse();
-        let mut char = char.borrow_mut();
-        let mut monster = monster.borrow_mut();
-        let mut fighters_iter = fighters.into_iter().cycle();
+        let mut fighters_iter = fighters.iter().cycle();
         let mut turn = 1;
         while turn <= MAX_TURN
-            && char.current_health > 0
-            && monster.current_health > 0
+            && char.borrow().current_health > 0
+            && monster.borrow().current_health > 0
             && let Some(fighter) = fighters_iter.next()
         {
             if fighter.borrow().is_monster() {
-                monster.turn_against(&mut *char, turn);
+                monster
+                    .borrow_mut()
+                    .turn_against(&mut *char.borrow_mut(), turn);
             } else {
-                char.turn_against(&mut *monster, turn);
+                char.borrow_mut()
+                    .turn_against(&mut *monster.borrow_mut(), turn);
             }
             turn += 1;
         }
-
+        let char = char.borrow();
+        let monster = monster.borrow();
         Fight {
             turns: turn,
             hp: char.current_health,
