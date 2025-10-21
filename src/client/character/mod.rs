@@ -52,10 +52,11 @@ use strum::IntoEnumIterator;
 
 pub use inventory::InventoryClient;
 
+mod request_handler;
+
 pub mod action;
 pub mod error;
 pub mod inventory;
-mod request_handler;
 
 pub type CharacterData = Arc<RwLock<Arc<CharacterSchema>>>;
 

@@ -1,7 +1,7 @@
 use crate::{
     CharacterClient, Gear, Slot,
     character::HasCharacterData,
-    entity::{SimulationCharacter, SimulationEntity, SimulationMonster},
+    simulator::entity::{SimulationCharacter, SimulationEntity, SimulationMonster},
 };
 use artifactsmmo_openapi::models::{FightResult, MonsterSchema};
 use std::{cell::RefCell, cmp::max, rc::Rc};
@@ -11,9 +11,10 @@ pub use effect_code::EffectCode;
 pub use has_effects::HasEffects;
 pub use hit::Hit;
 
+mod entity;
+
 pub mod damage_type;
 pub mod effect_code;
-pub mod entity;
 pub mod has_effects;
 pub mod hit;
 
