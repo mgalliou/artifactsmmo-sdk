@@ -1,12 +1,12 @@
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
+        Error,
         configuration::Configuration,
         tasks_api::{
-            get_all_tasks_rewards_tasks_rewards_get, get_all_tasks_tasks_list_get,
             GetAllTasksRewardsTasksRewardsGetError, GetAllTasksTasksListGetError,
+            get_all_tasks_rewards_tasks_rewards_get, get_all_tasks_tasks_list_get,
         },
-        Error,
     },
     models::{DataPageDropRateSchema, DataPageTaskFullSchema, DropRateSchema, TaskFullSchema},
 };

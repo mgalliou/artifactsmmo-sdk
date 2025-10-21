@@ -1,4 +1,4 @@
-use artifactsmmo_openapi::apis::{configuration::Configuration, Error};
+use artifactsmmo_openapi::apis::{Error, configuration::Configuration};
 use std::sync::Arc;
 
 pub use account::AccountApi;

@@ -3,16 +3,16 @@ use std::{result::Result, sync::Arc, vec::Vec};
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
+        Error,
         configuration::Configuration,
         grand_exchange_api::{
-            get_ge_sell_history_grandexchange_history_code_get,
-            get_ge_sell_order_grandexchange_orders_id_get,
-            get_ge_sell_orders_grandexchange_orders_get,
             GetGeSellHistoryGrandexchangeHistoryCodeGetError,
             GetGeSellOrderGrandexchangeOrdersIdGetError,
             GetGeSellOrdersGrandexchangeOrdersGetError,
+            get_ge_sell_history_grandexchange_history_code_get,
+            get_ge_sell_order_grandexchange_orders_id_get,
+            get_ge_sell_orders_grandexchange_orders_get,
         },
-        Error,
     },
     models::{
         DataPageGeOrderHistorySchema, DataPageGeOrderSchema, GeOrderHistorySchema,

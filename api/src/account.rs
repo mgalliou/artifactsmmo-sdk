@@ -1,14 +1,14 @@
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
+        Error,
         accounts_api::{
-            get_account_achievements_accounts_account_achievements_get,
-            get_account_characters_accounts_account_characters_get,
             GetAccountAchievementsAccountsAccountAchievementsGetError,
             GetAccountCharactersAccountsAccountCharactersGetError,
+            get_account_achievements_accounts_account_achievements_get,
+            get_account_characters_accounts_account_characters_get,
         },
         configuration::Configuration,
-        Error,
     },
     models::{AccountAchievementSchema, CharactersListSchema, DataPageAccountAchievementSchema},
 };

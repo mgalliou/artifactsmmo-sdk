@@ -1,9 +1,9 @@
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
-        configuration::Configuration,
-        monsters_api::{get_all_monsters_monsters_get, GetAllMonstersMonstersGetError},
         Error,
+        configuration::Configuration,
+        monsters_api::{GetAllMonstersMonstersGetError, get_all_monsters_monsters_get},
     },
     models::{DataPageMonsterSchema, MonsterSchema},
 };

@@ -1,9 +1,9 @@
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
-        configuration::Configuration,
-        resources_api::{get_all_resources_resources_get, GetAllResourcesResourcesGetError},
         Error,
+        configuration::Configuration,
+        resources_api::{GetAllResourcesResourcesGetError, get_all_resources_resources_get},
     },
     models::{DataPageResourceSchema, ResourceSchema},
 };

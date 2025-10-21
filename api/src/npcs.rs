@@ -1,12 +1,12 @@
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
+        Error,
         configuration::Configuration,
         npcs_api::{
-            get_all_npcs_items_npcs_items_get, get_all_npcs_npcs_details_get,
             GetAllNpcsItemsNpcsItemsGetError, GetAllNpcsNpcsDetailsGetError,
+            get_all_npcs_items_npcs_items_get, get_all_npcs_npcs_details_get,
         },
-        Error,
     },
     models::{DataPageNpcItem, DataPageNpcSchema, NpcItem, NpcSchema},
 };

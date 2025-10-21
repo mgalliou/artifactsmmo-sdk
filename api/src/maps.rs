@@ -1,12 +1,12 @@
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
+        Error,
         configuration::Configuration,
         maps_api::{
-            get_all_maps_maps_get, get_map_by_id_maps_id_map_id_get, GetAllMapsMapsGetError,
-            GetMapByIdMapsIdMapIdGetError,
+            GetAllMapsMapsGetError, GetMapByIdMapsIdMapIdGetError, get_all_maps_maps_get,
+            get_map_by_id_maps_id_map_id_get,
         },
-        Error,
     },
     models::{DataPageMapSchema, MapResponseSchema, MapSchema},
 };

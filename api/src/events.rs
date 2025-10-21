@@ -1,12 +1,12 @@
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
+        Error,
         configuration::Configuration,
         events_api::{
-            get_all_active_events_events_active_get, get_all_events_events_get,
             GetAllActiveEventsEventsActiveGetError, GetAllEventsEventsGetError,
+            get_all_active_events_events_active_get, get_all_events_events_get,
         },
-        Error,
     },
     models::{ActiveEventSchema, DataPageActiveEventSchema, DataPageEventSchema, EventSchema},
 };

@@ -1,12 +1,12 @@
 use crate::{DataPage, Paginate};
 use artifactsmmo_openapi::{
     apis::{
+        Error,
         configuration::Configuration,
         my_account_api::{
-            get_bank_details_my_bank_get, get_bank_items_my_bank_items_get,
             GetBankDetailsMyBankGetError, GetBankItemsMyBankItemsGetError,
+            get_bank_details_my_bank_get, get_bank_items_my_bank_items_get,
         },
-        Error,
     },
     models::{BankResponseSchema, DataPageSimpleItemSchema, SimpleItemSchema},
 };

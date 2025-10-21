@@ -1,10 +1,5 @@
-use crate::{
-    average_dmg,
-    simulator::{HasEffects, damage_type::DamageType},
-};
-use artifactsmmo_openapi::models::{
-    ItemSchema, ItemSlot, MonsterSchema, SimpleEffectSchema, SimpleItemSchema,
-};
+use crate::simulator::HasEffects;
+use artifactsmmo_openapi::models::{ItemSchema, ItemSlot, SimpleEffectSchema, SimpleItemSchema};
 use itertools::Itertools;
 use std::{fmt::Display, mem::swap, sync::Arc};
 use strum::IntoEnumIterator;

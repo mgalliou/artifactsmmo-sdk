@@ -1,8 +1,8 @@
 use artifactsmmo_openapi::{
     apis::{
-        characters_api::{get_character_characters_name_get, GetCharacterCharactersNameGetError},
-        configuration::Configuration,
         Error,
+        characters_api::{GetCharacterCharactersNameGetError, get_character_characters_name_get},
+        configuration::Configuration,
     },
     models::CharacterResponseSchema,
 };
