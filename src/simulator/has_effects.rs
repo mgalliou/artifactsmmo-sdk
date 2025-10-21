@@ -1,5 +1,7 @@
-use artifactsmmo_openapi::models::SimpleEffectSchema;
-use crate::{Simulator, Skill, damage_type::DamageType, hit::Hit};
+use crate::models::SimpleEffectSchema;
+use crate::{DamageType, Hit, Skill, average_dmg};
+use itertools::Itertools;
+use strum::IntoEnumIterator;
 
 const HP: &str = "hp";
 const BOOST_HP: &str = "boost_hp";
@@ -142,8 +144,8 @@ pub trait HasEffects {
     fn critless_dmg_against(&self, target: &dyn HasEffects) -> i32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(self.attack_dmg(t), self.dmg_increase(t), 0, target.res(t))
-                    .round() as i32
+                average_dmg(self.attack_dmg(t), self.dmg_increase(t), 0, target.res(t)).round()
+                    as i32
             })
             .sum()
     }
@@ -168,7 +170,7 @@ pub trait HasEffects {
     fn average_dmg_against(&self, target: &dyn HasEffects) -> f32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(self.attack_dmg(t), 0, self.critical_strike(), target.res(t))
+                average_dmg(
             })
             .sum()
     }
@@ -178,7 +180,7 @@ pub trait HasEffects {
     fn average_dmg_against_with(&self, boost: &dyn HasEffects, target: &dyn HasEffects) -> f32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(
+                average_dmg(
                     self.attack_dmg(t),
                     boost.dmg_increase(t),
                     self.critical_strike() + boost.critical_strike(),

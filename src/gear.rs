@@ -1,4 +1,7 @@
-use crate::simulator::{damage_type::DamageType, HasEffects, Simulator};
+use crate::{
+    average_dmg,
+    simulator::{HasEffects, damage_type::DamageType},
+};
 use artifactsmmo_openapi::models::{
     ItemSchema, ItemSlot, MonsterSchema, SimpleEffectSchema, SimpleItemSchema,
 };
@@ -96,7 +99,7 @@ impl Gear {
     pub fn average_dmg_against(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(
+                average_dmg(
                     self.attack_dmg(t),
                     self.dmg_increase(t),
                     self.critical_strike(),
@@ -110,7 +113,7 @@ impl Gear {
     pub fn avarage_dmg_from(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(
+                average_dmg(
                     monster.attack_dmg(t),
                     monster.dmg_increase(t),
                     monster.critical_strike(),

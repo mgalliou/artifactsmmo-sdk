@@ -1,16 +1,21 @@
 use crate::{
-    character::HasCharacterData, damage_type::DamageType, entity::{SimulationCharacter, SimulationEntity, SimulationMonster}, hit::Hit, skill::Skill, CharacterClient, Gear, Slot
+    CharacterClient, Gear, Slot,
+    character::HasCharacterData,
+    entity::{SimulationCharacter, SimulationEntity, SimulationMonster},
 };
-use artifactsmmo_openapi::models::{FightResult, MonsterSchema, SimpleEffectSchema};
-use itertools::Itertools;
+use artifactsmmo_openapi::models::{FightResult, MonsterSchema};
 use std::{cell::RefCell, cmp::max, rc::Rc};
-use strum::IntoEnumIterator;
+
+pub use damage_type::DamageType;
+pub use effect_code::EffectCode;
+pub use has_effects::HasEffects;
+pub use hit::Hit;
 
 pub mod damage_type;
 pub mod effect_code;
 pub mod entity;
-pub mod hit;
 pub mod has_effects;
+pub mod hit;
 
 const BASE_HP: u32 = 115;
 const HP_PER_LEVEL: u32 = 5;
@@ -74,71 +79,8 @@ impl Simulator {
             } else {
                 FightResult::Win
             },
-            cd: Self::fight_cd(gear.haste(), turn),
+            cd: fight_cd(gear.haste(), turn),
         }
-    }
-
-    /// Compute the average damage an attack will do against the given `target_resistance`.
-    pub fn average_dmg(
-        attack_dmg: i32,
-        dmg_increase: i32,
-        critical_strike: i32,
-        target_res: i32,
-    ) -> f32 {
-        let multiplier = Self::average_multiplier(dmg_increase, critical_strike, target_res);
-
-        attack_dmg as f32 * multiplier
-    }
-
-    fn average_multiplier(dmg_increase: i32, critical_strike: i32, target_res: i32) -> f32 {
-        Self::critless_multiplier(dmg_increase, target_res)
-            * (1.0 + critical_strike as f32 * 0.01 * CRIT_MULTIPLIER)
-    }
-
-    fn critless_multiplier(dmg_increase: i32, target_res: i32) -> f32 {
-        Self::dmg_multiplier(dmg_increase) * Self::res_multiplier(target_res)
-    }
-
-    fn crit_multiplier(dmg_increase: i32, target_res: i32) -> f32 {
-        Self::critless_multiplier(dmg_increase, target_res) * (1.0 + CRIT_MULTIPLIER)
-    }
-
-    fn dmg_multiplier(dmg_increase: i32) -> f32 {
-        1.0 + dmg_increase as f32 * 0.01
-    }
-
-    fn res_multiplier(target_res: i32) -> f32 {
-        let target_res = if target_res > 100 {
-            100.0
-        } else {
-            target_res as f32
-        };
-        1.0 - target_res * 0.01
-    }
-
-    pub fn time_to_rest(health: u32) -> u32 {
-        health / REST_HP_PER_SEC
-            + if health.is_multiple_of(REST_HP_PER_SEC) {
-                0
-            } else {
-                1
-            }
-    }
-
-    fn fight_cd(haste: i32, turns: u32) -> u32 {
-        max(
-            MIN_FIGHT_CD,
-            ((turns * SECOND_PER_TURN) as f32
-                - (haste as f32 * 0.01) * (turns * SECOND_PER_TURN) as f32)
-                .round() as u32,
-        )
-    }
-
-    pub fn gather_cd(resource_level: u32, cooldown_reduction: i32) -> u32 {
-        let level = resource_level as f32;
-        let reduction = cooldown_reduction as f32;
-
-        ((30.0 + (level / 2.0)) * (1.0 + reduction * 0.01)).round() as u32
     }
 }
 
@@ -205,10 +147,72 @@ impl Fight {
     }
 }
 
+/// Compute the average damage an attack will do against the given `target_resistance`.
+pub fn average_dmg(
+    attack_dmg: i32,
+    dmg_increase: i32,
+    critical_strike: i32,
+    target_res: i32,
+) -> f32 {
+    let multiplier = average_multiplier(dmg_increase, critical_strike, target_res);
+
+    attack_dmg as f32 * multiplier
+}
+
+fn average_multiplier(dmg_increase: i32, critical_strike: i32, target_res: i32) -> f32 {
+    critless_multiplier(dmg_increase, target_res)
+        * (1.0 + critical_strike as f32 * 0.01 * CRIT_MULTIPLIER)
+}
+
+fn critless_multiplier(dmg_increase: i32, target_res: i32) -> f32 {
+    dmg_multiplier(dmg_increase) * res_multiplier(target_res)
+}
+
+fn crit_multiplier(dmg_increase: i32, target_res: i32) -> f32 {
+    critless_multiplier(dmg_increase, target_res) * (1.0 + CRIT_MULTIPLIER)
+}
+
+fn dmg_multiplier(dmg_increase: i32) -> f32 {
+    1.0 + dmg_increase as f32 * 0.01
+}
+
+fn res_multiplier(target_res: i32) -> f32 {
+    let target_res = if target_res > 100 {
+        100.0
+    } else {
+        target_res as f32
+    };
+    1.0 - target_res * 0.01
+}
+
+pub fn time_to_rest(health: u32) -> u32 {
+    health / REST_HP_PER_SEC
+        + if health.is_multiple_of(REST_HP_PER_SEC) {
+            0
+        } else {
+            1
+        }
+}
+
+fn fight_cd(haste: i32, turns: u32) -> u32 {
+    max(
+        MIN_FIGHT_CD,
+        ((turns * SECOND_PER_TURN) as f32
+            - (haste as f32 * 0.01) * (turns * SECOND_PER_TURN) as f32)
+            .round() as u32,
+    )
+}
+
+pub fn gather_cd(resource_level: u32, cooldown_reduction: i32) -> u32 {
+    let level = resource_level as f32;
+    let reduction = cooldown_reduction as f32;
+
+    ((30.0 + (level / 2.0)) * (1.0 + reduction * 0.01)).round() as u32
+}
 
 #[cfg(test)]
 mod tests {
-    use crate::Simulator;
+    use crate::gather_cd;
 
     //TODO: rewrite tests
     // use crate::{ITEMS, MONSTERS};
@@ -273,6 +277,6 @@ mod tests {
     // }
     #[test]
     fn check_gather_cd() {
-        assert_eq!(Simulator::gather_cd(1, -10), 27)
+        assert_eq!(gather_cd(1, -10), 27)
     }
 }
