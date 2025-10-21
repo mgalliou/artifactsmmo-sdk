@@ -96,34 +96,6 @@ impl Gear {
         }
     }
 
-    pub fn average_dmg_against(&self, monster: &MonsterSchema) -> i32 {
-        DamageType::iter()
-            .map(|t| {
-                average_dmg(
-                    self.attack_dmg(t),
-                    self.dmg_increase(t),
-                    self.critical_strike(),
-                    monster.res(t),
-                )
-                .round() as i32
-            })
-            .sum()
-    }
-
-    pub fn avarage_dmg_from(&self, monster: &MonsterSchema) -> i32 {
-        DamageType::iter()
-            .map(|t| {
-                average_dmg(
-                    monster.attack_dmg(t),
-                    monster.dmg_increase(t),
-                    monster.critical_strike(),
-                    self.res(t),
-                )
-                .round() as i32
-            })
-            .sum()
-    }
-
     pub fn align_to(&mut self, other: &Gear) {
         if self.ring1 == other.ring2 || self.ring2 == other.ring1 {
             swap(&mut self.ring1, &mut self.ring2);
