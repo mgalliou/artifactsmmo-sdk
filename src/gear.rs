@@ -92,28 +92,29 @@ impl Gear {
             Slot::Bag => self.bag.clone(),
         }
     }
-    pub fn average_damage_against(&self, monster: &MonsterSchema) -> i32 {
+
+    pub fn average_dmg_against(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
-                    self.attack_damage(t),
-                    self.damage_increase(t),
+                    self.attack_dmg(t),
+                    self.dmg_increase(t),
                     self.critical_strike(),
-                    monster.resistance(t),
+                    monster.res(t),
                 )
                 .round() as i32
             })
             .sum()
     }
 
-    pub fn avarage_damage_from(&self, monster: &MonsterSchema) -> i32 {
+    pub fn avarage_dmg_from(&self, monster: &MonsterSchema) -> i32 {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
-                    monster.attack_damage(t),
-                    monster.damage_increase(t),
+                    monster.attack_dmg(t),
+                    monster.dmg_increase(t),
                     monster.critical_strike(),
-                    self.resistance(t),
+                    self.res(t),
                 )
                 .round() as i32
             })

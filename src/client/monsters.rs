@@ -94,7 +94,7 @@ impl HasEffects for MonsterSchema {
         self.hp
     }
 
-    fn attack_damage(&self, r#type: DamageType) -> i32 {
+    fn attack_dmg(&self, r#type: DamageType) -> i32 {
         match r#type {
             DamageType::Fire => self.attack_fire,
             DamageType::Earth => self.attack_earth,
@@ -107,7 +107,7 @@ impl HasEffects for MonsterSchema {
         self.critical_strike
     }
 
-    fn resistance(&self, r#type: DamageType) -> i32 {
+    fn res(&self, r#type: DamageType) -> i32 {
         match r#type {
             DamageType::Fire => self.res_fire,
             DamageType::Earth => self.res_earth,

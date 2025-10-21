@@ -74,45 +74,40 @@ impl Simulator {
 
     /// Compute the average damage an attack will do against the given `target_resistance`.
     pub fn average_dmg(
-        attack_damage: i32,
-        damage_increase: i32,
+        attack_dmg: i32,
+        dmg_increase: i32,
         critical_strike: i32,
-        target_resistance: i32,
+        target_res: i32,
     ) -> f32 {
-        let multiplier =
-            Self::average_multiplier(damage_increase, critical_strike, target_resistance);
+        let multiplier = Self::average_multiplier(dmg_increase, critical_strike, target_res);
 
-        attack_damage as f32 * multiplier
+        attack_dmg as f32 * multiplier
     }
 
-    fn average_multiplier(
-        damage_increase: i32,
-        critical_strike: i32,
-        target_resistance: i32,
-    ) -> f32 {
-        Self::critless_multiplier(damage_increase, target_resistance)
+    fn average_multiplier(dmg_increase: i32, critical_strike: i32, target_res: i32) -> f32 {
+        Self::critless_multiplier(dmg_increase, target_res)
             * (1.0 + critical_strike as f32 * 0.01 * CRIT_MULTIPLIER)
     }
 
-    fn critless_multiplier(damage_increase: i32, target_resistance: i32) -> f32 {
-        Self::dmg_multiplier(damage_increase) * Self::res_multiplier(target_resistance)
+    fn critless_multiplier(dmg_increase: i32, target_res: i32) -> f32 {
+        Self::dmg_multiplier(dmg_increase) * Self::res_multiplier(target_res)
     }
 
-    fn crit_multiplier(damage_increase: i32, target_resistance: i32) -> f32 {
-        Self::critless_multiplier(damage_increase, target_resistance) * (1.0 + CRIT_MULTIPLIER)
+    fn crit_multiplier(dmg_increase: i32, target_res: i32) -> f32 {
+        Self::critless_multiplier(dmg_increase, target_res) * (1.0 + CRIT_MULTIPLIER)
     }
 
     fn dmg_multiplier(dmg_increase: i32) -> f32 {
         1.0 + dmg_increase as f32 * 0.01
     }
 
-    fn res_multiplier(target_resistance: i32) -> f32 {
-        let resistance = if target_resistance > 100 {
+    fn res_multiplier(target_res: i32) -> f32 {
+        let target_res = if target_res > 100 {
             100.0
         } else {
-            target_resistance as f32
+            target_res as f32
         };
-        1.0 - resistance * 0.01
+        1.0 - target_res * 0.01
     }
 
     pub fn time_to_rest(health: u32) -> u32 {
@@ -185,7 +180,7 @@ impl Default for FightParams {
 }
 
 trait SimulationEntity: HasEffects {
-    fn turn_against(&mut self, enemy: &mut dyn SimulationEntity, turn: u32) {
+    fn turn_against(&mut self, target: &mut dyn SimulationEntity, turn: u32) {
         if turn == self.reconstitution() as u32 {
             self.set_health(self.max_hp());
         }
@@ -208,30 +203,30 @@ trait SimulationEntity: HasEffects {
             }
         }
         if self.current_turn() == 1 {
-            self.apply_burn(enemy);
-            self.apply_poison(enemy);
+            self.apply_burn(target);
+            self.apply_poison(target);
         }
-        for hit in self.hits_against(enemy, self.average()).iter() {
-            enemy.dec_health(hit.damage);
+        for hit in self.hits_against(target, self.average()).iter() {
+            target.dec_health(hit.dmg);
             if hit.is_crit {
-                self.inc_health(hit.damage * self.lifesteal() / 100);
+                self.inc_health(hit.dmg * self.lifesteal() / 100);
             }
-            if enemy.current_health() < 1 {
+            if target.current_health() < 1 {
                 return;
             }
-            if enemy.corrupted() > 0 {
-                enemy.suffer_corruption(hit.r#type);
+            if target.corrupted() > 0 {
+                target.suffer_corruption(hit.r#type);
             }
         }
         self.inc_turn();
     }
 
-    fn apply_burn(&self, enemy: &mut dyn SimulationEntity) {
-        enemy.set_burning(self.critless_damage_against(enemy) * self.burn() / 100);
+    fn apply_burn(&self, target: &mut dyn SimulationEntity) {
+        target.set_burning(self.critless_dmg_against(target) * self.burn() / 100);
     }
 
-    fn apply_poison(&self, enemy: &mut dyn SimulationEntity) {
-        enemy.set_poisoned(self.poison());
+    fn apply_poison(&self, target: &mut dyn SimulationEntity) {
+        target.set_poisoned(self.poison());
     }
 
     fn receive_healing(&mut self) {
@@ -352,10 +347,10 @@ impl<'a> SimulationCharacter<'a> {
             inititive: BASE_INITIATIVE + gear.initiative(),
             current_health: starting_hp,
             current_turn: 1,
-            fire_res: gear.resistance(DamageType::Fire),
-            earth_res: gear.resistance(DamageType::Earth),
-            water_res: gear.resistance(DamageType::Water),
-            air_res: gear.resistance(DamageType::Air),
+            fire_res: gear.res(DamageType::Fire),
+            earth_res: gear.res(DamageType::Earth),
+            water_res: gear.res(DamageType::Water),
+            air_res: gear.res(DamageType::Air),
             utility1_quantity,
             utility2_quantity,
             burning: 0,
@@ -446,7 +441,7 @@ impl<'a> SimulationEntity for SimulationCharacter<'a> {
 }
 
 impl<'a> HasEffects for SimulationCharacter<'a> {
-    fn resistance(&self, r#type: DamageType) -> i32 {
+    fn res(&self, r#type: DamageType) -> i32 {
         match r#type {
             DamageType::Fire => self.fire_res,
             DamageType::Earth => self.earth_res,
@@ -493,10 +488,10 @@ impl<'a> SimulationMonster<'a> {
             burning: 0,
             poisoned: 0,
             average,
-            fire_res: monster.resistance(DamageType::Fire),
-            earth_res: monster.resistance(DamageType::Earth),
-            water_res: monster.resistance(DamageType::Water),
-            air_res: monster.resistance(DamageType::Air),
+            fire_res: monster.res(DamageType::Fire),
+            earth_res: monster.res(DamageType::Earth),
+            water_res: monster.res(DamageType::Water),
+            air_res: monster.res(DamageType::Air),
         }
     }
 }
@@ -562,15 +557,15 @@ impl<'a> HasEffects for SimulationMonster<'a> {
         self.monster.health()
     }
 
-    fn attack_damage(&self, r#type: DamageType) -> i32 {
-        self.monster.attack_damage(r#type)
+    fn attack_dmg(&self, r#type: DamageType) -> i32 {
+        self.monster.attack_dmg(r#type)
     }
 
     fn critical_strike(&self) -> i32 {
         self.monster.critical_strike()
     }
 
-    fn resistance(&self, r#type: DamageType) -> i32 {
+    fn res(&self, r#type: DamageType) -> i32 {
         match r#type {
             DamageType::Fire => self.fire_res,
             DamageType::Earth => self.earth_res,
@@ -606,46 +601,45 @@ impl Fight {
 
 pub struct Hit {
     pub r#type: DamageType,
-    pub damage: i32,
+    pub dmg: i32,
     pub is_crit: bool,
 }
 
 impl Hit {
     pub fn new(
-        attack_damage: i32,
-        damage_increase: i32,
+        attack_dmg: i32,
+        dmg_increase: i32,
         r#type: DamageType,
-        target_resistance: i32,
+        target_res: i32,
         is_crit: bool,
     ) -> Hit {
-        let mut damage = attack_damage as f32;
+        let mut dmg = attack_dmg as f32;
 
-        damage *= if is_crit {
-            Simulator::crit_multiplier(damage_increase, target_resistance)
+        dmg *= if is_crit {
+            Simulator::crit_multiplier(dmg_increase, target_res)
         } else {
-            Simulator::critless_multiplier(damage_increase, target_resistance)
+            Simulator::critless_multiplier(dmg_increase, target_res)
         };
         Hit {
             r#type,
-            damage: damage.round() as i32,
+            dmg: dmg.round() as i32,
             is_crit,
         }
     }
 
     pub fn average(
-        attack_damage: i32,
-        damage_increase: i32,
+        attack_dmg: i32,
+        dmg_increase: i32,
         critical_strike: i32,
         r#type: DamageType,
-        target_resistance: i32,
+        target_res: i32,
     ) -> Hit {
-        let mut damage = attack_damage as f32;
+        let mut dmg = attack_dmg as f32;
 
-        damage *=
-            Simulator::average_multiplier(damage_increase, critical_strike, target_resistance);
+        dmg *= Simulator::average_multiplier(dmg_increase, critical_strike, target_res);
         Hit {
             r#type,
-            damage: damage.round() as i32,
+            dmg: dmg.round() as i32,
             is_crit: true,
         }
     }
@@ -670,7 +664,7 @@ impl DamageType {
         }
     }
 
-    pub fn into_damage(&self) -> &'static str {
+    pub fn into_dmg(&self) -> &'static str {
         match self {
             DamageType::Fire => "dmg_fire",
             DamageType::Earth => "dmg_earth",
@@ -679,7 +673,7 @@ impl DamageType {
         }
     }
 
-    pub fn into_boost_damage(&self) -> &'static str {
+    pub fn into_boost_dmg(&self) -> &'static str {
         match self {
             DamageType::Fire => "boost_dmg_fire",
             DamageType::Earth => "boost_dmg_earth",
@@ -688,7 +682,7 @@ impl DamageType {
         }
     }
 
-    pub fn into_resistance(&self) -> &'static str {
+    pub fn into_res(&self) -> &'static str {
         match self {
             DamageType::Fire => "res_fire",
             DamageType::Earth => "res_earth",
@@ -746,18 +740,18 @@ pub trait HasEffects {
         self.effect_value(THREAT)
     }
 
-    fn attack_damage(&self, r#type: DamageType) -> i32 {
+    fn attack_dmg(&self, r#type: DamageType) -> i32 {
         self.effect_value(r#type.into_attack())
     }
 
-    fn damage_increase(&self, r#type: DamageType) -> i32 {
+    fn dmg_increase(&self, r#type: DamageType) -> i32 {
         self.effect_value(DMG)
-            + self.effect_value(r#type.into_damage())
-            + self.effect_value(r#type.into_boost_damage())
+            + self.effect_value(r#type.into_dmg())
+            + self.effect_value(r#type.into_boost_dmg())
     }
 
-    fn resistance(&self, r#type: DamageType) -> i32 {
-        self.effect_value(r#type.into_resistance())
+    fn res(&self, r#type: DamageType) -> i32 {
+        self.effect_value(r#type.into_res())
     }
 
     fn critical_strike(&self) -> i32 {
@@ -807,28 +801,28 @@ pub trait HasEffects {
             .unwrap_or(0)
     }
 
-    fn hits_against(&self, enemy: &dyn HasEffects, average: bool) -> Vec<Hit> {
+    fn hits_against(&self, target: &dyn HasEffects, average: bool) -> Vec<Hit> {
         let mut is_crit = false;
         if !average {
             is_crit = rand::random_range(0..=100) <= self.critical_strike();
         }
         DamageType::iter()
             .filter_map(|t| {
-                let attack_damage = self.attack_damage(t);
-                (attack_damage > 0).then_some(if average {
+                let attack_dmg = self.attack_dmg(t);
+                (attack_dmg > 0).then_some(if average {
                     Hit::average(
-                        self.attack_damage(t),
-                        self.damage_increase(t),
+                        self.attack_dmg(t),
+                        self.dmg_increase(t),
                         self.critical_strike(),
                         t,
-                        enemy.resistance(t),
+                        target.res(t),
                     )
                 } else {
                     Hit::new(
-                        self.attack_damage(t),
-                        self.damage_increase(t),
+                        self.attack_dmg(t),
+                        self.dmg_increase(t),
                         t,
-                        enemy.resistance(t),
+                        target.res(t),
                         is_crit,
                     )
                 })
@@ -836,16 +830,11 @@ pub trait HasEffects {
             .collect_vec()
     }
 
-    fn critless_damage_against(&self, enemy: &dyn HasEffects) -> i32 {
+    fn critless_dmg_against(&self, target: &dyn HasEffects) -> i32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(
-                    self.attack_damage(t),
-                    self.damage_increase(t),
-                    0,
-                    enemy.resistance(t),
-                )
-                .round() as i32
+                Simulator::average_dmg(self.attack_dmg(t), self.dmg_increase(t), 0, target.res(t))
+                    .round() as i32
             })
             .sum()
     }
@@ -864,18 +853,13 @@ pub trait HasEffects {
     where
         Self: Sized,
     {
-        target.average_damage() - target.average_dmg_against(self)
+        target.average_dmg() - target.average_dmg_against(self)
     }
 
     fn average_dmg_against(&self, target: &dyn HasEffects) -> f32 {
         DamageType::iter()
             .map(|t| {
-                Simulator::average_dmg(
-                    self.attack_damage(t),
-                    0,
-                    self.critical_strike(),
-                    target.resistance(t),
-                )
+                Simulator::average_dmg(self.attack_dmg(t), 0, self.critical_strike(), target.res(t))
             })
             .sum()
     }
@@ -886,18 +870,18 @@ pub trait HasEffects {
         DamageType::iter()
             .map(|t| {
                 Simulator::average_dmg(
-                    self.attack_damage(t),
-                    boost.damage_increase(t),
+                    self.attack_dmg(t),
+                    boost.dmg_increase(t),
                     self.critical_strike() + boost.critical_strike(),
-                    target.resistance(t),
+                    target.res(t),
                 )
             })
             .sum()
     }
 
-    fn average_damage(&self) -> f32 {
+    fn average_dmg(&self) -> f32 {
         DamageType::iter()
-            .map(|t| Simulator::average_dmg(self.attack_damage(t), 0, self.critical_strike(), 0))
+            .map(|t| Simulator::average_dmg(self.attack_dmg(t), 0, self.critical_strike(), 0))
             .sum()
     }
 
