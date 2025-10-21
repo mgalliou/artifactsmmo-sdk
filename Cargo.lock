@@ -32,7 +32,7 @@ dependencies = [
 
 [[package]]
 name = "artifactsmmo-sdk"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "artifactsmmo-api-wrapper",
  "artifactsmmo-openapi",
