@@ -1,4 +1,4 @@
-use crate::simulator::{DamageType, HasEffects, Simulator};
+use crate::simulator::{damage_type::DamageType, HasEffects, Simulator};
 use artifactsmmo_openapi::models::{
     ItemSchema, ItemSlot, MonsterSchema, SimpleEffectSchema, SimpleItemSchema,
 };

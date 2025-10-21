@@ -1,7 +1,7 @@
 use crate::{
     CanProvideXp, CollectionClient, DataEntity, DropsItems, Level, Persist,
     client::events::EventsClient,
-    simulator::{DamageType, HasEffects},
+    simulator::{HasEffects, damage_type::DamageType},
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};

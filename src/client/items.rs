@@ -6,7 +6,7 @@ use crate::{
     },
     consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
-    simulator::{EffectType, HasEffects},
+    simulator::{EffectCode, HasEffects},
     skill::Skill,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
@@ -186,11 +186,11 @@ impl ItemsClient {
             i.code != item.code
                 && i.type_is(item.r#type())
                 && item.effects().iter().all(|e| {
-                    if e.code == EffectType::InventorySpace
-                        || e.code == EffectType::Mining
-                        || e.code == EffectType::Woodcutting
-                        || e.code == EffectType::Fishing
-                        || e.code == EffectType::Alchemy
+                    if e.code == EffectCode::InventorySpace
+                        || e.code == EffectCode::Mining
+                        || e.code == EffectCode::Woodcutting
+                        || e.code == EffectCode::Fishing
+                        || e.code == EffectCode::Alchemy
                     {
                         e.value >= i.effect_value(&e.code)
                     } else {
