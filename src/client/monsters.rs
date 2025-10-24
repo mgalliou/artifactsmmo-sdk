@@ -1,11 +1,14 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataEntity, DropsItems, Level, Persist,
+    CanProvideXp, Code, CollectionClient, DataEntity, DropsItems, Level, Persist,
     client::events::EventsClient,
     simulator::{HasEffects, damage_type::DamageType},
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{DropRateSchema, MonsterSchema, SimpleEffectSchema};
+use artifactsmmo_openapi::models::{
+    DropRateSchema, MonsterSchema, MonsterType, SimpleEffectSchema,
+};
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
@@ -13,7 +16,7 @@ use std::{
 
 #[derive(Default, Debug, CollectionClient)]
 pub struct MonstersClient {
-    data: RwLock<HashMap<String, Arc<MonsterSchema>>>,
+    data: RwLock<HashMap<String, Monster>>,
     api: Arc<ArtifactApi>,
     events: Arc<EventsClient>,
 }
@@ -29,25 +32,25 @@ impl MonstersClient {
         monsters
     }
 
-    pub fn dropping(&self, item_code: &str) -> Vec<Arc<MonsterSchema>> {
+    pub fn dropping(&self, item_code: &str) -> Vec<Monster> {
         self.all()
             .into_iter()
-            .filter(|m| m.drops.iter().any(|d| d.code == item_code))
+            .filter(|m| m.drops().iter().any(|d| d.code == item_code))
             .collect_vec()
     }
 
-    pub fn lowest_providing_xp_at(&self, level: u32) -> Option<Arc<MonsterSchema>> {
+    pub fn lowest_providing_xp_at(&self, level: u32) -> Option<Monster> {
         self.all()
             .into_iter()
             .filter(|m| m.provides_xp_at(level))
-            .min_by_key(|m| m.level)
+            .min_by_key(|m| m.level())
     }
 
-    pub fn highest_providing_exp(&self, level: u32) -> Option<Arc<MonsterSchema>> {
+    pub fn highest_providing_exp(&self, level: u32) -> Option<Monster> {
         self.all()
             .into_iter()
             .filter(|m| m.provides_xp_at(level))
-            .max_by_key(|m| m.level)
+            .max_by_key(|m| m.level())
     }
 
     pub fn is_event(&self, code: &str) -> bool {
@@ -55,16 +58,16 @@ impl MonstersClient {
     }
 }
 
-impl Persist<HashMap<String, Arc<MonsterSchema>>> for MonstersClient {
+impl Persist<HashMap<String, Monster>> for MonstersClient {
     const PATH: &'static str = ".cache/monsters.json";
 
-    fn load_from_api(&self) -> HashMap<String, Arc<MonsterSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Monster> {
         self.api
             .monsters
             .get_all()
             .unwrap()
             .into_iter()
-            .map(|m| (m.code.clone(), Arc::new(m)))
+            .map(|m| (m.code.clone(), Monster(Arc::new(m))))
             .collect()
     }
 
@@ -74,59 +77,78 @@ impl Persist<HashMap<String, Arc<MonsterSchema>>> for MonstersClient {
 }
 
 impl DataEntity for MonstersClient {
-    type Entity = Arc<MonsterSchema>;
+    type Entity = Monster;
 }
 
-impl DropsItems for MonsterSchema {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Monster(Arc<MonsterSchema>);
+
+impl Monster {
+    pub fn name(&self) -> &str {
+        &self.0.name
+    }
+
+    pub fn is_boss(&self) -> bool {
+        self.0.r#type == MonsterType::Boss
+    }
+}
+
+impl DropsItems for Monster {
     fn drops(&self) -> &Vec<DropRateSchema> {
-        &self.drops
+        &self.0.drops
     }
 }
 
-impl Level for MonsterSchema {
+impl Level for Monster {
     fn level(&self) -> u32 {
-        self.level as u32
+        self.0.level as u32
     }
 }
 
-impl HasEffects for MonsterSchema {
+impl Code for Monster {
+    fn code(&self) -> &str {
+        &self.0.code
+    }
+}
+
+impl HasEffects for Monster {
     fn health(&self) -> i32 {
-        self.hp
+        self.0.hp
     }
 
     fn attack_dmg(&self, r#type: DamageType) -> i32 {
         match r#type {
-            DamageType::Fire => self.attack_fire,
-            DamageType::Earth => self.attack_earth,
-            DamageType::Water => self.attack_water,
-            DamageType::Air => self.attack_air,
+            DamageType::Fire => self.0.attack_fire,
+            DamageType::Earth => self.0.attack_earth,
+            DamageType::Water => self.0.attack_water,
+            DamageType::Air => self.0.attack_air,
         }
     }
 
     fn critical_strike(&self) -> i32 {
-        self.critical_strike
+        self.0.critical_strike
     }
 
     fn res(&self, r#type: DamageType) -> i32 {
         match r#type {
-            DamageType::Fire => self.res_fire,
-            DamageType::Earth => self.res_earth,
-            DamageType::Water => self.res_water,
-            DamageType::Air => self.res_air,
+            DamageType::Fire => self.0.res_fire,
+            DamageType::Earth => self.0.res_earth,
+            DamageType::Water => self.0.res_water,
+            DamageType::Air => self.0.res_air,
         }
     }
 
     fn initiative(&self) -> i32 {
-        self.initiative
+        self.0.initiative
     }
 
     fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        self.effects.iter().flatten().collect_vec()
+        self.0.effects.iter().flatten().collect_vec()
     }
 }
 
 pub trait MonsterSchemaExt {}
 
-impl MonsterSchemaExt for MonsterSchema {}
+impl MonsterSchemaExt for Monster {}
 
-impl CanProvideXp for MonsterSchema {}
+impl CanProvideXp for Monster {}

@@ -1,13 +1,14 @@
 use crate::{
     Gear,
+    monsters::Monster,
     simulator::{
         BASE_HP, BASE_INITIATIVE, BURN_MULTIPLIER, HP_PER_LEVEL, HasEffects,
         damage_type::DamageType,
     },
 };
-use artifactsmmo_openapi::models::{ItemSchema, MonsterSchema, SimpleEffectSchema};
+use artifactsmmo_openapi::models::{ItemSchema, SimpleEffectSchema};
 use dyn_clone::DynClone;
-use std::{cell::RefCell, ops::Deref, rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 pub(super) trait SimulationEntity: HasEffects + DynClone {
     fn turn_against(&mut self, target: &mut dyn SimulationEntity, turn: u32) {
@@ -339,7 +340,7 @@ impl HasEffects for SimulationCharacter {
 pub(super) struct SimulationMonster(Rc<RefCell<BaseSimulationMonster>>);
 
 impl SimulationMonster {
-    pub(super) fn new(monster: Arc<MonsterSchema>, average: bool) -> Self {
+    pub(super) fn new(monster: Monster, average: bool) -> Self {
         Self(Rc::new(RefCell::new(BaseSimulationMonster::new(
             monster, average,
         ))))
@@ -348,7 +349,7 @@ impl SimulationMonster {
 
 pub(super) struct BaseSimulationMonster {
     averaged: bool,
-    monster: Arc<MonsterSchema>,
+    monster: Monster,
 
     current_turn: u32,
     pub(super) current_health: i32,
@@ -363,7 +364,7 @@ pub(super) struct BaseSimulationMonster {
 }
 
 impl BaseSimulationMonster {
-    pub(super) fn new(monster: Arc<MonsterSchema>, average: bool) -> Self {
+    pub(super) fn new(monster: Monster, average: bool) -> Self {
         Self {
             current_health: monster.health(),
             current_turn: 1,
@@ -381,7 +382,7 @@ impl BaseSimulationMonster {
 
 impl SimulationEntity for SimulationMonster {
     fn name(&self) -> String {
-        self.0.borrow().monster.name.clone()
+        self.0.borrow().monster.name().to_string()
     }
 
     fn averaged(&self) -> bool {
@@ -397,7 +398,7 @@ impl SimulationEntity for SimulationMonster {
     }
 
     fn max_hp(&self) -> i32 {
-        self.0.borrow().monster.hp
+        self.0.borrow().monster.health()
     }
 
     fn current_health(&self) -> i32 {

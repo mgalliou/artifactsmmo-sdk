@@ -1,17 +1,12 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataEntity, Level, Persist, check_lvl_diff,
-    client::{
+    check_lvl_diff, client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
-    },
-    consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS},
-    gear::Slot,
-    simulator::{EffectCode, HasEffects},
-    skill::Skill,
+    }, consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS}, gear::Slot, monsters::Monster, simulator::{EffectCode, HasEffects}, skill::Skill, CanProvideXp, Code, CollectionClient, DataEntity, Level, Persist
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CraftSchema, ItemSchema, MonsterSchema, NpcSchema, NpcType, ResourceSchema, SimpleEffectSchema,
+    CraftSchema, ItemSchema, NpcSchema, NpcType, ResourceSchema, SimpleEffectSchema,
     SimpleItemSchema,
 };
 use itertools::Itertools;
@@ -237,7 +232,7 @@ impl ItemsClient {
         self.get(code).is_some_and(|i| {
             self.sources_of(&i.code).iter().any(|s| match s {
                 ItemSource::Resource(r) => self.resources.is_event(&r.code),
-                ItemSource::Monster(m) => self.monsters.is_event(&m.code),
+                ItemSource::Monster(m) => self.monsters.is_event(m.code()),
                 ItemSource::Npc(n) => n.r#type == NpcType::Merchant,
                 ItemSource::Craft => false,
                 ItemSource::TaskReward => false,
@@ -530,7 +525,7 @@ impl PartialEq<SubType> for String {
 #[derive(Debug, Clone, PartialEq, EnumIs)]
 pub enum ItemSource {
     Resource(Arc<ResourceSchema>),
-    Monster(Arc<MonsterSchema>),
+    Monster(Monster),
     Npc(Arc<NpcSchema>),
     Craft,
     TaskReward,
@@ -543,7 +538,7 @@ impl fmt::Display for ItemSource {
             ItemSource::Resource(resource_schema) => {
                 write!(f, "Resource ({})", resource_schema.name)
             }
-            ItemSource::Monster(monster_schema) => write!(f, "Monster ({})", monster_schema.name),
+            ItemSource::Monster(m) => write!(f, "Monster ({})", m.name()),
             ItemSource::Npc(npc_schema) => write!(f, "NPC ({})", npc_schema.name),
             ItemSource::Craft => write!(f, "Craft"),
             ItemSource::TaskReward => write!(f, "Task Reward"),

@@ -1,12 +1,10 @@
 use crate::{
-    CharacterClient, Gear, Slot,
-    character::HasCharacterData,
-    simulator::entity::{SimulationCharacter, SimulationEntity, SimulationMonster},
+    character::HasCharacterData, monsters::Monster, simulator::entity::{SimulationCharacter, SimulationEntity, SimulationMonster}, CharacterClient, Gear, Slot
 };
-use artifactsmmo_openapi::models::{FightResult, MonsterSchema};
+use artifactsmmo_openapi::models::FightResult;
 use itertools::Itertools;
 use rand::seq::IndexedRandom;
-use std::{cmp::max, sync::Arc};
+use std::cmp::max;
 
 pub use damage_type::DamageType;
 pub use effect_code::EffectCode;
@@ -39,7 +37,7 @@ impl Simulator {
     pub fn fight(
         initiator: Participant,
         participants: Option<Vec<Participant>>,
-        monster: Arc<MonsterSchema>,
+        monster: Monster,
         params: FightParams,
     ) -> Fight {
         let char = SimulationCharacter::new(

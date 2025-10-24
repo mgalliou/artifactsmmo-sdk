@@ -36,7 +36,7 @@ use crate::{
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
     CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapAccessType,
-    MapContentType, MapLayer, MapSchema, MonsterType, NpcItemTransactionSchema,
+    MapContentType, MapLayer, MapSchema, NpcItemTransactionSchema,
     RecyclingItemsSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
     TaskSchema, TaskTradeSchema, TaskType,
 };
@@ -156,13 +156,13 @@ impl CharacterClient {
         let Some(monster) = self.monsters.get(&monster_code) else {
             return Err(FightError::NoMonsterOnMap);
         };
-        if !self.inventory().has_room_for_drops_from(monster.as_ref()) {
+        if !self.inventory().has_room_for_drops_from(&monster) {
             return Err(FightError::InsufficientInventorySpace);
         }
         let Some(participants) = participants else {
             return Ok(());
         };
-        if !participants.is_empty() && monster.r#type == MonsterType::Boss {
+        if !participants.is_empty() && monster.is_boss() {
             return Err(FightError::MonsterIsNotABoss);
         }
         for p in participants.iter() {
@@ -170,7 +170,7 @@ impl CharacterClient {
                 if p.position() != self.position() {
                     return Err(FightError::NoMonsterOnMap);
                 }
-                if !p.inventory().has_room_for_drops_from(monster.as_ref()) {
+                if !p.inventory().has_room_for_drops_from(&monster) {
                     return Err(FightError::InsufficientInventorySpace);
                 }
             }
