@@ -1,12 +1,15 @@
 use crate::{
-    Gear, HasEffects,
-    damage_type::DamageType,
-    simulator::{BASE_HP, BASE_INITIATIVE, BURN_MULTIPLIER, HP_PER_LEVEL},
+    Gear,
+    simulator::{
+        BASE_HP, BASE_INITIATIVE, BURN_MULTIPLIER, HP_PER_LEVEL, HasEffects,
+        damage_type::DamageType,
+    },
 };
 use artifactsmmo_openapi::models::{ItemSchema, MonsterSchema, SimpleEffectSchema};
-use std::sync::Arc;
+use dyn_clone::DynClone;
+use std::{cell::RefCell, ops::Deref, rc::Rc, sync::Arc};
 
-pub(super) trait SimulationEntity: HasEffects {
+pub(super) trait SimulationEntity: HasEffects + DynClone {
     fn turn_against(&mut self, target: &mut dyn SimulationEntity, turn: u32) {
         if turn == self.reconstitution() as u32 {
             self.set_health(self.max_hp());
@@ -33,7 +36,7 @@ pub(super) trait SimulationEntity: HasEffects {
             self.apply_burn(target);
             self.apply_poison(target);
         }
-        for hit in self.hits_against(target, self.average()).iter() {
+        for hit in self.hits_against(target, self.averaged()).iter() {
             target.dec_health(hit.dmg);
             if hit.is_crit {
                 self.inc_health(hit.dmg * self.lifesteal() / 100);
@@ -90,9 +93,11 @@ pub(super) trait SimulationEntity: HasEffects {
         self.dec_health(self.poisoned());
     }
 
-    fn average(&self) -> bool;
+    fn name(&self) -> String;
+    fn averaged(&self) -> bool;
     fn current_turn(&self) -> u32;
     fn inc_turn(&mut self);
+    fn starting_hp(&self) -> i32;
     fn max_hp(&self) -> i32;
     fn current_health(&self) -> i32;
     fn set_health(&mut self, value: i32);
@@ -133,9 +138,37 @@ pub(super) trait SimulationEntity: HasEffects {
     fn is_monster(&self) -> bool;
 }
 
-pub(super) struct SimulationCharacter<'a> {
-    average: bool,
-    gear: &'a Gear,
+dyn_clone::clone_trait_object!(SimulationEntity);
+
+#[derive(Clone)]
+pub(super) struct SimulationCharacter(Rc<RefCell<BaseSimulationCharacter>>);
+
+impl SimulationCharacter {
+    pub(super) fn new(
+        name: String,
+        level: u32,
+        gear: Gear,
+        utility1_quantity: u32,
+        utility2_quantity: u32,
+        missing_hp: i32,
+        average: bool,
+    ) -> Self {
+        Self(Rc::new(RefCell::new(BaseSimulationCharacter::new(
+            name,
+            level,
+            gear,
+            utility1_quantity,
+            utility2_quantity,
+            missing_hp,
+            average,
+        ))))
+    }
+}
+
+pub struct BaseSimulationCharacter {
+    name: String,
+    averaged: bool,
+    gear: Gear,
     pub(super) starting_hp: i32,
     max_hp: i32,
     inititive: i32,
@@ -155,10 +188,11 @@ pub(super) struct SimulationCharacter<'a> {
     utility2_quantity: u32,
 }
 
-impl<'a> SimulationCharacter<'a> {
+impl BaseSimulationCharacter {
     pub(super) fn new(
+        name: String,
         level: u32,
-        gear: &'a Gear,
+        gear: Gear,
         utility1_quantity: u32,
         utility2_quantity: u32,
         missing_hp: i32,
@@ -168,7 +202,7 @@ impl<'a> SimulationCharacter<'a> {
         let max_hp = base_hp + gear.health();
         let starting_hp = max_hp - missing_hp;
         Self {
-            gear,
+            name,
             max_hp,
             starting_hp,
             inititive: BASE_INITIATIVE + gear.initiative(),
@@ -178,121 +212,143 @@ impl<'a> SimulationCharacter<'a> {
             earth_res: gear.res(DamageType::Earth),
             water_res: gear.res(DamageType::Water),
             air_res: gear.res(DamageType::Air),
+            gear,
             utility1_quantity,
             utility2_quantity,
             burning: 0,
             poisoned: 0,
-            average,
+            averaged: average,
         }
     }
 }
 
-impl<'a> SimulationEntity for SimulationCharacter<'a> {
+impl SimulationEntity for SimulationCharacter {
+    fn name(&self) -> String {
+        self.0.borrow().name.clone()
+    }
+
+    fn averaged(&self) -> bool {
+        self.0.borrow().averaged
+    }
+
     fn current_turn(&self) -> u32 {
-        self.current_turn
+        self.0.borrow().current_turn
     }
 
     fn inc_turn(&mut self) {
-        self.current_turn += 1
+        self.0.borrow_mut().current_turn += 1
     }
 
     fn max_hp(&self) -> i32 {
-        self.max_hp
+        self.0.borrow().max_hp
     }
 
     fn current_health(&self) -> i32 {
-        self.current_health
-    }
-
-    fn poisoned(&self) -> i32 {
-        self.poisoned
-    }
-
-    fn burning(&self) -> i32 {
-        self.burning
-    }
-
-    fn set_burning(&mut self, value: i32) {
-        self.burning = value;
-    }
-
-    fn set_poisoned(&mut self, value: i32) {
-        self.poisoned = value;
+        self.0.borrow().current_health
     }
 
     fn set_health(&mut self, value: i32) {
-        self.current_health = value;
+        self.0.borrow_mut().current_health = value;
     }
 
-    fn average(&self) -> bool {
-        self.average
+    fn burning(&self) -> i32 {
+        self.0.borrow().burning
     }
 
-    fn utility1(&self) -> Option<Arc<ItemSchema>> {
-        self.gear.utility1.clone()
+    fn set_burning(&mut self, value: i32) {
+        self.0.borrow_mut().burning = value;
     }
 
-    fn utility2(&self) -> Option<Arc<ItemSchema>> {
-        self.gear.utility2.clone()
+    fn poisoned(&self) -> i32 {
+        self.0.borrow().poisoned
     }
 
-    fn utility1_quantity(&self) -> u32 {
-        self.utility1_quantity
-    }
-
-    fn utility2_quantity(&self) -> u32 {
-        self.utility2_quantity
-    }
-
-    fn dec_utility1(&mut self) {
-        self.utility1_quantity = self.utility1_quantity().saturating_sub(1);
-    }
-
-    fn dec_utility2(&mut self) {
-        self.utility2_quantity = self.utility2_quantity().saturating_sub(1);
+    fn set_poisoned(&mut self, value: i32) {
+        self.0.borrow_mut().poisoned = value;
     }
 
     fn suffer_corruption(&mut self, r#type: DamageType) {
         let corrupted = self.corrupted();
         match r#type {
-            DamageType::Fire => self.fire_res -= corrupted,
-            DamageType::Earth => self.earth_res -= corrupted,
-            DamageType::Water => self.water_res -= corrupted,
-            DamageType::Air => self.air_res -= corrupted,
+            DamageType::Fire => self.0.borrow_mut().fire_res -= corrupted,
+            DamageType::Earth => self.0.borrow_mut().earth_res -= corrupted,
+            DamageType::Water => self.0.borrow_mut().water_res -= corrupted,
+            DamageType::Air => self.0.borrow_mut().air_res -= corrupted,
         }
+    }
+
+    fn utility1(&self) -> Option<Arc<ItemSchema>> {
+        self.0.borrow().gear.utility1.clone()
+    }
+
+    fn utility2(&self) -> Option<Arc<ItemSchema>> {
+        self.0.borrow().gear.utility2.clone()
+    }
+
+    fn utility1_quantity(&self) -> u32 {
+        self.0.borrow().utility1_quantity
+    }
+
+    fn utility2_quantity(&self) -> u32 {
+        self.0.borrow().utility2_quantity
+    }
+
+    fn dec_utility1(&mut self) {
+        self.0.borrow_mut().utility1_quantity = self.utility1_quantity().saturating_sub(1);
+    }
+
+    fn dec_utility2(&mut self) {
+        self.0.borrow_mut().utility2_quantity = self.utility2_quantity().saturating_sub(1);
     }
 
     fn is_monster(&self) -> bool {
         false
     }
+
+    fn starting_hp(&self) -> i32 {
+        self.0.borrow().starting_hp
+    }
 }
 
-impl<'a> HasEffects for SimulationCharacter<'a> {
+impl HasEffects for SimulationCharacter {
     fn res(&self, r#type: DamageType) -> i32 {
+        let inner = self.0.borrow();
         match r#type {
-            DamageType::Fire => self.fire_res,
-            DamageType::Earth => self.earth_res,
-            DamageType::Water => self.water_res,
-            DamageType::Air => self.air_res,
+            DamageType::Fire => inner.fire_res,
+            DamageType::Earth => inner.earth_res,
+            DamageType::Water => inner.water_res,
+            DamageType::Air => inner.air_res,
         }
     }
 
     fn initiative(&self) -> i32 {
-        self.inititive
+        self.0.borrow().inititive
     }
 
     fn effect_value(&self, effect: &str) -> i32 {
-        self.gear.effect_value(effect)
+        self.0.borrow().gear.effect_value(effect)
     }
 
     fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        self.gear.effects()
+        todo!()
+        // self.0.borrow().gear.effects().clone()
     }
 }
 
-pub(super) struct SimulationMonster<'a> {
-    average: bool,
-    monster: &'a MonsterSchema,
+#[derive(Clone)]
+pub(super) struct SimulationMonster(Rc<RefCell<BaseSimulationMonster>>);
+
+impl SimulationMonster {
+    pub(super) fn new(monster: Arc<MonsterSchema>, average: bool) -> Self {
+        Self(Rc::new(RefCell::new(BaseSimulationMonster::new(
+            monster, average,
+        ))))
+    }
+}
+
+pub(super) struct BaseSimulationMonster {
+    averaged: bool,
+    monster: Arc<MonsterSchema>,
 
     current_turn: u32,
     pub(super) current_health: i32,
@@ -306,102 +362,113 @@ pub(super) struct SimulationMonster<'a> {
     poisoned: i32,
 }
 
-impl<'a> SimulationMonster<'a> {
-    pub(super) fn new(monster: &'a MonsterSchema, average: bool) -> Self {
+impl BaseSimulationMonster {
+    pub(super) fn new(monster: Arc<MonsterSchema>, average: bool) -> Self {
         Self {
-            monster,
             current_health: monster.health(),
             current_turn: 1,
             burning: 0,
             poisoned: 0,
-            average,
+            averaged: average,
             fire_res: monster.res(DamageType::Fire),
             earth_res: monster.res(DamageType::Earth),
             water_res: monster.res(DamageType::Water),
             air_res: monster.res(DamageType::Air),
+            monster,
         }
     }
 }
 
-impl<'a> SimulationEntity for SimulationMonster<'a> {
+impl SimulationEntity for SimulationMonster {
+    fn name(&self) -> String {
+        self.0.borrow().monster.name.clone()
+    }
+
+    fn averaged(&self) -> bool {
+        self.0.borrow().averaged
+    }
+
     fn current_turn(&self) -> u32 {
-        self.current_turn
+        self.0.borrow().current_turn
     }
 
     fn inc_turn(&mut self) {
-        self.current_turn += 1
+        self.0.borrow_mut().current_turn += 1
     }
 
     fn max_hp(&self) -> i32 {
-        self.monster.hp
+        self.0.borrow().monster.hp
     }
 
     fn current_health(&self) -> i32 {
-        self.current_health
-    }
-
-    fn poisoned(&self) -> i32 {
-        self.poisoned
-    }
-
-    fn burning(&self) -> i32 {
-        self.burning
-    }
-
-    fn set_burning(&mut self, value: i32) {
-        self.burning = value
-    }
-
-    fn set_poisoned(&mut self, value: i32) {
-        self.poisoned = value
+        self.0.borrow().current_health
     }
 
     fn set_health(&mut self, value: i32) {
-        self.current_health = value;
+        self.0.borrow_mut().current_health = value;
     }
 
-    fn average(&self) -> bool {
-        self.average
+    fn burning(&self) -> i32 {
+        self.0.borrow().burning
+    }
+
+    fn set_burning(&mut self, value: i32) {
+        self.0.borrow_mut().burning = value
+    }
+
+    fn poisoned(&self) -> i32 {
+        self.0.borrow().poisoned
+    }
+
+    fn set_poisoned(&mut self, value: i32) {
+        self.0.borrow_mut().poisoned = value
     }
 
     fn suffer_corruption(&mut self, r#type: DamageType) {
         let corrupted = self.corrupted();
+        let mut inner = self.0.borrow_mut();
         match r#type {
-            DamageType::Fire => self.fire_res -= corrupted,
-            DamageType::Earth => self.earth_res -= corrupted,
-            DamageType::Water => self.water_res -= corrupted,
-            DamageType::Air => self.air_res -= corrupted,
+            DamageType::Fire => inner.fire_res -= corrupted,
+            DamageType::Earth => inner.earth_res -= corrupted,
+            DamageType::Water => inner.water_res -= corrupted,
+            DamageType::Air => inner.air_res -= corrupted,
         }
     }
 
     fn is_monster(&self) -> bool {
         true
     }
+
+    fn starting_hp(&self) -> i32 {
+        self.max_hp()
+    }
 }
 
-impl<'a> HasEffects for SimulationMonster<'a> {
+impl HasEffects for SimulationMonster {
     fn health(&self) -> i32 {
-        self.monster.health()
+        self.0.borrow().monster.health()
     }
 
     fn attack_dmg(&self, r#type: DamageType) -> i32 {
-        self.monster.attack_dmg(r#type)
+        self.0.borrow().monster.attack_dmg(r#type)
     }
 
     fn critical_strike(&self) -> i32 {
-        self.monster.critical_strike()
+        self.0.borrow().monster.critical_strike()
     }
 
     fn res(&self, r#type: DamageType) -> i32 {
+        let inner = self.0.borrow();
         match r#type {
-            DamageType::Fire => self.fire_res,
-            DamageType::Earth => self.earth_res,
-            DamageType::Water => self.water_res,
-            DamageType::Air => self.air_res,
+            DamageType::Fire => inner.fire_res,
+            DamageType::Earth => inner.earth_res,
+            DamageType::Water => inner.water_res,
+            DamageType::Air => inner.air_res,
         }
     }
 
     fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        self.monster.effects()
+        // self.0.borrow().monster.effects()
+        todo!()
     }
 }

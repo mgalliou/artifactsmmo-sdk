@@ -4,7 +4,9 @@ use crate::{
     simulator::entity::{SimulationCharacter, SimulationEntity, SimulationMonster},
 };
 use artifactsmmo_openapi::models::{FightResult, MonsterSchema};
-use std::{cell::RefCell, cmp::max, rc::Rc};
+use itertools::Itertools;
+use rand::seq::IndexedRandom;
+use std::{cmp::max, sync::Arc};
 
 pub use damage_type::DamageType;
 pub use effect_code::EffectCode;
@@ -34,97 +36,148 @@ const BURN_MULTIPLIER: f32 = 0.90;
 pub struct Simulator {}
 
 impl Simulator {
-    pub fn fight(level: u32, gear: &Gear, monster: &MonsterSchema, params: FightParams) -> Fight {
-        let char = Rc::new(RefCell::new(SimulationCharacter::new(
-            level,
-            gear,
-            params.utility1_quantity,
-            params.utility2_quantity,
-            params.missing_hp,
+    pub fn fight(
+        initiator: Participant,
+        participants: Option<Vec<Participant>>,
+        monster: Arc<MonsterSchema>,
+        params: FightParams,
+    ) -> Fight {
+        let char = SimulationCharacter::new(
+            initiator.name.clone(),
+            initiator.level,
+            initiator.gear,
+            initiator.utility1_quantity,
+            initiator.utility2_quantity,
+            initiator.missing_hp,
             params.averaged,
-        )));
-        let monster = Rc::new(RefCell::new(SimulationMonster::new(
-            monster,
-            params.averaged,
-        )));
-        let mut fighters: Vec<Rc<RefCell<dyn SimulationEntity>>> =
-            vec![char.clone(), monster.clone()];
-        fighters.sort_by_key(|e| e.borrow().initiative());
-        fighters.reverse();
-        let mut fighters_iter = fighters.iter().cycle();
+        );
+        let mut chars = vec![char.clone()];
+        if let Some(participants) = participants {
+            let participants = participants
+                .into_iter()
+                .map(|participant| {
+                    SimulationCharacter::new(
+                        participant.name.clone(),
+                        participant.level,
+                        participant.gear,
+                        participant.utility1_quantity,
+                        participant.utility2_quantity,
+                        participant.missing_hp,
+                        params.averaged,
+                    )
+                })
+                .collect_vec();
+            participants.iter().for_each(|p| chars.push(p.clone()));
+        }
+        let mut monster = SimulationMonster::new(monster, params.averaged);
+        let mut fighters: Vec<Box<dyn SimulationEntity>> = vec![Box::new(monster.clone())];
+        chars
+            .iter()
+            .for_each(|c| fighters.push(Box::new(c.clone())));
+        let mut remaining_fighters = fighters.clone();
         let mut turn = 1;
         while turn <= MAX_TURN
-            && char.borrow().current_health > 0
-            && monster.borrow().current_health > 0
-            && let Some(fighter) = fighters_iter.next()
+            && monster.current_health() > 0
+            && chars.iter().all(|c| c.current_health() > 0)
         {
-            if fighter.borrow().is_monster() {
-                monster
-                    .borrow_mut()
-                    .turn_against(&mut *char.borrow_mut(), turn);
+            if remaining_fighters.is_empty() {
+                remaining_fighters = fighters.clone();
+            }
+            let Some(mut fighter) = get_next_fighter(&mut remaining_fighters) else {
+                break;
+            };
+            remaining_fighters.retain(|f| f.name() != fighter.name());
+            if fighter.is_monster() {
+                let Some(mut target) = pick_monster_target(&chars) else {
+                    break;
+                };
+                monster.turn_against(&mut target, turn);
             } else {
-                char.borrow_mut()
-                    .turn_against(&mut *monster.borrow_mut(), turn);
+                fighter.turn_against(&mut monster, turn);
             }
             turn += 1;
         }
-        let char = char.borrow();
-        let monster = monster.borrow();
         Fight {
             turns: turn,
-            hp: char.current_health,
-            monster_hp: monster.current_health,
-            hp_lost: char.starting_hp - char.current_health,
-            result: if char.current_health <= 0 || turn > MAX_TURN {
+            hp: char.current_health(),
+            monster_hp: monster.current_health(),
+            hp_lost: char.starting_hp() - char.current_health(),
+            result: if char.current_health() <= 0
+                || (turn > MAX_TURN && monster.current_health() > 0)
+            {
                 FightResult::Loss
             } else {
                 FightResult::Win
             },
-            cd: fight_cd(gear.haste(), turn),
+            cd: fight_cd(char.haste(), turn),
         }
     }
 }
 
-pub struct FightParams {
+fn get_next_fighter(
+    fighters: &mut Vec<Box<dyn SimulationEntity>>,
+) -> Option<Box<dyn SimulationEntity>> {
+    fighters
+        .iter()
+        .filter(|f| f.current_health() > 0)
+        .max_set_by_key(|f| f.initiative())
+        .into_iter()
+        .max_set_by_key(|f| f.current_health())
+        .choose(&mut rand::rng())
+        .map(|&c| c.clone())
+}
+
+fn pick_monster_target(chars: &[SimulationCharacter]) -> Option<SimulationCharacter> {
+    let chars_alive = chars.iter().filter(|c| c.current_health() > 0);
+    let targets = if rand::random_range(1..=100) <= 90 {
+        chars_alive.max_set_by_key(|c| c.threat())
+    } else {
+        chars_alive.collect_vec()
+    };
+    targets
+        .iter()
+        .min_set_by_key(|c| c.current_health())
+        .choose(&mut rand::rng())
+        .map(|&&c| c.clone())
+}
+
+pub struct Participant {
+    name: String,
+    level: u32,
+    gear: Gear,
     utility1_quantity: u32,
     utility2_quantity: u32,
     missing_hp: i32,
+}
+
+impl From<&CharacterClient> for Participant {
+    fn from(value: &CharacterClient) -> Self {
+        Self {
+            name: value.name(),
+            level: value.level(),
+            gear: value.gear().clone(),
+            utility1_quantity: value.quantity_in_slot(Slot::Utility1),
+            utility2_quantity: value.quantity_in_slot(Slot::Utility1),
+            missing_hp: value.missing_hp(),
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct FightParams {
     averaged: bool,
     ignore_death: bool,
 }
 
 impl FightParams {
-    pub fn ignore_death(mut self) -> Self {
-        self.ignore_death = true;
-        self
-    }
-
     pub fn averaged(mut self) -> Self {
         self.averaged = true;
         self
     }
-}
 
-impl From<&CharacterClient> for FightParams {
-    fn from(value: &CharacterClient) -> Self {
-        Self {
-            utility1_quantity: value.quantity_in_slot(Slot::Utility1),
-            utility2_quantity: value.quantity_in_slot(Slot::Utility2),
-            missing_hp: value.missing_hp(),
-            ..Default::default()
-        }
-    }
-}
-
-impl Default for FightParams {
-    fn default() -> Self {
-        Self {
-            utility1_quantity: 100,
-            utility2_quantity: 100,
-            missing_hp: 0,
-            averaged: false,
-            ignore_death: false,
-        }
+    pub fn ignore_death(mut self) -> Self {
+        self.ignore_death = true;
+        self
     }
 }
 
@@ -213,7 +266,7 @@ pub fn gather_cd(resource_level: u32, cooldown_reduction: i32) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use crate::gather_cd;
+    use crate::simulator::gather_cd;
 
     //TODO: rewrite tests
     // use crate::{ITEMS, MONSTERS};

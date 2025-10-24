@@ -1,5 +1,8 @@
-use crate::models::SimpleEffectSchema;
-use crate::{DamageType, Hit, Skill, average_dmg};
+use crate::{
+    models::SimpleEffectSchema,
+    simulator::{average_dmg, DamageType, Hit},
+    Skill,
+};
 use itertools::Itertools;
 use strum::IntoEnumIterator;
 
@@ -116,7 +119,7 @@ pub trait HasEffects {
         let is_crit = if averaged {
             false
         } else {
-            rand::random_range(0..=100) <= self.critical_strike()
+            rand::random_range(1..=100) <= self.critical_strike()
         };
         DamageType::iter()
             .filter_map(|t| {
