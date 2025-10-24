@@ -1,5 +1,8 @@
 use crate::{
-    character::HasCharacterData, monsters::Monster, simulator::entity::{SimulationCharacter, SimulationEntity, SimulationMonster}, CharacterClient, Gear, Slot
+    CharacterClient, Gear, Slot,
+    character::HasCharacterData,
+    monsters::Monster,
+    simulator::entity::{SimulationCharacter, SimulationEntity, SimulationMonster},
 };
 use artifactsmmo_openapi::models::FightResult;
 use itertools::Itertools;
@@ -148,6 +151,26 @@ pub struct Participant {
     missing_hp: i32,
 }
 
+impl Participant {
+    pub fn new(
+        name: String,
+        level: u32,
+        gear: Gear,
+        utility1_quantity: u32,
+        utility2_quantity: u32,
+        missing_hp: i32,
+    ) -> Self {
+        Self {
+            name,
+            level,
+            gear,
+            utility1_quantity,
+            utility2_quantity,
+            missing_hp,
+        }
+    }
+}
+
 impl From<&CharacterClient> for Participant {
     fn from(value: &CharacterClient) -> Self {
         Self {
@@ -155,7 +178,7 @@ impl From<&CharacterClient> for Participant {
             level: value.level(),
             gear: value.gear().clone(),
             utility1_quantity: value.quantity_in_slot(Slot::Utility1),
-            utility2_quantity: value.quantity_in_slot(Slot::Utility1),
+            utility2_quantity: value.quantity_in_slot(Slot::Utility2),
             missing_hp: value.missing_hp(),
         }
     }
