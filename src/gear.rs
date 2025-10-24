@@ -117,7 +117,7 @@ impl HasEffects for Gear {
             .sum()
     }
 
-    fn effects(&self) -> Vec<&SimpleEffectSchema> {
+    fn effects(&self) -> Vec<SimpleEffectSchema> {
         vec![]
     }
 }

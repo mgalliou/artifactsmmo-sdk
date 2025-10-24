@@ -1,8 +1,14 @@
 use crate::{
-    check_lvl_diff, client::{
+    CanProvideXp, Code, CollectionClient, DataEntity, Level, Persist, check_lvl_diff,
+    client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
-    }, consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS}, gear::Slot, monsters::Monster, simulator::{EffectCode, HasEffects}, skill::Skill, CanProvideXp, Code, CollectionClient, DataEntity, Level, Persist
+    },
+    consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS},
+    gear::Slot,
+    monsters::Monster,
+    simulator::{EffectCode, HasEffects},
+    skill::Skill,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
@@ -423,8 +429,8 @@ impl ItemSchemaExt for ItemSchema {
 }
 
 impl HasEffects for ItemSchema {
-    fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        self.effects.iter().flatten().collect_vec()
+    fn effects(&self) -> Vec<SimpleEffectSchema> {
+        self.effects.iter().flatten().cloned().collect_vec()
     }
 }
 

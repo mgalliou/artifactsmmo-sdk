@@ -142,8 +142,8 @@ impl HasEffects for Monster {
         self.0.initiative
     }
 
-    fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        self.0.effects.iter().flatten().collect_vec()
+    fn effects(&self) -> Vec<SimpleEffectSchema> {
+        self.0.effects.iter().flatten().cloned().collect_vec()
     }
 }
 

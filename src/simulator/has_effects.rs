@@ -208,5 +208,5 @@ pub trait HasEffects {
             .sum()
     }
 
-    fn effects(&self) -> Vec<&SimpleEffectSchema>;
+    fn effects(&self) -> Vec<SimpleEffectSchema>;
 }

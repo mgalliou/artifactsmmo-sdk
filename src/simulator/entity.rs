@@ -330,9 +330,8 @@ impl HasEffects for SimulationCharacter {
         self.0.borrow().gear.effect_value(effect)
     }
 
-    fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        todo!()
-        // self.0.borrow().gear.effects().clone()
+    fn effects(&self) -> Vec<SimpleEffectSchema> {
+        self.0.borrow().gear.effects().clone()
     }
 }
 
@@ -468,8 +467,7 @@ impl HasEffects for SimulationMonster {
         }
     }
 
-    fn effects(&self) -> Vec<&SimpleEffectSchema> {
-        // self.0.borrow().monster.effects()
-        todo!()
+    fn effects(&self) -> Vec<SimpleEffectSchema> {
+        self.0.borrow().monster.effects().clone()
     }
 }
