@@ -16,12 +16,12 @@ pub use client::*;
 pub use consts::*;
 pub use container::*;
 pub use gear::*;
-
 pub use skill::*;
 
 pub mod client;
 pub mod consts;
 pub mod container;
+pub mod entities;
 pub mod gear;
 pub mod simulator;
 pub mod skill;

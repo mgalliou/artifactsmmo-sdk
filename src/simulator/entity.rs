@@ -1,6 +1,6 @@
 use crate::{
     Gear,
-    monsters::Monster,
+    entities::Monster,
     simulator::{
         BASE_HP, BASE_INITIATIVE, BURN_MULTIPLIER, HP_PER_LEVEL, HasEffects,
         damage_type::DamageType,

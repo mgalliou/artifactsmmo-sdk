@@ -1,6 +1,4 @@
-use crate::simulator::{
-    average_multiplier, crit_multiplier, critless_multiplier, DamageType,
-};
+use crate::simulator::{DamageType, average_multiplier, crit_multiplier, critless_multiplier};
 
 pub struct Hit {
     pub dmg: i32,

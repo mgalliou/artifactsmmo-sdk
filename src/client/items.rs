@@ -1,15 +1,8 @@
 use crate::{
-    CanProvideXp, Code, CollectionClient, DataEntity, DropsItems, Level, Persist, check_lvl_diff,
-    client::{
+    CanProvideXp, Code, CollectionClient, DataEntity, DropsItems, Level, Persist, check_lvl_diff, client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
-    },
-    consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS},
-    gear::Slot,
-    monsters::Monster,
-    resources::Resource,
-    simulator::{EffectCode, HasEffects},
-    skill::Skill,
+    }, consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS}, entities::{Monster, Resource}, gear::Slot, simulator::{EffectCode, HasEffects}, skill::Skill
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{

@@ -1,11 +1,9 @@
 use crate::{
-    CanProvideXp, Code, CollectionClient, DataEntity, DropsItems, Level, Persist,
-    client::events::EventsClient, skill::Skill,
+    CollectionClient, DataEntity, DropsItems, Persist, client::events::EventsClient,
+    entities::Resource,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
@@ -50,7 +48,7 @@ impl Persist<HashMap<String, Resource>> for ResourcesClient {
             .get_all()
             .unwrap()
             .into_iter()
-            .map(|r| (r.code.clone(), Resource(Arc::new(r))))
+            .map(|r| (r.code.clone(), Resource::new(r)))
             .collect()
     }
 
@@ -62,36 +60,3 @@ impl Persist<HashMap<String, Resource>> for ResourcesClient {
 impl DataEntity for ResourcesClient {
     type Entity = Resource;
 }
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Resource(Arc<ResourceSchema>);
-
-impl Resource {
-    pub fn name(&self) -> &str {
-        &self.0.name
-    }
-
-    pub fn skill(&self) -> Skill {
-        self.0.skill.into()
-    }
-}
-
-impl DropsItems for Resource {
-    fn drops(&self) -> &Vec<DropRateSchema> {
-        &self.0.drops
-    }
-}
-
-impl Code for Resource {
-    fn code(&self) -> &str {
-        &self.0.code
-    }
-}
-
-impl Level for Resource {
-    fn level(&self) -> u32 {
-        self.0.level as u32
-    }
-}
-
-impl CanProvideXp for Resource {}

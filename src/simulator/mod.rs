@@ -1,7 +1,7 @@
 use crate::{
     CharacterClient, Gear, Slot,
     character::HasCharacterData,
-    monsters::Monster,
+    entities::Monster,
     simulator::entity::{SimulationCharacter, SimulationEntity, SimulationMonster},
 };
 use artifactsmmo_openapi::models::FightResult;
