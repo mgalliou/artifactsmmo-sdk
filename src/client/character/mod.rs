@@ -36,13 +36,12 @@ use crate::{
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
     CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapAccessType,
-    MapContentType, MapLayer, MapSchema, NpcItemTransactionSchema,
-    RecyclingItemsSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
-    TaskSchema, TaskTradeSchema, TaskType,
+    MapContentType, MapLayer, MapSchema, NpcItemTransactionSchema, RecyclingItemsSchema,
+    RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema,
+    TaskType,
 };
 use chrono::{DateTime, Utc};
 use std::{
-    convert::Into,
     ops::Deref,
     str::FromStr,
     sync::{Arc, RwLock},
@@ -190,10 +189,10 @@ impl CharacterClient {
         let Some(resource) = self.resources.get(&resource_code) else {
             return Err(GatherError::NoResourceOnMap);
         };
-        if self.skill_level(resource.skill.into()) < resource.level() {
+        if self.skill_level(resource.skill()) < resource.level() {
             return Err(GatherError::SkillLevelInsufficient);
         }
-        if !self.inventory().has_room_for_drops_from(resource.as_ref()) {
+        if !self.inventory().has_room_for_drops_from(&resource) {
             return Err(GatherError::InsufficientInventorySpace);
         }
         Ok(())

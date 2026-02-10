@@ -1,10 +1,11 @@
 use crate::{
-    CanProvideXp, CollectionClient, DataEntity, DropsItems, Level, Persist,
-    client::events::EventsClient,
+    CanProvideXp, Code, CollectionClient, DataEntity, DropsItems, Level, Persist,
+    client::events::EventsClient, skill::Skill,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{DropRateSchema, ResourceSchema};
 use itertools::Itertools;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
@@ -12,7 +13,7 @@ use std::{
 
 #[derive(Default, Debug, CollectionClient)]
 pub struct ResourcesClient {
-    data: RwLock<HashMap<String, Arc<ResourceSchema>>>,
+    data: RwLock<HashMap<String, Resource>>,
     api: Arc<ArtifactApi>,
     events: Arc<EventsClient>,
 }
@@ -28,10 +29,10 @@ impl ResourcesClient {
         resources
     }
 
-    pub fn dropping(&self, item_code: &str) -> Vec<Arc<ResourceSchema>> {
+    pub fn dropping(&self, item_code: &str) -> Vec<Resource> {
         self.all()
             .into_iter()
-            .filter(|m| m.drops.iter().any(|d| d.code == item_code))
+            .filter(|r| r.drops().iter().any(|d| d.code == item_code))
             .collect_vec()
     }
 
@@ -40,16 +41,16 @@ impl ResourcesClient {
     }
 }
 
-impl Persist<HashMap<String, Arc<ResourceSchema>>> for ResourcesClient {
+impl Persist<HashMap<String, Resource>> for ResourcesClient {
     const PATH: &'static str = ".cache/resources.json";
 
-    fn load_from_api(&self) -> HashMap<String, Arc<ResourceSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Resource> {
         self.api
             .resources
             .get_all()
             .unwrap()
             .into_iter()
-            .map(|r| (r.code.clone(), Arc::new(r)))
+            .map(|r| (r.code.clone(), Resource(Arc::new(r))))
             .collect()
     }
 
@@ -59,19 +60,38 @@ impl Persist<HashMap<String, Arc<ResourceSchema>>> for ResourcesClient {
 }
 
 impl DataEntity for ResourcesClient {
-    type Entity = Arc<ResourceSchema>;
+    type Entity = Resource;
 }
 
-impl DropsItems for ResourceSchema {
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Resource(Arc<ResourceSchema>);
+
+impl Resource {
+    pub fn name(&self) -> &str {
+        &self.0.name
+    }
+
+    pub fn skill(&self) -> Skill {
+        self.0.skill.into()
+    }
+}
+
+impl DropsItems for Resource {
     fn drops(&self) -> &Vec<DropRateSchema> {
-        &self.drops
+        &self.0.drops
     }
 }
 
-impl Level for ResourceSchema {
+impl Code for Resource {
+    fn code(&self) -> &str {
+        &self.0.code
+    }
+}
+
+impl Level for Resource {
     fn level(&self) -> u32 {
-        self.level as u32
+        self.0.level as u32
     }
 }
 
-impl CanProvideXp for ResourceSchema {}
+impl CanProvideXp for Resource {}

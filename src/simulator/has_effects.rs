@@ -1,7 +1,7 @@
 use crate::{
-    models::SimpleEffectSchema,
-    simulator::{average_dmg, DamageType, Hit},
     Skill,
+    models::SimpleEffectSchema,
+    simulator::{DamageType, Hit, average_dmg},
 };
 use itertools::Itertools;
 use strum::IntoEnumIterator;

@@ -1,5 +1,5 @@
 use crate::{
-    CanProvideXp, Code, CollectionClient, DataEntity, Level, Persist, check_lvl_diff,
+    CanProvideXp, Code, CollectionClient, DataEntity, DropsItems, Level, Persist, check_lvl_diff,
     client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
@@ -7,13 +7,13 @@ use crate::{
     consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS},
     gear::Slot,
     monsters::Monster,
+    resources::Resource,
     simulator::{EffectCode, HasEffects},
     skill::Skill,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CraftSchema, ItemSchema, NpcSchema, NpcType, ResourceSchema, SimpleEffectSchema,
-    SimpleItemSchema,
+    CraftSchema, ItemSchema, NpcSchema, NpcType, SimpleEffectSchema, SimpleItemSchema,
 };
 use itertools::Itertools;
 use std::{
@@ -98,7 +98,7 @@ impl ItemsClient {
             .get(resource_code)
             .iter()
             .flat_map(|r| {
-                r.drops
+                r.drops()
                     .iter()
                     .map(|drop| self.crafted_with_base_mat(&drop.code))
                     .collect_vec()
@@ -237,7 +237,7 @@ impl ItemsClient {
     pub fn is_from_event(&self, code: &str) -> bool {
         self.get(code).is_some_and(|i| {
             self.sources_of(&i.code).iter().any(|s| match s {
-                ItemSource::Resource(r) => self.resources.is_event(&r.code),
+                ItemSource::Resource(r) => self.resources.is_event(r.code()),
                 ItemSource::Monster(m) => self.monsters.is_event(m.code()),
                 ItemSource::Npc(n) => n.r#type == NpcType::Merchant,
                 ItemSource::Craft => false,
@@ -530,7 +530,7 @@ impl PartialEq<SubType> for String {
 
 #[derive(Debug, Clone, PartialEq, EnumIs)]
 pub enum ItemSource {
-    Resource(Arc<ResourceSchema>),
+    Resource(Resource),
     Monster(Monster),
     Npc(Arc<NpcSchema>),
     Craft,
@@ -541,8 +541,8 @@ pub enum ItemSource {
 impl fmt::Display for ItemSource {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ItemSource::Resource(resource_schema) => {
-                write!(f, "Resource ({})", resource_schema.name)
+            ItemSource::Resource(r) => {
+                write!(f, "Resource ({})", r.name())
             }
             ItemSource::Monster(m) => write!(f, "Monster ({})", m.name()),
             ItemSource::Npc(npc_schema) => write!(f, "NPC ({})", npc_schema.name),
