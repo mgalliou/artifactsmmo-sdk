@@ -4,10 +4,10 @@ use crate::{
     client::{
         bank::BankClient,
         character::{HasCharacterData, action::Action, error::RequestError},
-        maps::MapSchemaExt,
         server::ServerClient,
     },
     consts::BANK_EXTENSION_SIZE,
+    entities::Map,
     gear::Slot,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
@@ -547,7 +547,7 @@ impl ResponseSchema for CharacterMovementResponseSchema {
         format!(
             "{}: moved to {}. {}s",
             self.data.character.name,
-            self.data.destination.pretty(),
+            Map::new(*self.data.destination.clone()),
             self.data.cooldown.remaining_seconds
         )
     }
@@ -562,7 +562,7 @@ impl ResponseSchema for CharacterTransitionResponseSchema {
         format!(
             "{}: transitioned to {}. {}s",
             self.data.character.name,
-            self.data.destination.pretty(),
+            Map::new(*self.data.destination.clone()),
             self.data.cooldown.remaining_seconds
         )
     }

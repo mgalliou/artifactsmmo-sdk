@@ -1,4 +1,4 @@
-use crate::{DataEntity, Persist, maps::MapSchemaExt};
+use crate::{DataEntity, Persist};
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
@@ -87,12 +87,12 @@ impl DataEntity for EventsClient {
 }
 
 pub trait EventSchemaExt {
-    fn content_code(&self) -> &String;
+    fn content_code(&self) -> &str;
     fn to_string(&self) -> String;
 }
 
 impl EventSchemaExt for EventSchema {
-    fn content_code(&self) -> &String {
+    fn content_code(&self) -> &str {
         &self.content.code
     }
 
@@ -102,9 +102,11 @@ impl EventSchemaExt for EventSchema {
 }
 
 impl EventSchemaExt for ActiveEventSchema {
-    fn content_code(&self) -> &String {
+    fn content_code(&self) -> &str {
         self.map
-            .content()
+            .interactions
+            .content
+            .as_deref()
             .map(|c| &c.code)
             .expect("event to have content")
     }

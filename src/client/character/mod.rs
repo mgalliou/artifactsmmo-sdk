@@ -21,13 +21,14 @@ use crate::{
             request_handler::CharacterRequestHandler,
         },
         items::{ItemsClient, LevelConditionCode},
-        maps::{MapSchemaExt, MapsClient},
+        maps::MapsClient,
         monsters::MonstersClient,
         npcs::NpcsClient,
         npcs_items::NpcItemExt,
         resources::ResourcesClient,
         server::ServerClient,
     },
+    entities::Map,
     gear::Slot,
     grand_exchange::GrandExchangeClient,
     simulator::HasEffects,
@@ -35,10 +36,9 @@ use crate::{
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use artifactsmmo_openapi::models::{
-    CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapAccessType,
-    MapContentType, MapLayer, MapSchema, NpcItemTransactionSchema, RecyclingItemsSchema,
-    RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema,
-    TaskType,
+    CharacterFightSchema, CharacterSchema, ConditionOperator, GeTransactionSchema, MapContentType,
+    MapLayer, MapSchema, NpcItemTransactionSchema, RecyclingItemsSchema, RewardsSchema,
+    SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TaskSchema, TaskTradeSchema, TaskType,
 };
 use chrono::{DateTime, Utc};
 use std::{
@@ -116,9 +116,7 @@ impl CharacterClient {
         let Some(map) = self.maps.get(self.position().0, x, y) else {
             return Err(MoveError::MapNotFound);
         };
-        if map.access.r#type == MapAccessType::Blocked
-            || !self.meets_conditions_for(map.access.as_ref())
-        {
+        if map.is_blocked() || !self.meets_conditions_for(map.access()) {
             return Err(MoveError::ConditionsNotMet);
         }
         Ok(())
@@ -131,7 +129,7 @@ impl CharacterClient {
 
     pub fn can_transition(&self) -> Result<(), TransitionError> {
         let map = self.current_map();
-        let Some(ref transition) = map.interactions.transition else {
+        let Some(ref transition) = map.interactions().transition else {
             return Err(TransitionError::TransitionNotFound);
         };
         if !self.meets_conditions_for(transition.as_ref()) {
@@ -824,7 +822,7 @@ impl CharacterClient {
         self.inner.remaining_cooldown()
     }
 
-    pub fn current_map(&self) -> Arc<MapSchema> {
+    pub fn current_map(&self) -> Map {
         let (layer, x, y) = self.position();
         self.maps.get(layer, x, y).unwrap()
     }
