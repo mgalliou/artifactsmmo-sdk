@@ -1,50 +1,50 @@
-use crate::simulator::HasEffects;
-use artifactsmmo_openapi::models::{ItemSchema, ItemSlot, SimpleEffectSchema, SimpleItemSchema};
+use crate::{Code, entities::Item, simulator::HasEffects};
+use artifactsmmo_openapi::models::{ItemSlot, SimpleEffectSchema, SimpleItemSchema};
 use itertools::Itertools;
-use std::{fmt::Display, mem::swap, sync::Arc};
+use std::{fmt::Display, mem::swap};
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Gear {
-    pub weapon: Option<Arc<ItemSchema>>,
-    pub helmet: Option<Arc<ItemSchema>>,
-    pub shield: Option<Arc<ItemSchema>>,
-    pub body_armor: Option<Arc<ItemSchema>>,
-    pub leg_armor: Option<Arc<ItemSchema>>,
-    pub boots: Option<Arc<ItemSchema>>,
-    pub amulet: Option<Arc<ItemSchema>>,
-    pub ring1: Option<Arc<ItemSchema>>,
-    pub ring2: Option<Arc<ItemSchema>>,
-    pub utility1: Option<Arc<ItemSchema>>,
-    pub utility2: Option<Arc<ItemSchema>>,
-    pub artifact1: Option<Arc<ItemSchema>>,
-    pub artifact2: Option<Arc<ItemSchema>>,
-    pub artifact3: Option<Arc<ItemSchema>>,
-    pub rune: Option<Arc<ItemSchema>>,
-    pub bag: Option<Arc<ItemSchema>>,
+    pub weapon: Option<Item>,
+    pub helmet: Option<Item>,
+    pub shield: Option<Item>,
+    pub body_armor: Option<Item>,
+    pub leg_armor: Option<Item>,
+    pub boots: Option<Item>,
+    pub amulet: Option<Item>,
+    pub ring1: Option<Item>,
+    pub ring2: Option<Item>,
+    pub utility1: Option<Item>,
+    pub utility2: Option<Item>,
+    pub artifact1: Option<Item>,
+    pub artifact2: Option<Item>,
+    pub artifact3: Option<Item>,
+    pub rune: Option<Item>,
+    pub bag: Option<Item>,
 }
 
 impl Gear {
     #[allow(clippy::too_many_arguments)]
     //TODO: return result with invalid gear errors
     pub fn new(
-        weapon: Option<Arc<ItemSchema>>,
-        helmet: Option<Arc<ItemSchema>>,
-        shield: Option<Arc<ItemSchema>>,
-        body_armor: Option<Arc<ItemSchema>>,
-        leg_armor: Option<Arc<ItemSchema>>,
-        boots: Option<Arc<ItemSchema>>,
-        amulet: Option<Arc<ItemSchema>>,
-        ring1: Option<Arc<ItemSchema>>,
-        ring2: Option<Arc<ItemSchema>>,
-        utility1: Option<Arc<ItemSchema>>,
-        utility2: Option<Arc<ItemSchema>>,
-        artifact1: Option<Arc<ItemSchema>>,
-        artifact2: Option<Arc<ItemSchema>>,
-        artifact3: Option<Arc<ItemSchema>>,
-        rune: Option<Arc<ItemSchema>>,
-        bag: Option<Arc<ItemSchema>>,
+        weapon: Option<Item>,
+        helmet: Option<Item>,
+        shield: Option<Item>,
+        body_armor: Option<Item>,
+        leg_armor: Option<Item>,
+        boots: Option<Item>,
+        amulet: Option<Item>,
+        ring1: Option<Item>,
+        ring2: Option<Item>,
+        utility1: Option<Item>,
+        utility2: Option<Item>,
+        artifact1: Option<Item>,
+        artifact2: Option<Item>,
+        artifact3: Option<Item>,
+        rune: Option<Item>,
+        bag: Option<Item>,
     ) -> Option<Gear> {
         (!(utility1.is_some() && utility1 == utility2
             || artifact1.is_some() && artifact1 == artifact2
@@ -70,7 +70,7 @@ impl Gear {
             })
     }
 
-    pub fn item_in(&self, slot: Slot) -> Option<Arc<ItemSchema>> {
+    pub fn item_in(&self, slot: Slot) -> Option<Item> {
         match slot {
             Slot::Weapon => self.weapon.clone(),
             Slot::Shield => self.shield.clone(),
@@ -129,7 +129,7 @@ impl Display for Gear {
                 f,
                 "{}: {}",
                 s,
-                self.item_in(s).as_ref().map_or("empty", |i| &i.code)
+                self.item_in(s).as_ref().map_or("empty", |i| i.code())
             )?;
         }
         Ok(())
@@ -142,7 +142,7 @@ impl From<Gear> for Vec<SimpleItemSchema> {
             .filter_map(|slot| {
                 value.item_in(slot).and_then(|i| {
                     (!slot.is_ring()).then_some(SimpleItemSchema {
-                        code: i.code.to_owned(),
+                        code: i.code().to_owned(),
                         quantity: slot.max_quantity(),
                     })
                 })
@@ -154,7 +154,7 @@ impl From<Gear> for Vec<SimpleItemSchema> {
         }
         if let Some(ring1) = value.ring1 {
             items.push(SimpleItemSchema {
-                code: ring1.code.to_owned(),
+                code: ring1.code().to_owned(),
                 quantity,
             })
         }
@@ -162,7 +162,7 @@ impl From<Gear> for Vec<SimpleItemSchema> {
             && let Some(ring2) = value.ring2
         {
             items.push(SimpleItemSchema {
-                code: ring2.code.to_owned(),
+                code: ring2.code().to_owned(),
                 quantity,
             })
         }

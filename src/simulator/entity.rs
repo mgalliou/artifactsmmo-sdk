@@ -1,14 +1,14 @@
 use crate::{
     Gear,
-    entities::Monster,
+    entities::{Item, Monster},
     simulator::{
         BASE_HP, BASE_INITIATIVE, BURN_MULTIPLIER, HP_PER_LEVEL, HasEffects,
         damage_type::DamageType,
     },
 };
-use artifactsmmo_openapi::models::{ItemSchema, SimpleEffectSchema};
+use artifactsmmo_openapi::models::SimpleEffectSchema;
 use dyn_clone::DynClone;
-use std::{cell::RefCell, rc::Rc, sync::Arc};
+use std::{cell::RefCell, rc::Rc};
 
 pub(super) trait SimulationEntity: HasEffects + DynClone {
     fn turn_against(&mut self, target: &mut dyn SimulationEntity, turn: u32) {
@@ -118,11 +118,11 @@ pub(super) trait SimulationEntity: HasEffects + DynClone {
         self.set_health(self.current_health() - value)
     }
 
-    fn utility1(&self) -> Option<Arc<ItemSchema>> {
+    fn utility1(&self) -> Option<Item> {
         None
     }
 
-    fn utility2(&self) -> Option<Arc<ItemSchema>> {
+    fn utility2(&self) -> Option<Item> {
         None
     }
 
@@ -278,11 +278,11 @@ impl SimulationEntity for SimulationCharacter {
         }
     }
 
-    fn utility1(&self) -> Option<Arc<ItemSchema>> {
+    fn utility1(&self) -> Option<Item> {
         self.0.borrow().gear.utility1.clone()
     }
 
-    fn utility2(&self) -> Option<Arc<ItemSchema>> {
+    fn utility2(&self) -> Option<Item> {
         self.0.borrow().gear.utility2.clone()
     }
 

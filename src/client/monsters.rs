@@ -1,6 +1,6 @@
 use crate::{
     CanProvideXp, CollectionClient, DataEntity, DropsItems, Level, Persist,
-    client::events::EventsClient, entities::Monster, 
+    client::events::EventsClient, entities::Monster,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use itertools::Itertools;

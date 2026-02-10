@@ -1,9 +1,9 @@
 use crate::{
     Code, DropsItems,
     container::{ItemContainer, LimitedContainer, SlotLimited, SpaceLimited},
-    items::ItemSchemaExt,
+    entities::Item,
 };
-use artifactsmmo_openapi::models::{CharacterSchema, InventorySlot, ItemSchema, SimpleItemSchema};
+use artifactsmmo_openapi::models::{CharacterSchema, InventorySlot, SimpleItemSchema};
 use itertools::Itertools;
 use std::sync::Arc;
 
@@ -19,7 +19,7 @@ impl InventoryClient {
 }
 
 pub trait Inventory: LimitedContainer + SlotLimited + SpaceLimited {
-    fn has_room_to_craft(&self, item: &ItemSchema) -> bool {
+    fn has_room_to_craft(&self, item: &Item) -> bool {
         let Some(quantity) = item
             .craft_schema()
             .and_then(|s| s.quantity.map(|q| q as u32))

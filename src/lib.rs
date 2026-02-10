@@ -1,7 +1,6 @@
 use artifactsmmo_openapi::models::{
     AccessSchema, CharacterFightSchema, ConditionSchema, DropRateSchema, DropSchema, InventorySlot,
-    ItemSchema, RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema,
-    TransitionSchema,
+    RewardsSchema, SimpleItemSchema, SkillDataSchema, SkillInfoSchema, TransitionSchema,
 };
 use fs_extra::file::{read_to_string, write_all};
 use itertools::Itertools;
@@ -225,12 +224,6 @@ pub trait DropsItems {
 
 pub trait HasConditions {
     fn conditions(&self) -> &Option<Vec<ConditionSchema>>;
-}
-
-impl HasConditions for ItemSchema {
-    fn conditions(&self) -> &Option<Vec<ConditionSchema>> {
-        &self.conditions
-    }
 }
 
 impl HasConditions for AccessSchema {

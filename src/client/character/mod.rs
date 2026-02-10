@@ -1,5 +1,5 @@
 use crate::{
-    AccountClient, CollectionClient, GOLD, Gear, HasConditions, ItemContainer, Level,
+    AccountClient, Code, CollectionClient, GOLD, Gear, HasConditions, ItemContainer, Level,
     LimitedContainer, SlotLimited, SpaceLimited, TASK_EXCHANGE_PRICE, TASKS_COIN, TasksClient,
     character::{
         error::{
@@ -20,7 +20,7 @@ use crate::{
             },
             request_handler::CharacterRequestHandler,
         },
-        items::{ItemSchemaExt, ItemsClient, LevelConditionCode},
+        items::{ItemsClient, LevelConditionCode},
         maps::{MapSchemaExt, MapsClient},
         monsters::MonstersClient,
         npcs::NpcsClient,
@@ -42,7 +42,6 @@ use artifactsmmo_openapi::models::{
 };
 use chrono::{DateTime, Utc};
 use std::{
-    ops::Deref,
     str::FromStr,
     sync::{Arc, RwLock},
     time::Duration,
@@ -217,7 +216,7 @@ impl CharacterClient {
         let Some(skill) = item.skill_to_craft() else {
             return Err(CraftError::ItemNotCraftable);
         };
-        if self.skill_level(skill) < item.level {
+        if self.skill_level(skill) < item.level() {
             return Err(CraftError::InsufficientSkillLevel);
         }
         if !self.inventory().contains_multiple(&item.mats_for(quantity)) {
@@ -251,7 +250,7 @@ impl CharacterClient {
         if skill.is_cooking() || skill.is_alchemy() {
             return Err(RecycleError::ItemNotRecyclable);
         }
-        if self.skill_level(skill) < item.level {
+        if self.skill_level(skill) < item.level() {
             return Err(RecycleError::InsufficientSkillLevel);
         }
         if self.inventory().total_of(item_code) < quantity {
@@ -383,7 +382,7 @@ impl CharacterClient {
             return Err(EquipError::InsufficientQuantity);
         }
         if let Some(equiped) = self.items.get(&self.equiped_in(slot)) {
-            if equiped.code == item_code {
+            if equiped.code() == item_code {
                 if slot.max_quantity() <= 1 {
                     return Err(EquipError::ItemAlreadyEquiped);
                 } else if self.quantity_in_slot(slot) + quantity > slot.max_quantity() {
@@ -393,7 +392,7 @@ impl CharacterClient {
                 return Err(EquipError::SlotNotEmpty);
             }
         }
-        if !self.meets_conditions_for(item.deref()) {
+        if !self.meets_conditions_for(&item) {
             return Err(EquipError::ConditionsNotMet);
         }
         if self.inventory().free_space() as i32 + item.inventory_space() <= 0 {
@@ -417,7 +416,7 @@ impl CharacterClient {
         if self.quantity_in_slot(slot) < quantity {
             return Err(UnequipError::InsufficientQuantity);
         }
-        if !self.inventory().has_room_for(&equiped.code, quantity) {
+        if !self.inventory().has_room_for(equiped.code(), quantity) {
             return Err(UnequipError::InsufficientInventorySpace);
         }
         Ok(())
@@ -438,7 +437,7 @@ impl CharacterClient {
         if self.inventory().total_of(item_code) < quantity {
             return Err(UseError::InsufficientQuantity);
         }
-        if self.level() < item.level {
+        if self.level() < item.level() {
             return Err(UseError::InsufficientCharacterLevel);
         }
         Ok(())
@@ -729,10 +728,10 @@ impl CharacterClient {
         let Some(item) = self.items.get(item_code) else {
             return Err(GeCreateOrderError::ItemNotFound);
         };
-        if !item.tradeable {
+        if !item.is_tradable() {
             return Err(GeCreateOrderError::ItemNotSalable);
         }
-        if self.inventory().total_of(&item.code) < quantity {
+        if self.inventory().total_of(item.code()) < quantity {
             return Err(GeCreateOrderError::InsufficientQuantity);
         }
         if !self.gold() < ((price * quantity) as f32 * 0.03) as u32 {

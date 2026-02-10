@@ -13,8 +13,8 @@ use std::sync::Arc;
 pub struct Monster(Arc<MonsterSchema>);
 
 impl Monster {
-    pub fn new(monster_schema: MonsterSchema) -> Self {
-        Self(Arc::new(monster_schema))
+    pub fn new(schema: MonsterSchema) -> Self {
+        Self(Arc::new(schema))
     }
 
     pub fn name(&self) -> &str {

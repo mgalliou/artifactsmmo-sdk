@@ -1,18 +1,21 @@
 use crate::{
-    CanProvideXp, Code, CollectionClient, DataEntity, DropsItems, Level, Persist, check_lvl_diff, client::{
+    Code, CollectionClient, DataEntity, DropsItems, Level, Persist,
+    client::{
         monsters::MonstersClient, npcs::NpcsClient, resources::ResourcesClient,
         tasks_rewards::TasksRewardsClient,
-    }, consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS}, entities::{Monster, Resource}, gear::Slot, simulator::{EffectCode, HasEffects}, skill::Skill
+    },
+    consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS},
+    entities::{Item, Monster, Resource},
+    gear::Slot,
+    simulator::{EffectCode, HasEffects},
+    skill::Skill,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{
-    CraftSchema, ItemSchema, NpcSchema, NpcType, SimpleEffectSchema, SimpleItemSchema,
-};
+use artifactsmmo_openapi::models::{NpcSchema, NpcType, SimpleItemSchema};
 use itertools::Itertools;
 use std::{
     collections::HashMap,
     fmt,
-    str::FromStr,
     sync::{Arc, RwLock},
     vec::Vec,
 };
@@ -20,7 +23,7 @@ use strum_macros::{AsRefStr, Display, EnumIs, EnumIter, EnumString};
 
 #[derive(Default, Debug, CollectionClient)]
 pub struct ItemsClient {
-    data: RwLock<HashMap<String, Arc<ItemSchema>>>,
+    data: RwLock<HashMap<String, Item>>,
     api: Arc<ArtifactApi>,
     resources: Arc<ResourcesClient>,
     monsters: Arc<MonstersClient>,
@@ -86,7 +89,7 @@ impl ItemsClient {
 
     /// Takes an `resource` code and returns the items that can be crafted
     /// from the base mats it drops.
-    pub fn crafted_from_resource(&self, resource_code: &str) -> Vec<Arc<ItemSchema>> {
+    pub fn crafted_from_resource(&self, resource_code: &str) -> Vec<Item> {
         self.resources
             .get(resource_code)
             .iter()
@@ -101,7 +104,7 @@ impl ItemsClient {
     }
 
     /// Takes an item `code` and returns the items directly crafted with it.
-    pub fn crafted_with(&self, code: &str) -> Vec<Arc<ItemSchema>> {
+    pub fn crafted_with(&self, code: &str) -> Vec<Item> {
         self.filtered(|i| i.is_crafted_with(code))
     }
 
@@ -113,7 +116,7 @@ impl ItemsClient {
 
     /// Takes an item `code` and returns the only item it can be crafted in, or
     /// `None` otherwise.
-    pub fn unique_craft(&self, code: &str) -> Option<Arc<ItemSchema>> {
+    pub fn unique_craft(&self, code: &str) -> Option<Item> {
         let crafts = self.crafted_with(code);
         (crafts.len() == 1)
             .then_some(crafts.first().cloned())
@@ -121,8 +124,8 @@ impl ItemsClient {
     }
 
     /// Takes an item `code` and returns the items crafted with it as base mat.
-    pub fn crafted_with_base_mat(&self, code: &str) -> Vec<Arc<ItemSchema>> {
-        self.filtered(|i| self.is_crafted_with_base_mat(&i.code, code))
+    pub fn crafted_with_base_mat(&self, code: &str) -> Vec<Item> {
+        self.filtered(|i| self.is_crafted_with_base_mat(i.code(), code))
     }
 
     /// Takes an item `code` and checks if it is crafted with `mat` as a base
@@ -141,15 +144,15 @@ impl ItemsClient {
         if len < 1 {
             return 0;
         }
-        mob_mats.iter().map(|i| i.level).sum::<u32>() / len
+        mob_mats.iter().map(|i| i.level()).sum::<u32>() / len
     }
 
     pub fn mats_mob_max_lvl(&self, code: &str) -> u32 {
         self.mats_of(code)
             .iter()
             .filter_map(|i| self.get(&i.code).filter(|i| i.subtype_is(SubType::Mob)))
-            .max_by_key(|i| i.level)
-            .map_or(0, |i| i.level)
+            .max_by_key(|i| i.level())
+            .map_or(0, |i| i.level())
     }
 
     /// Takes an item `code` and returns the amount of inventory space the mats
@@ -168,16 +171,16 @@ impl ItemsClient {
             }
     }
 
-    pub fn restoring_utilities(&self, level: u32) -> Vec<Arc<ItemSchema>> {
-        self.filtered(|i| i.r#type().is_utility() && i.restore() > 0 && i.level >= level)
+    pub fn restoring_utilities(&self, level: u32) -> Vec<Item> {
+        self.filtered(|i| i.r#type().is_utility() && i.restore() > 0 && i.level() >= level)
     }
 
-    pub fn upgrades_of(&self, item_code: &str) -> Vec<Arc<ItemSchema>> {
+    pub fn upgrades_of(&self, item_code: &str) -> Vec<Item> {
         let Some(item) = self.get(item_code) else {
             return vec![];
         };
         self.filtered(|i| {
-            i.code != item.code
+            i.code() != item.code()
                 && i.type_is(item.r#type())
                 && item.effects().iter().all(|e| {
                     if e.code == EffectCode::InventorySpace
@@ -229,7 +232,7 @@ impl ItemsClient {
 
     pub fn is_from_event(&self, code: &str) -> bool {
         self.get(code).is_some_and(|i| {
-            self.sources_of(&i.code).iter().any(|s| match s {
+            self.sources_of(i.code()).iter().any(|s| match s {
                 ItemSource::Resource(r) => self.resources.is_event(r.code()),
                 ItemSource::Monster(m) => self.monsters.is_event(m.code()),
                 ItemSource::Npc(n) => n.r#type == NpcType::Merchant,
@@ -255,16 +258,16 @@ impl ItemsClient {
     }
 }
 
-impl Persist<HashMap<String, Arc<ItemSchema>>> for ItemsClient {
+impl Persist<HashMap<String, Item>> for ItemsClient {
     const PATH: &'static str = ".cache/items.json";
 
-    fn load_from_api(&self) -> HashMap<String, Arc<ItemSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Item> {
         self.api
             .items
             .get_all()
             .unwrap()
             .into_iter()
-            .map(|item| (item.code.clone(), Arc::new(item)))
+            .map(|i| (i.code.clone(), Item::new(i)))
             .collect()
     }
 
@@ -274,175 +277,7 @@ impl Persist<HashMap<String, Arc<ItemSchema>>> for ItemsClient {
 }
 
 impl DataEntity for ItemsClient {
-    type Entity = Arc<ItemSchema>;
-}
-
-pub trait ItemSchemaExt {
-    fn is_crafted_with(&self, item_code: &str) -> bool;
-    fn mats_quantity(&self) -> u32;
-    fn mats(&self) -> Vec<SimpleItemSchema>;
-    fn mats_for(&self, quantity: u32) -> Vec<SimpleItemSchema>;
-    fn recycled_quantity(&self) -> u32;
-    fn skill_to_craft(&self) -> Option<Skill>;
-    fn skill_to_craft_is(&self, skill: Skill) -> bool;
-    fn is_crafted_from_task(&self) -> bool;
-    fn is_craftable(&self) -> bool;
-    fn is_recyclable(&self) -> bool;
-    fn craft_schema(&self) -> Option<&CraftSchema>;
-
-    fn is_equipable(&self) -> bool;
-    fn is_tool(&self) -> bool;
-
-    fn is_consumable(&self) -> bool;
-    fn is_food(&self) -> bool;
-    fn is_gold_bag(&self) -> bool;
-
-    fn type_is(&self, r#type: Type) -> bool;
-    fn r#type(&self) -> Type;
-
-    fn subtype_is(&self, subtype: SubType) -> bool;
-    fn subtype(&self) -> Option<SubType>;
-
-    fn name(&self) -> String;
-}
-
-impl ItemSchemaExt for ItemSchema {
-    fn is_crafted_with(&self, item_code: &str) -> bool {
-        self.mats().iter().any(|m| m.code == item_code)
-    }
-
-    fn mats_quantity(&self) -> u32 {
-        self.mats().iter().map(|m| m.quantity).sum()
-    }
-
-    fn mats(&self) -> Vec<SimpleItemSchema> {
-        self.craft_schema()
-            .iter()
-            .filter_map(|i| i.items.clone())
-            .flatten()
-            .collect_vec()
-    }
-
-    fn mats_for(&self, quantity: u32) -> Vec<SimpleItemSchema> {
-        self.craft_schema()
-            .iter()
-            .filter_map(|i| i.items.clone())
-            .flatten()
-            .update(|i| i.quantity *= quantity)
-            .collect_vec()
-    }
-
-    fn recycled_quantity(&self) -> u32 {
-        let q = self.mats_quantity();
-        q / 5 + if q.is_multiple_of(5) { 0 } else { 1 }
-    }
-
-    fn skill_to_craft(&self) -> Option<Skill> {
-        self.craft_schema()
-            .and_then(|schema| schema.skill)
-            .map(Skill::from)
-    }
-
-    fn skill_to_craft_is(&self, skill: Skill) -> bool {
-        self.skill_to_craft().is_some_and(|s| s == skill)
-    }
-
-    fn is_crafted_from_task(&self) -> bool {
-        TASKS_REWARDS_SPECIFICS
-            .iter()
-            .any(|i| self.is_crafted_with(i))
-    }
-
-    fn is_craftable(&self) -> bool {
-        self.craft_schema().is_some()
-    }
-
-    fn is_recyclable(&self) -> bool {
-        self.skill_to_craft()
-            .is_some_and(|s| s.is_weaponcrafting() || s.is_gearcrafting() || s.is_jewelrycrafting())
-    }
-
-    fn craft_schema(&self) -> Option<&CraftSchema> {
-        self.craft.as_deref()
-    }
-
-    fn is_equipable(&self) -> bool {
-        match self.r#type() {
-            Type::BodyArmor
-            | Type::Weapon
-            | Type::LegArmor
-            | Type::Helmet
-            | Type::Boots
-            | Type::Shield
-            | Type::Amulet
-            | Type::Ring
-            | Type::Artifact
-            | Type::Utility
-            | Type::Bag
-            | Type::Rune => true,
-            Type::Consumable | Type::Currency | Type::Resource => false,
-        }
-    }
-
-    fn is_tool(&self) -> bool {
-        self.subtype_is(SubType::Tool)
-    }
-
-    fn is_consumable(&self) -> bool {
-        self.type_is(Type::Consumable)
-    }
-
-    fn is_food(&self) -> bool {
-        self.is_consumable() && self.subtype_is(SubType::Food)
-    }
-
-    fn is_gold_bag(&self) -> bool {
-        self.is_consumable() && self.subtype_is(SubType::Bag)
-    }
-
-    fn type_is(&self, r#type: Type) -> bool {
-        self.r#type == r#type
-    }
-
-    fn r#type(&self) -> Type {
-        Type::from_str(&self.r#type).expect("type to be valid")
-    }
-
-    fn subtype_is(&self, subtype: SubType) -> bool {
-        self.subtype().is_some_and(|st| st == subtype)
-    }
-
-    fn subtype(&self) -> Option<SubType> {
-        SubType::from_str(&self.subtype).ok()
-    }
-
-    fn name(&self) -> String {
-        self.name.to_owned()
-    }
-}
-
-impl HasEffects for ItemSchema {
-    fn effects(&self) -> Vec<SimpleEffectSchema> {
-        self.effects.iter().flatten().cloned().collect_vec()
-    }
-}
-
-impl Level for ItemSchema {
-    fn level(&self) -> u32 {
-        self.level
-    }
-}
-
-impl CanProvideXp for ItemSchema {
-    fn provides_xp_at(&self, level: u32) -> bool {
-        self.is_craftable() && check_lvl_diff(level, self.level())
-    }
-}
-
-impl fmt::Display for dyn ItemSchemaExt {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.name())
-    }
+    type Entity = Item;
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Display, AsRefStr, EnumIter, EnumString, EnumIs)]
