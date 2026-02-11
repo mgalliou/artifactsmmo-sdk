@@ -24,7 +24,6 @@ use crate::{
         maps::MapsClient,
         monsters::MonstersClient,
         npcs::NpcsClient,
-        npcs_items::NpcItemExt,
         resources::ResourcesClient,
         server::ServerClient,
     },
@@ -590,11 +589,11 @@ impl CharacterClient {
         let Some(buy_price) = item.buy_price() else {
             return Err(BuyNpcError::ItemNotBuyable);
         };
-        if item.currency == GOLD {
+        if item.currency() == GOLD {
             if self.gold() < buy_price * quantity {
                 return Err(BuyNpcError::InsufficientGold);
             }
-        } else if self.inventory().total_of(&item.currency) < buy_price * quantity {
+        } else if self.inventory().total_of(item.currency()) < buy_price * quantity {
             return Err(BuyNpcError::InsufficientQuantity);
         }
         Ok(())

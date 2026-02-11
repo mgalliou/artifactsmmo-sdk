@@ -1,13 +1,10 @@
-use crate::{DataEntity, Persist};
+use crate::{DataEntity, Persist, entities::NpcItem};
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{self};
 use sdk_derive::CollectionClient;
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock},
 };
-
-type NpcItem = Arc<models::NpcItem>;
 
 #[derive(Default, Debug, CollectionClient)]
 pub struct NpcsItemsClient {
@@ -35,7 +32,7 @@ impl Persist<HashMap<String, NpcItem>> for NpcsItemsClient {
             .get_items()
             .unwrap()
             .into_iter()
-            .map(|npc| (npc.code.clone(), Arc::new(npc)))
+            .map(|npc| (npc.code.clone(), NpcItem::new(npc)))
             .collect()
     }
 
@@ -46,14 +43,4 @@ impl Persist<HashMap<String, NpcItem>> for NpcsItemsClient {
 
 impl DataEntity for NpcsItemsClient {
     type Entity = NpcItem;
-}
-
-pub trait NpcItemExt {
-    fn buy_price(&self) -> Option<u32>;
-}
-
-impl NpcItemExt for NpcItem {
-    fn buy_price(&self) -> Option<u32> {
-        self.buy_price.map(|p| p as u32)
-    }
 }

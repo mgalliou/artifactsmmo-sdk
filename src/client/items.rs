@@ -247,14 +247,14 @@ impl ItemsClient {
         self.npcs
             .items
             .get(item_code)
-            .is_some_and(|i| i.buy_price.is_some())
+            .is_some_and(|i| i.is_buyable())
     }
 
     pub fn is_salable(&self, item_code: &str) -> bool {
         self.npcs
             .items
             .get(item_code)
-            .is_some_and(|i| i.sell_price.is_some())
+            .is_some_and(|i| i.is_salable())
     }
 }
 

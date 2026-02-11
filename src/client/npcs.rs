@@ -1,5 +1,5 @@
 use crate::{
-    CollectionClient, DataEntity, Persist, client::npcs_items::NpcsItemsClient, entities::Npc,
+    Code, CollectionClient, DataEntity, Persist, client::npcs_items::NpcsItemsClient, entities::Npc,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
 use itertools::Itertools;
@@ -30,8 +30,8 @@ impl NpcsClient {
         self.items
             .all()
             .iter()
-            .filter(|i| i.code == code && i.buy_price.is_some())
-            .flat_map(|i| self.get(&i.npc))
+            .filter(|i| i.is_buyable() && i.code() == code)
+            .flat_map(|i| self.get(i.npc_code()))
             .collect_vec()
     }
 }
