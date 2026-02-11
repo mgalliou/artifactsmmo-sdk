@@ -5,13 +5,13 @@ use crate::{
         tasks_rewards::TasksRewardsClient,
     },
     consts::{TASKS_COIN, TASKS_REWARDS_SPECIFICS},
-    entities::{Item, Monster, Resource},
+    entities::{Item, Monster, Npc, Resource},
     gear::Slot,
     simulator::{EffectCode, HasEffects},
     skill::Skill,
 };
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{NpcSchema, NpcType, SimpleItemSchema};
+use artifactsmmo_openapi::models::SimpleItemSchema;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -233,9 +233,9 @@ impl ItemsClient {
     pub fn is_from_event(&self, code: &str) -> bool {
         self.get(code).is_some_and(|i| {
             self.sources_of(i.code()).iter().any(|s| match s {
-                ItemSource::Resource(r) => self.resources.is_event(r.code()),
-                ItemSource::Monster(m) => self.monsters.is_event(m.code()),
-                ItemSource::Npc(n) => n.r#type == NpcType::Merchant,
+                ItemSource::Resource(resource) => self.resources.is_event(resource.code()),
+                ItemSource::Monster(monster) => self.monsters.is_event(monster.code()),
+                ItemSource::Npc(npc) => npc.is_merchant(),
                 ItemSource::Craft => false,
                 ItemSource::TaskReward => false,
                 ItemSource::Task => false,
@@ -360,7 +360,7 @@ impl PartialEq<SubType> for String {
 pub enum ItemSource {
     Resource(Resource),
     Monster(Monster),
-    Npc(Arc<NpcSchema>),
+    Npc(Npc),
     Craft,
     TaskReward,
     Task,
@@ -373,7 +373,7 @@ impl fmt::Display for ItemSource {
                 write!(f, "Resource ({})", r.name())
             }
             ItemSource::Monster(m) => write!(f, "Monster ({})", m.name()),
-            ItemSource::Npc(npc_schema) => write!(f, "NPC ({})", npc_schema.name),
+            ItemSource::Npc(npc_schema) => write!(f, "NPC ({})", npc_schema.name()),
             ItemSource::Craft => write!(f, "Craft"),
             ItemSource::TaskReward => write!(f, "Task Reward"),
             ItemSource::Task => write!(f, "Task"),

@@ -1,6 +1,7 @@
-use crate::{CollectionClient, DataEntity, Persist, client::npcs_items::NpcsItemsClient};
+use crate::{
+    CollectionClient, DataEntity, Persist, client::npcs_items::NpcsItemsClient, entities::Npc,
+};
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::NpcSchema;
 use itertools::Itertools;
 use std::{
     collections::HashMap,
@@ -9,7 +10,7 @@ use std::{
 
 #[derive(Default, Debug, CollectionClient)]
 pub struct NpcsClient {
-    data: RwLock<HashMap<String, Arc<NpcSchema>>>,
+    data: RwLock<HashMap<String, Npc>>,
     api: Arc<ArtifactApi>,
     pub items: Arc<NpcsItemsClient>,
 }
@@ -25,7 +26,7 @@ impl NpcsClient {
         npcs
     }
 
-    pub fn selling(&self, code: &str) -> Vec<Arc<NpcSchema>> {
+    pub fn selling(&self, code: &str) -> Vec<Npc> {
         self.items
             .all()
             .iter()
@@ -35,16 +36,16 @@ impl NpcsClient {
     }
 }
 
-impl Persist<HashMap<String, Arc<NpcSchema>>> for NpcsClient {
+impl Persist<HashMap<String, Npc>> for NpcsClient {
     const PATH: &'static str = ".cache/npcs.json";
 
-    fn load_from_api(&self) -> HashMap<String, Arc<NpcSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Npc> {
         self.api
             .npcs
             .get_all()
             .unwrap()
             .into_iter()
-            .map(|npc| (npc.code.clone(), Arc::new(npc)))
+            .map(|npc| (npc.code.clone(), Npc::new(npc)))
             .collect()
     }
 
@@ -54,5 +55,5 @@ impl Persist<HashMap<String, Arc<NpcSchema>>> for NpcsClient {
 }
 
 impl DataEntity for NpcsClient {
-    type Entity = Arc<NpcSchema>;
+    type Entity = Npc;
 }
