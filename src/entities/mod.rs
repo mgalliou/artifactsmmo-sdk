@@ -7,6 +7,7 @@ mod npc;
 mod npc_item;
 mod resource;
 mod task;
+mod task_reward;
 
 pub use active_event::*;
 pub use event::*;
@@ -17,3 +18,4 @@ pub use npc::*;
 pub use npc_item::*;
 pub use resource::*;
 pub use task::*;
+pub use task_reward::*;

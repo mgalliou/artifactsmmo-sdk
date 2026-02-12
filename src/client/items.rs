@@ -217,7 +217,7 @@ impl ItemsClient {
         if self.get(code).is_some_and(|i| i.is_craftable()) {
             sources.push(ItemSource::Craft);
         }
-        if self.tasks_rewards.all().iter().any(|r| r.code == code) {
+        if self.tasks_rewards.all().iter().any(|r| r.code() == code) {
             sources.push(ItemSource::TaskReward);
         }
         sources.extend(
