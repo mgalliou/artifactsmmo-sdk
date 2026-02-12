@@ -8,7 +8,6 @@ use log::error;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::Path, sync::RwLockReadGuard};
 
-pub use artifactsmmo_openapi::models;
 pub use sdk_derive::CollectionClient;
 
 pub use client::*;
