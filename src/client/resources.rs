@@ -35,7 +35,7 @@ impl ResourcesClient {
     }
 
     pub fn is_event(&self, code: &str) -> bool {
-        self.events.all().iter().any(|e| e.content.code == code)
+        self.events.all().iter().any(|e| e.content().code == code)
     }
 }
 

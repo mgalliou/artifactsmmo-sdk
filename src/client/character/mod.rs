@@ -145,10 +145,11 @@ impl CharacterClient {
     }
 
     pub fn can_fight(&self, participants: Option<&[String; 2]>) -> Result<(), FightError> {
-        let Some(monster_code) = self.current_map().monster() else {
+        let binding = self.current_map();
+        let Some(monster_code) = binding.monster() else {
             return Err(FightError::NoMonsterOnMap);
         };
-        let Some(monster) = self.monsters.get(&monster_code) else {
+        let Some(monster) = self.monsters.get(monster_code) else {
             return Err(FightError::NoMonsterOnMap);
         };
         if !self.inventory().has_room_for_drops_from(&monster) {
@@ -179,10 +180,11 @@ impl CharacterClient {
     }
 
     pub fn can_gather(&self) -> Result<(), GatherError> {
-        let Some(resource_code) = self.current_map().resource() else {
+        let binding = self.current_map();
+        let Some(resource_code) = binding.resource() else {
             return Err(GatherError::NoResourceOnMap);
         };
-        let Some(resource) = self.resources.get(&resource_code) else {
+        let Some(resource) = self.resources.get(resource_code) else {
             return Err(GatherError::NoResourceOnMap);
         };
         if self.skill_level(resource.skill()) < resource.level() {

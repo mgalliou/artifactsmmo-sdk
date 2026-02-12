@@ -51,12 +51,14 @@ impl Map {
         self.0.access.r#type == MapAccessType::Blocked
     }
 
-    pub fn monster(&self) -> Option<String> {
-        Some(self.content()?.code.clone())
+    // TODO: should maybe return `Monster` ?
+    pub fn monster(&self) -> Option<&str> {
+        Some(&self.content()?.code)
     }
 
-    pub fn resource(&self) -> Option<String> {
-        Some(self.content()?.code.clone())
+    // TODO: should maybe return `Resource` ?
+    pub fn resource(&self) -> Option<&str> {
+        Some(&self.content()?.code)
     }
 
     pub fn closest_among(&self, others: &[Map]) -> Option<Map> {

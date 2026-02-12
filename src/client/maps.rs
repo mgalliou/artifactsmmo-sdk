@@ -34,18 +34,18 @@ impl MapsClient {
 
     pub fn refresh_from_events(&self) {
         self.events.active().iter().for_each(|e| {
-            if DateTime::parse_from_rfc3339(&e.expiration).unwrap() < Utc::now()
-                && let Some(map) = self.data.get(&(e.map.layer, e.map.x, e.map.y))
+            if DateTime::parse_from_rfc3339(e.expiration()).is_ok_and(|e| e < Utc::now())
+                && let Some(map) = self.data.get(&(e.map().layer, e.map().x, e.map().y))
             {
-                *map.write().unwrap() = Map::new(*e.previous_map.clone())
+                *map.write().unwrap() = Map::new(e.previous_map().clone())
             }
         });
         self.events.refresh_active();
         self.events.active().iter().for_each(|e| {
-            if DateTime::parse_from_rfc3339(&e.expiration).unwrap() > Utc::now()
-                && let Some(map) = self.data.get(&(e.map.layer, e.map.x, e.map.y))
+            if DateTime::parse_from_rfc3339(e.expiration()).is_ok_and(|e| e > Utc::now())
+                && let Some(map) = self.data.get(&(e.map().layer, e.map().x, e.map().y))
             {
-                *map.write().unwrap() = Map::new(*e.map.clone())
+                *map.write().unwrap() = Map::new(e.map().clone())
             }
         });
     }

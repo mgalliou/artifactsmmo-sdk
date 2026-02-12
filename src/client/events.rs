@@ -1,6 +1,8 @@
-use crate::{DataEntity, Persist};
+use crate::{
+    DataEntity, Persist,
+    entities::{ActiveEvent, Event},
+};
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{ActiveEventSchema, EventSchema};
 use chrono::{DateTime, Duration, Utc};
 use itertools::Itertools;
 use log::debug;
@@ -12,9 +14,9 @@ use std::{
 
 #[derive(Default, Debug, CollectionClient)]
 pub struct EventsClient {
-    data: RwLock<HashMap<String, Arc<EventSchema>>>,
+    data: RwLock<HashMap<String, Event>>,
     api: Arc<ArtifactApi>,
-    active: RwLock<Vec<Arc<ActiveEventSchema>>>,
+    active: RwLock<Vec<ActiveEvent>>,
     last_refresh: RwLock<DateTime<Utc>>,
 }
 
@@ -31,7 +33,7 @@ impl EventsClient {
         events
     }
 
-    pub fn active(&self) -> Vec<Arc<ActiveEventSchema>> {
+    pub fn active(&self) -> Vec<ActiveEvent> {
         self.active.read().unwrap().iter().cloned().collect_vec()
     }
 
@@ -44,7 +46,7 @@ impl EventsClient {
         let mut events = self.active.write().unwrap();
         self.update_last_refresh(now);
         if let Ok(new) = self.api.events.get_active() {
-            *events = new.into_iter().map(Arc::new).collect_vec();
+            *events = new.into_iter().map(ActiveEvent::new).collect_vec();
             debug!("events refreshed.");
         }
     }
@@ -64,16 +66,16 @@ impl EventsClient {
     }
 }
 
-impl Persist<HashMap<String, Arc<EventSchema>>> for EventsClient {
+impl Persist<HashMap<String, Event>> for EventsClient {
     const PATH: &'static str = ".cache/events.json";
 
-    fn load_from_api(&self) -> HashMap<String, Arc<EventSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Event> {
         self.api
             .events
             .get_all()
             .unwrap()
             .into_iter()
-            .map(|event| (event.code.clone(), Arc::new(event)))
+            .map(|event| (event.code.clone(), Event::new(event)))
             .collect()
     }
 
@@ -83,50 +85,5 @@ impl Persist<HashMap<String, Arc<EventSchema>>> for EventsClient {
 }
 
 impl DataEntity for EventsClient {
-    type Entity = Arc<EventSchema>;
-}
-
-pub trait EventSchemaExt {
-    fn content_code(&self) -> &str;
-    fn to_string(&self) -> String;
-}
-
-impl EventSchemaExt for EventSchema {
-    fn content_code(&self) -> &str {
-        &self.content.code
-    }
-
-    fn to_string(&self) -> String {
-        format!("{}: '{}'", self.name, self.content_code())
-    }
-}
-
-impl EventSchemaExt for ActiveEventSchema {
-    fn content_code(&self) -> &str {
-        self.map
-            .interactions
-            .content
-            .as_deref()
-            .map(|c| &c.code)
-            .expect("event to have content")
-    }
-
-    fn to_string(&self) -> String {
-        let remaining = if let Ok(expiration) = DateTime::parse_from_rfc3339(&self.expiration) {
-            (expiration.to_utc() - Utc::now()).num_seconds().to_string()
-        } else {
-            "?".to_string()
-        };
-        format!(
-            "{} ({},{}): '{}', duration: {}, created at {}, expires at {}, remaining: {}s",
-            self.name,
-            self.map.x,
-            self.map.y,
-            self.content_code(),
-            self.duration,
-            self.created_at,
-            self.expiration,
-            remaining
-        )
-    }
+    type Entity = Event;
 }
