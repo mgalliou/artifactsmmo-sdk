@@ -1,17 +1,19 @@
 mod active_event;
-mod events;
+mod event;
 mod item;
 mod map;
 mod monster;
 mod npc;
 mod npc_item;
 mod resource;
+mod task;
 
 pub use active_event::*;
-pub use events::*;
+pub use event::*;
 pub use item::*;
 pub use map::*;
 pub use monster::*;
 pub use npc::*;
 pub use npc_item::*;
 pub use resource::*;
+pub use task::*;

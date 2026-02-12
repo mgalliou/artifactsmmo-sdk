@@ -1,6 +1,5 @@
-use crate::{DataEntity, Persist, TasksRewardsClient};
+use crate::{DataEntity, Persist, TasksRewardsClient, entities::Task};
 use artifactsmmo_api_wrapper::ArtifactApi;
-use artifactsmmo_openapi::models::{RewardsSchema, TaskFullSchema};
 use sdk_derive::CollectionClient;
 use std::{
     collections::HashMap,
@@ -9,7 +8,7 @@ use std::{
 
 #[derive(Default, Debug, CollectionClient)]
 pub struct TasksClient {
-    data: RwLock<HashMap<String, Arc<TaskFullSchema>>>,
+    data: RwLock<HashMap<String, Task>>,
     pub reward: Arc<TasksRewardsClient>,
     api: Arc<ArtifactApi>,
 }
@@ -26,16 +25,16 @@ impl TasksClient {
     }
 }
 
-impl Persist<HashMap<String, Arc<TaskFullSchema>>> for TasksClient {
+impl Persist<HashMap<String, Task>> for TasksClient {
     const PATH: &'static str = ".cache/tasks.json";
 
-    fn load_from_api(&self) -> HashMap<String, Arc<TaskFullSchema>> {
+    fn load_from_api(&self) -> HashMap<String, Task> {
         self.api
             .tasks
             .get_all()
             .unwrap()
             .into_iter()
-            .map(|task| (task.code.clone(), Arc::new(task)))
+            .map(|task| (task.code.clone(), Task::new(task)))
             .collect()
     }
 
@@ -45,23 +44,5 @@ impl Persist<HashMap<String, Arc<TaskFullSchema>>> for TasksClient {
 }
 
 impl DataEntity for TasksClient {
-    type Entity = Arc<TaskFullSchema>;
-}
-
-pub trait TaskFullSchemaExt {
-    fn rewards_quantity(&self) -> u32 {
-        self.rewards().items.iter().map(|i| i.quantity).sum()
-    }
-
-    fn rewards_slots(&self) -> u32 {
-        self.rewards().items.len() as u32
-    }
-
-    fn rewards(&self) -> &RewardsSchema;
-}
-
-impl TaskFullSchemaExt for TaskFullSchema {
-    fn rewards(&self) -> &RewardsSchema {
-        self.rewards.as_ref()
-    }
+    type Entity = Task;
 }
