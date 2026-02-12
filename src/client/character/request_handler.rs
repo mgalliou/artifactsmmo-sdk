@@ -214,13 +214,13 @@ impl CharacterRequestHandler {
         Duration::from_secs(0)
     }
 
-    pub fn request_move(&self, x: i32, y: i32) -> Result<Map, RequestError> {
+    pub fn request_move(&self, x: i32, y: i32) -> Result<Arc<MapSchema>, RequestError> {
         self.request_action(Action::Move { x, y })
             .and_then(|r| {
                 r.downcast::<CharacterMovementResponseSchema>()
                     .map_err(|_| RequestError::DowncastError)
             })
-            .map(|s| Map::new(*s.data.destination))
+            .map(|s| Arc::new(*s.data.destination))
     }
 
     pub fn request_transition(&self) -> Result<Arc<MapSchema>, RequestError> {

@@ -1,8 +1,8 @@
 use crate::{
     Skill,
+    models::SimpleEffectSchema,
     simulator::{DamageType, Hit, average_dmg},
 };
-use artifactsmmo_openapi::models::SimpleEffectSchema;
 use itertools::Itertools;
 use strum::IntoEnumIterator;
 
