@@ -23,18 +23,6 @@ pub trait ItemContainer {
     }
 }
 
-pub trait SlotLimited: ItemContainer {
-    fn free_slots(&self) -> u32;
-}
-
-pub trait SpaceLimited: ItemContainer {
-    fn max_items(&self) -> u32;
-
-    fn free_space(&self) -> u32 {
-        self.max_items().saturating_sub(self.total_items())
-    }
-}
-
 pub trait LimitedContainer {
     fn is_full(&self) -> bool;
     fn has_room_for_multiple(&self, items: &[SimpleItemSchema]) -> bool;
@@ -45,5 +33,17 @@ pub trait LimitedContainer {
             code: item_code.to_owned(),
             quantity,
         }])
+    }
+}
+
+pub trait SlotLimited: ItemContainer + LimitedContainer {
+    fn free_slots(&self) -> u32;
+}
+
+pub trait SpaceLimited: ItemContainer + LimitedContainer {
+    fn max_items(&self) -> u32;
+
+    fn free_space(&self) -> u32 {
+        self.max_items().saturating_sub(self.total_items())
     }
 }

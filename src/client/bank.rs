@@ -27,7 +27,7 @@ impl BankClient {
     }
 }
 
-pub trait Bank: ItemContainer + LimitedContainer + SlotLimited {
+pub trait Bank: SlotLimited {
     fn details(&self) -> Arc<BankSchema>;
 
     fn slots(&self) -> u32 {

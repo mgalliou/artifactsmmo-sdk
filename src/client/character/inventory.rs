@@ -18,7 +18,7 @@ impl InventoryClient {
     }
 }
 
-pub trait Inventory: LimitedContainer + SlotLimited + SpaceLimited {
+pub trait Inventory: SlotLimited + SpaceLimited {
     fn has_room_to_craft(&self, item: &Item) -> bool {
         let Some(quantity) = item
             .craft_schema()
