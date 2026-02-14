@@ -103,7 +103,7 @@ impl CharacterClient {
         }
     }
 
-    pub fn r#move(&self, x: i32, y: i32) -> Result<Arc<MapSchema>, MoveError> {
+    pub fn r#move(&self, x: i32, y: i32) -> Result<Map, MoveError> {
         self.can_move(x, y)?;
         Ok(self.inner.request_move(x, y)?)
     }
